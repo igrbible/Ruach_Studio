@@ -26,6 +26,31 @@
   function realmWs(w) { var m = realmNow(); return m === "both" || m === "off" || wsRealm(w) === m; }
   function inRealm(r) { var m = realmNow(); return m === "both" || m === "off" || rowRealm(r) === m; }
   function isLink(r) { return realmsOn() && !!state.place && state.place.charAt(0) !== "_" && rowRealm(r) !== wsRealm(state.place); }
+  // HERESY 2941 (Viktor 22.11.2026: «внутренние связи и логику по пространствам и их связи по трекам нужно перепроверить и зафиксить»): a take's home is a
+  // workspace of its own realm; one of the other realm holds it as a link, never as its home. «Not in a workspace» is a take with no home (a song that
+  // stands only as a link in a Narrator's workspace is homeless in the Musician's realm), the same in every count, list, search and menu
+  function noWs(r) { return !(r.workspaces || []).some(function (w) { return !realmsOn() || wsRealm(w) === rowRealm(r); }); }
+  // HERESY 2941: the realm these takes share, "creator" or "reader"; "" when they belong to both; "creator" while the realms are off
+  function takesRealm(list) {
+    var seen = {};
+    (list || []).forEach(function (n) { seen[rowRealm(rowOf(n))] = 1; });
+    var k = Object.keys(seen);
+    return !realmsOn() || !k.length ? "creator" : k.length === 1 ? k[0] : "";
+  }
+  // HERESY 2941 (Viktor 22.11.2026: «в ПЕРЕМЕСТИТЬ в пространство, если песня, и она оригинально принадлежит музыкальному миру, в списке не должны появляться
+  // пространства из Чтеца, и наоборот. А вот ДОБАВИТЬ в пространство — это легитимно линковать и в другой мир»): a move the lab refuses for the realm
+  // (lab/collection.py ws-move): into a workspace of the other realm, unless the takes came from that realm's workspace (a link moved within it)
+  function mixedSaid(list) {
+    var m = 0, r = 0;
+    (list || []).forEach(function (n) { if (rowRealm(rowOf(n)) === "reader") r++; else m++; });
+    return tr("The checked belong to both realms ({0} of the Musician, {1} of the Narrator): a move keeps each take in its realm, so check the takes of one realm").replace("{0}", m).replace("{1}", r);
+  }
+  function crossMove(w, list, from) {
+    if (!realmsOn() || !w || state.ws.indexOf(w) < 0) return false;
+    if (from && wsRealm(from) === wsRealm(w)) return false;
+    var R = takesRealm(list);
+    return !R || R !== wsRealm(w);
+  }
   function currentIn(realm) {                    // the realm's own workspace in hand: the one in hand when it is the realm's, else the last it had
     var w = current();
     if (w && wsRealm(w) === realm) return w;
@@ -280,7 +305,7 @@
   }
   function foundAt(r) {
     var at = r.workspaces.map(function (w) { return [w, (archivedWs(w) ? "🗄 " : frozenWs(w) ? "❄ " : "") + wsShow(w), true]; });   // HERESY 2919: with their emoji
-    if (!r.workspaces.length) at.push(["__none", "Not in a workspace", false]);
+    if (noWs(r)) at.push(["__none", "Not in a workspace", false]);   // HERESY 2941: no home in its realm
     if (r.hidden && !r.frozen && !r.archived) at.push(["__hidden", "Hidden", false]);
     return '<div class="coll-found"><span class="coll-found-cap">Where it lives:</span>' + at.map(function (a) {
       return '<button type="button" class="coll-found-at" data-found-at="' + esc(a[0]) + '" data-found-name="' + esc(r.name) + '" data-tip="Open it there">' +
@@ -580,7 +605,7 @@
       if ((!state.place || state.place.charAt(0) === "_") && !inRealm(r)) return false;   // HERESY 2294: the realm's own; a workspace shows its links too
       if (state.place === "__fav" && !r.favorite) return false;
       if (state.place === "__pinned" && !pinnedAll()[r.name]) return false;   // HERESY 1105
-      if (state.place === "__none" && r.workspaces.length) return false;   // HERESY 1058
+      if (state.place === "__none" && !noWs(r)) return false;   // HERESY 1058; 2941: a link is no home
       if (state.place === "__hidden") { if (!r.hidden) return false; }
       else if (r.hidden && !state.reveal) return false;   // HERESY 2046: the eye shows them, dimmed
       if (r.rating < 0 && !showDis() && !state.reveal && !(state.kinds.__disliked && logic !== "nor")) return false;   // HERESY 1167; 1241: shown when the filter asks for the disliked
@@ -602,28 +627,13 @@
     return rows;
   }
 
-  function paintSide() {
-    // HERESY 2163: the per-workspace tallies of 2046 (perWs, perHid) went with 2089, which counts every place in tallyN below; they were written and never read
-    var counts = { "": 0, __fav: 0, __hidden: 0, __none: 0 };
-    var hidSys = { "": 0, __none: 0 };               // HERESY 2058: the hidden of All Workspaces and of Not in a workspace, for their ⋯
-    // HERESY 2058b (Viktor 03.11.2026: «На счётчике … если есть скрытые … дробное отображение типа `189/208`»; the re-audit of 04.11.2026: ⓘ counts a disliked
-    // take the Engine keeps out as hidden, the tree did not): the tree counts the same way, out of a place's shown number and into its hidden part
-    var disOut = function (r) { return !r.hidden && r.rating < 0 && !showDis(); };
-    state.rows.forEach(function (r) {
-      if (!inRealm(r)) return;                       // HERESY 2294: the system places count the realm's own takes
-      // HERESY 2074 (Viktor 05.11.2026: «Давай, быстрецом гоним всё до и для среза 2.0.6»): Hidden's own number counts what its list shows (no archived or frozen take,
-      // no disliked one the list leaves out), as its ⋯ does: the row, the list and the menu agree (the rule of 03.11.2026, «…дробное отображение типа `189/208`»)
-      if (r.hidden) { if (iceAt(r, "__hidden") && !disOutOfList(r)) counts.__hidden++; if (!r.frozen && !r.archived) hidSys[""]++; if (!r.workspaces.length) hidSys.__none++; return; }
-      if (disOut(r)) return;                         // HERESY 2058b: disliked, out of the lists: hidden in its workspaces, shown nowhere
-      if (!r.frozen && !r.archived) { counts[""]++; if (r.favorite) counts.__fav++; }   // HERESY 1166: a frozen take only in its own; 2049: an archived one too
-      if (!r.workspaces.length) counts.__none++;
-    });
-    // HERESY 2089 (Viktor 05.11.2026: «…Чтобы не раздувать по ширине колонку и не обрезать имена пространств, предлагая при наведении мышки на число треков
-    // поднимать тултип с подсчётами, а ту косую так и оставить»): every place counted in one pass as ⓘ counts it since 2078b (the list's own test, iceAt):
-    // shown, hidden by hand, disliked kept out while the Engine hides them, and apart what only a frozen workspace or the archive shows. A place holding
-    // hidden takes shows «/» and the whole (ⓘ's number), so the names keep the column's width (the fraction ran under the ⋯); the counts in the number's tip,
-    // English in the page for the catalogs, a line each
-    var tallyN = {};
+  // HERESY 2089 (Viktor 05.11.2026: «…Чтобы не раздувать по ширине колонку и не обрезать имена пространств, предлагая при наведении мышки на число треков
+  // поднимать тултип с подсчётами, а ту косую так и оставить»): every place counted in one pass as ⓘ counts it since 2078b (the list's own test, iceAt):
+  // shown, hidden by hand, disliked kept out while the Engine hides them, and apart what only a frozen workspace or the archive shows. A place holding
+  // hidden takes shows «/» and the whole (ⓘ's number), so the names keep the column's width (the fraction ran under the ⋯); the counts in the number's tip,
+  // English in the page for the catalogs, a line each. HERESY 2940: its own function, so the menus that show the column's tree count as the column does
+  function tallyAll() {
+    var disOut = function (r) { return !r.hidden && r.rating < 0 && !showDis(); }, tallyN = {};
     state.rows.forEach(function (r) {
       var once = {}, at = function (a) {
         if (once[a]) return;
@@ -637,6 +647,79 @@
         for (var i = from; i <= parts.length; i++) at(parts.slice(0, i).join(SEP));
       });
     });
+    return tallyN;
+  }
+  function tallyTotal(T, k) { var c = T[k]; return c ? c.shown + c.hand + c.dis + c.ice + c.arch : 0; }
+  // HERESY 2940 (Viktor 22.11.2026: «По контекстному меню список пространств нужно доделать. Эмоджи туда также, и сортировку в том же синхроне с главным
+  // списком и сортировкой пространств, как в левой колонке Библиотекаря»): the tree of workspaces as the column shows it, one source for the column and
+  // the take's menus (Library › Workspaces, Move to). realm: creator, reader or both (none given: the switch's, as the column). The column's order
+  // (by emoji, A to Z, most takes) and what its chooser hides (the frozen, the empty; the place open and the one in hand stay). main: the tree under
+  // «Workspaces»; archived: what stands under «Archived» while the tree keeps the archive there (with «Show the archived in the tree», in main)
+  function wsTreeList(o) {
+    o = o || {};
+    var TO = treeOpts(), T = o.tally || tallyAll(), total = function (k) { return tallyTotal(T, k); };
+    var mine = o.realm && o.realm !== "both" && realmsOn() ? function (w) { return wsRealm(w) === o.realm; } : o.realm ? function () { return true; } : realmWs;
+    var arch = TO.arch ? [] : treeOrder(state.ws.filter(function (w) { return archivedWs(w) && mine(w); }), TO.sort, total);   // HERESY 2294: the realm's; 2919: in the tree when asked
+    var main = treeOrder(state.ws.filter(function (w) {   // HERESY 2049: the archived under Archived (2919: or in the tree, when asked)
+      if (!mine(w) || (archivedWs(w) && !TO.arch)) return false;
+      var here = w === state.place || String(state.place || "").indexOf(w + SEP) === 0 || w === current();
+      if (TO.ice && frozenWs(w) && !here) return false;                 // HERESY 2919: the frozen out of sight when asked
+      if (TO.empty && !total(w) && !here) return false;                 // and the empty ones (none of its sections holds a take)
+      return true;
+    }), TO.sort, total);
+    return { main: main, archived: arch, sort: TO.sort, tally: T };
+  }
+  // HERESY 2956 (Viktor 23.11.2026 with a screenshot of «The workspace in hand»: «В выборе пространства не применена ересь с системными эмоджи Студии»):
+  // a chooser's rows from the column's own tree, as the column draws them: the level's name, its emoji in a column of its own (em "": the faint stack,
+  // a leaf for a section), the parents' path for a filter's find (1853), the Studio's marks after the name (❄ frozen, 🔒 locked, 👁‍🗨 blind), the count
+  // as the column counts it. o.why(w): why it cannot be chosen ("" when it can): the row stays, muted, its tip saying so; o.link: a link row (🔗)
+  function wsChoiceRows(list, o) {
+    o = o || {};
+    var T = o.tally || tallyAll();
+    return list.map(function (w) {
+      var e = wsEm(w), depth = wsParts(w).length, c = T[w] || { shown: 0, hand: 0, dis: 0 }, why = o.why ? o.why(w) : "", lk = (state.locks || {})[w] || {};
+      var marks = (frozenWs(w) ? "\u2744" : "") + (lk.workspace || lk.tracks ? "\ud83d\udd12" : "") + ((state.blind || []).indexOf(w) >= 0 ? "\ud83d\udc41\u200d\ud83d\udde8" : "");
+      return { value: w, label: (o.link ? "\ud83d\udd17 " : "") + e.name, em: e.em || "", emSec: depth > 1, depth: depth - 1, path: pathShow(w), marks: marks,
+               note: (c.hand + c.dis ? "/" : "") + (c.shown + c.hand + c.dis), current: w === o.current, muted: !!why, tip: why || undefined };
+    });
+  }
+  // why a workspace takes no new take: a 💎 set, frozen, archived, or the regeneration's own section (1434, 1166, 2049); "" when it takes them
+  function wsClosedWhy(w) {
+    return DIAMOND.test(wsParts(w)[0] || "") ? "A 💎 set: nothing new lands in it" : frozenWs(w) ? "Frozen: nothing new lands in it"
+      : archivedWs(w) ? "Archived: nothing new lands in it" : wsLeaf(w) === SOURCED ? "The regeneration's own section: nothing new lands in it" : "";
+  }
+  // the tree's rows (its main part, then «Archived» and what stands under it) for a chooser
+  function wsChoiceTree(o) {
+    o = o || {};
+    var T = wsTreeList({ realm: o.realm, tally: o.tally }), keep = o.keep || function () { return true; };
+    var rows = wsChoiceRows(T.main.filter(keep), Object.assign({}, o, { tally: T.tally })), arch = T.archived.filter(keep);
+    if (arch.length) rows = rows.concat([{ head: "Archived" }], wsChoiceRows(arch, Object.assign({}, o, { tally: T.tally })));
+    return rows;
+  }
+  // HERESY 2940: a workspace's row in a menu: its level's name (its emoji apart, in the menu's emoji column) or, for a section standing without its
+  // parent, the parents' path with their emoji before it; em: its emoji, "" for none (the menu draws the faint icon the column draws); sec: a section
+  function wsMenuFace(w, child) {
+    var e = wsEm(w), sub = wsParts(w).length > 1, path = !child && sub ? pathShow(w) + " › " : "";
+    return { label: path + e.name, em: e.em || "", sec: sub, frozen: frozenWs(w), archived: archivedWs(w) };
+  }
+
+  function paintSide() {
+    // HERESY 2163: the per-workspace tallies of 2046 (perWs, perHid) went with 2089, which counts every place in tallyN below; they were written and never read
+    var counts = { "": 0, __fav: 0, __hidden: 0, __none: 0 };
+    var hidSys = { "": 0, __none: 0 };               // HERESY 2058: the hidden of All Workspaces and of Not in a workspace, for their ⋯
+    // HERESY 2058b (Viktor 03.11.2026: «На счётчике … если есть скрытые … дробное отображение типа `189/208`»; the re-audit of 04.11.2026: ⓘ counts a disliked
+    // take the Engine keeps out as hidden, the tree did not): the tree counts the same way, out of a place's shown number and into its hidden part
+    var disOut = function (r) { return !r.hidden && r.rating < 0 && !showDis(); };
+    state.rows.forEach(function (r) {
+      if (!inRealm(r)) return;                       // HERESY 2294: the system places count the realm's own takes
+      // HERESY 2074 (Viktor 05.11.2026: «Давай, быстрецом гоним всё до и для среза 2.0.6»): Hidden's own number counts what its list shows (no archived or frozen take,
+      // no disliked one the list leaves out), as its ⋯ does: the row, the list and the menu agree (the rule of 03.11.2026, «…дробное отображение типа `189/208`»)
+      if (r.hidden) { if (iceAt(r, "__hidden") && !disOutOfList(r)) counts.__hidden++; if (!r.frozen && !r.archived) hidSys[""]++; if (noWs(r)) hidSys.__none++; return; }
+      if (disOut(r)) return;                         // HERESY 2058b: disliked, out of the lists: hidden in its workspaces, shown nowhere
+      if (!r.frozen && !r.archived) { counts[""]++; if (r.favorite) counts.__fav++; }   // HERESY 1166: a frozen take only in its own; 2049: an archived one too
+      if (noWs(r)) counts.__none++;                 // HERESY 2941: a link is no home
+    });
+    var tallyN = tallyAll();                         // HERESY 2089; 2940: one pass, shared with the menus that show this tree
     var nText = function (key) { var c = tallyN[key] || { shown: 0, hand: 0, dis: 0 }; return (c.hand + c.dis ? "/" : "") + (c.shown + c.hand + c.dis); };
     var nSpan = function (key) {
       var c = tallyN[key], tip = [];
@@ -668,7 +751,7 @@
     // HERESY 2049: Archived, and under it each archived workspace whole (its ⋯: back, or to the trash)
     // (HERESY 2163: 2058's archN, archHid and frac went too: Archived and its workspaces count by tallyN since 2089)
     // HERESY 2919: the tree's order and what it shows (the chooser by «Workspaces»); each row's emoji in a column of its own, the names on one line
-    var TO = treeOpts(), total = function (k) { var c = tallyN[k]; return c ? c.shown + c.hand + c.dis + c.ice + c.arch : 0; };
+    var TO = treeOpts();
     var emCell = function (w) {
       var e = wsEm(w), sub = wsParts(w).length > 1;
       return '<i class="coll-em' + (e.em ? "" : " is-faint") + (sub ? " is-sec" : "") + '" aria-hidden="true">' + (e.em ? esc(e.em) : HE.faint(sub)) + "</i>";
@@ -677,7 +760,7 @@
       var i = html.indexOf('<span class="coll-pname"'), j = html.indexOf(">", i);
       return i < 0 ? html : html.slice(0, i) + '<span class="coll-pname has-em"' + html.slice(i + 24, j + 1) + emCell(w) + html.slice(j + 1);
     };
-    var arch = TO.arch ? [] : treeOrder(state.ws.filter(function (w) { return archivedWs(w) && realmWs(w); }), TO.sort, total);   // HERESY 2294: the realm's; 2919: in the tree when asked
+    var tree = wsTreeList({ tally: tallyN }), arch = tree.archived;   // HERESY 2940: the tree's one source (wsTreeList), the menus read the same
     // HERESY 2445 (Viktor 12.11.2026: «В Библиотеке пространство "В архиве" нужно уметь сворачивать»): Archived folds its workspaces away as a
     // workspace folds its sections (1685), with the same handle, kept per viewer in the same list (yue2.collSecFold, the key __archived); folded,
     // the row says so when the place in hand is inside it
@@ -702,13 +785,7 @@
       item("__pinned", "Pinned", pinN, false, "pin") +
       item("__none", "Not in a workspace", counts.__none, false, "folder-minus").replace('<span class="coll-n">', sysMore("__none", hidSys.__none)) +
       '<div class="coll-cap coll-cap-ws">Workspaces<button type="button" class="coll-ws-sort' + (TO.sort !== "group" || TO.arch || TO.ice || TO.empty ? " is-set" : "") + '" data-ws-sort="1" aria-label="The tree of workspaces: its order and what it shows" data-tip="The tree of workspaces: its order and what it shows">' + SORT_SVG + "</button></div>" +
-      treeOrder(state.ws.filter(function (w) {   // HERESY 2049: the archived under Archived (2919: or in the tree, when asked)
-        if (!realmWs(w) || (archivedWs(w) && !TO.arch)) return false;
-        var here = w === state.place || String(state.place || "").indexOf(w + SEP) === 0 || w === current();
-        if (TO.ice && frozenWs(w) && !here) return false;                 // HERESY 2919: the frozen out of sight when asked
-        if (TO.empty && !total(w) && !here) return false;                 // and the empty ones (none of its sections holds a take)
-        return true;
-      }), TO.sort, total).map(function (w) {
+      tree.main.map(function (w) {                   // HERESY 2940: wsTreeList, the realm's tree in its order with what the chooser hides
         var ice = (frozenWs(w) ? '<span class="coll-ice" title="Frozen: its takes are heard, never changed">\u2744</span>' : "") +   // HERESY 1166
           ((state.blind || []).indexOf(w) >= 0 ? '<span class="coll-blind" data-tip="Blind: what made its takes is hidden">' + ico("blind") + "</span>" : "");   // HERESY 1874
         var lk = (state.locks || {})[w] || {}, lock = ice + (lk.workspace || lk.tracks ?   // HERESY 1070
@@ -1128,8 +1205,11 @@
     var r = rowOf(name), t = state.hooks.findTake ? state.hooks.findTake(name) : null, title = r ? r.title : name;
     if (!r || !window.HeresyDialog || !window.HeresyDialog.choose) return Promise.resolve();
     var here = state.place, out = tl("Take it out of this workspace");
-    var items = (r.workspaces || []).map(function (w) {
-      return { value: { go: w }, label: w, current: w === here, note: w === here ? tl("open now") : "", act: frozenWs(w) ? null : { value: { out: w }, label: "\u2715", tip: out } };
+    // HERESY 2956: in the tree's order, each with its emoji in a column of its own and its parents' path, as the column shows them
+    var items = wsChoiceRows(treeOrder((r.workspaces || []).filter(function (w) { return state.ws.indexOf(w) >= 0; }), treeOpts().sort === "az" ? "az" : "group")).map(function (it) {
+      var w = it.value;
+      return Object.assign(it, { value: { go: w }, depth: 0, label: wsParts(w).map(function (x, i) { return wsEm(wsParts(w).slice(0, i + 1).join(SEP)).name; }).join(SEP), path: "", current: w === here, note: w === here ? tl("open now") : "",
+                                 act: frozenWs(w) ? null : { value: { out: w }, label: "\u2715", tip: out } });
     });
     return window.HeresyDialog.choose(tl("Its workspaces") + "\n\n" + tl("“{0}” is in these. A click on one opens it; ✕ takes the take out of it (it stays in the library and in the others).").replace("{0}", title),
       items, { cancel: tl("Close"), closeTop: true }).then(function (v) {
@@ -1259,7 +1339,7 @@
     var ofPlace = function (r) {
       if (state.place === "__fav") return r.favorite;
       if (state.place === "__pinned") return !!pinnedAll()[r.name];
-      if (state.place === "__none") return !r.workspaces.length;
+      if (state.place === "__none") return noWs(r);   // HERESY 2941
       if (state.place === "__hidden") return r.hidden;
       if (state.place === "__archived") return r.archived;   // HERESY 2049
       if (state.place && state.place.charAt(0) !== "_") return inTree(r, state.place);
@@ -1321,7 +1401,7 @@
     return state.rows.filter(function (r) {
       if (state.place === "__fav") return r.favorite && !r.hidden;
       if (state.place === "__pinned") return !!pinnedAll()[r.name] && !r.hidden;
-      if (state.place === "__none") return !r.workspaces.length && !r.hidden;
+      if (state.place === "__none") return noWs(r) && !r.hidden;   // HERESY 2941
       if (state.place === "__hidden") return r.hidden;
       if (state.place) return !r.hidden && inTree(r, state.place);     // HERESY 1161: with its sections
       return !r.hidden;
@@ -1511,6 +1591,12 @@
     var r = rowOf(name);
     if (!r) return null;
     var cur = current(), own = (r.workspaces || []).filter(function (w) { return !frozenWs(w) && workable(w) === w; });
+    // HERESY 2941: in its own realm first, by that realm's workspace in hand: a song linked into the Narrator's workspace in hand was pinned there
+    // from the Musician's column; a take that stands only as a link is pinned where it is linked, as before
+    if (realmsOn()) {
+      var home = own.filter(function (w) { return wsRealm(w) === rowRealm(r); });
+      if (home.length) { own = home; cur = currentIn(rowRealm(r)); }
+    }
     var place = own.indexOf(cur) >= 0 ? cur : own.filter(function (w) { return cur && w.indexOf(cur + SEP) === 0; })[0] || own[0];
     if (!place) return null;
     var have = (state.pins || {})[place] || [];
@@ -1812,21 +1898,35 @@
   }
 
   // HERESY 1101: a move into one workspace, for the menu on a card (the selection when the card is in it)
-  function moveTo(w, list, fromHere) {
+  function moveTo(w, list, fromHere, emoji) {         // emoji (HERESY 2941): a workspace the move makes, its emoji chosen beside its name
     var from = fromHere && state.place && state.place.charAt(0) !== "_" ? state.place : "", n = list.length;
     var go = function () {
       // HERESY 2130 (the audit of 06.11.2026): out of the place open and its sections (tree), as its view shows them: a section's take moved from its
       // parent's view stayed where it was, and the toast said «out of» the parent
-      return act({ op: "ws-move", workspace: w, from: from, tree: !!from, names: list }, n + " moved to “" + w + "”" + (from ? " (out of “" + from + "”)" : " (out of every other workspace)"))
+      return act(Object.assign({ op: "ws-move", workspace: w, from: from, tree: !!from, names: list }, emoji ? { emoji: emoji } : {}), n + " moved to “" + w + "”" + (from ? " (out of “" + from + "”)" : " (out of every other workspace)"))
         .then(function (ok) { if (ok) { list.forEach(function (k) { delete state.sel[k]; }); paint(); } return ok; });
     };
+    // HERESY 2941: a move across the realms is a link offered instead (the lab would refuse it): a drop, the bar's chooser or a name typed
+    if (crossMove(w, list, from)) return linkInstead(w, list);
     // HERESY 1474: from the take's menu as from the bar (1473): several takes, or one that lives in more than one workspace, asked first
-    if (n < 2 && (from || reach(list, false).wss.length < 2)) return go();
+    if (n < 2 && (from || reach(list, false, null, true).wss.length < 2)) return go();
     return guarded(tl(n > 1 ? "Move " + n + " takes to \u201c" + w + "\u201d?" : "Move 1 take to \u201c" + w + "\u201d?") + "\n\n" +
-                   (from ? tl("They leave \u201c" + from + "\u201d.") : tl("They leave every other workspace they are in (a locked one keeps its own).")),
+                   (from ? tl("They leave \u201c" + from + "\u201d.") : tl("They leave every other workspace of their realm they are in (a locked one keeps its own; their links in the other realm stay).")),
                    tl("Move them"), list, !!from).then(function (yes) { return yes ? go() : false; });
   }
 
+  // HERESY 2941: the takes linked into the other realm's workspace (Add to workspace) when a move there was asked, after a question that says why
+  function linkInstead(w, list) {
+    var R = takesRealm(list);
+    var why = R === "creator" ? tr("A move never takes a take out of its realm: these are the Musician's, and \u201c{0}\u201d is the Narrator's.")
+            : R === "reader" ? tr("A move never takes a take out of its realm: these are the Narrator's, and \u201c{0}\u201d is the Musician's.")
+            : tr("A move never takes a take out of its realm: these belong to both realms.");
+    return window.HeresyDialog.confirm(why.replace("{0}", w) + "\n\n" + tr("Link them into \u201c{0}\u201d instead? They stay where they are as well.").replace("{0}", w),
+      { ok: tr("Link them") }).then(function (yes) {
+      if (!yes) return false;
+      return act({ op: "ws-add", workspace: w, names: list }, tr("Linked into \u201c{0}\u201d: {1}").replace("{0}", w).replace("{1}", list.length));
+    });
+  }
   // the workspace in hand (the header): the list shows it, new takes land in it
   function paintCurrent() {
     var btn = $("wsCurrent");
@@ -1845,16 +1945,18 @@
   // question, when a run asks first.
   function chooseCurrent(why) {
     var cur = current();
-    var items = treeOrder(state.ws.filter(function (w) { return !closedWs(w) && wsLeaf(w) !== SOURCED; }), treeOpts().sort === "az" ? "az" : "group").map(function (w) {   // 1434: no 💎 set; 2919: the tree's order
-      var n = state.rows.filter(function (r) { return inTree(r, w); }).length;
-      return { value: w, label: lvlShow(w), depth: wsParts(w).length - 1, path: pathShow(w), current: w === cur, note: String(n) };   // 1853: path; 2919: their emoji
-    });
+    // HERESY 2956: the column's tree (its order, its filters, Archived) with its emoji column; what takes no new take is there, muted, saying why
+    var items = wsChoiceTree({ current: cur, why: wsClosedWhy });
     var more = [{ label: "+ New workspace\u2026", value: "__new" }];
-    if (cur && wsParts(cur).length < DEPTH) more.push({ label: "+ New section of \u201c" + wsLeaf(cur) + "\u201d\u2026", value: "__section" });
+    // HERESY 2956: «+ New section of …» in each workspace's petal (one that takes new takes and has room for a level more)
+    var petalMore = function (it) {
+      var w = it.value;
+      return typeof w === "string" && !it.muted && wsParts(w).length < DEPTH ? [{ label: "+ New section of \u201c" + wsLeaf(w) + "\u201d\u2026", value: "__section:" + w }] : [];
+    };
     var text = (why || "The workspace in hand") + "\n\nEvery new take lands in it, and the Takes column shows it.";
-    return window.HeresyDialog.choose(text, items, { more: more, cancel: why ? "Send nothing" : "Cancel", filter: "Filter the workspaces" }).then(function (v) {
-      if (v === "__new" || v === "__section") {
-        var parent = v === "__section" ? cur : "";
+    return window.HeresyDialog.choose(text, items, { more: more, cancel: why ? "Send nothing" : "Cancel", filter: "Filter the workspaces", petals: true, petalMore: petalMore }).then(function (v) {
+      if (v === "__new" || String(v || "").indexOf("__section:") === 0) {
+        var parent = v === "__new" ? "" : String(v).slice("__section:".length);
         return askWs(parent ? "A new section of \u201c" + parent + "\u201d\n\nIt is in hand at once: new takes land in it."
                             : "A new workspace\n\nIt is in hand at once: new takes land in it.", "", "", { ok: "Make it", placeholder: "its name", section: !!parent }).then(function (v) {   // HERESY 2919
           var name = String((v && v.name) || "").trim();   // HERESY 2462: a / is refused in the dialog, never taken out quietly
@@ -2015,7 +2117,13 @@
     };
   }
   function act(body, done, quiet) {
-    if (/^ws-(create|add|move|merge)$/.test(body.op || "") && realmNow() === "reader" && !body.realm) body.realm = "reader";   // HERESY 2294
+    // HERESY 2294: a workspace made here from the Narrator's realm is the Narrator's. HERESY 2941: one an add or a move makes is its takes' realm (a song's
+    // «New workspace…» from its menu, the switch on the Narrator, made the Narrator's workspace and the move into it was refused); one made empty, or by a merge
+    // or by takes of both realms, the realm in view, as before
+    if (/^ws-(create|add|move|merge)$/.test(body.op || "") && !body.realm) {
+      var tkR = /^ws-(add|move)$/.test(body.op) && body.names && body.names.length ? takesRealm(body.names) : "";
+      if (tkR === "reader" || (!tkR && realmNow() === "reader")) body.realm = "reader";
+    }
     var undo = quiet ? null : undoFor(body), asked = rateSeq;   // what was, read before the change
     return api("/collection", body).then(function (d) {
       actsDone++;
@@ -2333,6 +2441,7 @@
       var text = (add ? "Add " + what + " to \u201c" + w + "\u201d?" : "Move " + what + " to \u201c" + w + "\u201d?") + "\n\n" +
         (add ? "They stay where they are as well." : from ? "Out of \u201c" + from + "\u201d." : "Out of every other workspace they are in.") +
         " Ctrl+Z gives it back.";
+      if (!add && crossMove(w, list, from)) { linkInstead(w, list).then(function (ok) { if (ok) { state.sel = {}; paint(); } }); return; }   // HERESY 2941: a drop across the realms links
       window.HeresyDialog.confirm(text, { ok: add ? "Add" : "Move" }).then(function (yes) {
         if (!yes) return;
         act(add ? { op: "ws-add", workspace: w, names: list } : { op: "ws-move", workspace: w, from: from, tree: !!from, names: list },   // HERESY 2130
@@ -2618,29 +2727,36 @@
     $("collFav").addEventListener("click", function () { favMany(names()); });
     if ($("collProtect")) $("collProtect").addEventListener("click", function () { protectMany(names()); });   // HERESY 1368
     // HERESY 2048: add and move through the Studio's own chooser (the tree, its filter, a new one)
-    var wsChoose = function (title, but) {
-      var items = treeOrder(state.ws.filter(function (w) { return w !== but && !closedWs(w) && wsLeaf(w) !== SOURCED; }), treeOpts().sort === "az" ? "az" : "group").map(function (w) {   // HERESY 2919
-        return { value: w, label: lvlShow(w), depth: wsParts(w).length - 1, path: pathShow(w),
-                 note: String(state.rows.filter(function (r) { return inTree(r, w); }).length) };
-      });
-      return window.HeresyDialog.choose(title, items, { more: [{ label: "+ New workspace\u2026", value: "__new" }], cancel: "Cancel", filter: "Filter the workspaces" })
+    // HERESY 2940 · 2941: the column's tree (wsTreeList: its order, its filters) of the takes' realm; with links (an add), the other realm's after it, each
+    // row a link (🔗); a new one made there is of the takes' realm
+    var wsChoose = function (title, but, realm, links) {
+      // HERESY 2956: the tree's rows with their emoji column (wsChoiceTree); the one they come from and what takes nothing new, muted with why
+      var why = function (w) { return w === but ? "They are here already" : wsClosedWhy(w); };
+      var tally0 = tallyAll(), items = wsChoiceTree({ realm: realm || "both", tally: tally0, why: why });
+      if (links && realmsOn() && (realm === "creator" || realm === "reader"))
+        items = items.concat([{ head: realm === "reader" ? "Link into the Musician's" : "Link into the Narrator's" }],
+          wsChoiceRows(wsTreeList({ realm: realm === "reader" ? "creator" : "reader", tally: tally0 }).main, { tally: tally0, why: why, link: true }));
+      return window.HeresyDialog.choose(title, items, { more: [{ label: "+ New workspace\u2026", value: "__new" }], cancel: "Cancel", filter: "Filter the workspaces", petals: true })   // HERESY 2956
         .then(function (v) {
           if (v !== "__new") return v || "";
           return askWs("A new workspace for the selected", "", "", { ok: "Make it", placeholder: "its name" }).then(function (v) {   // HERESY 2919
             var n = String((v && v.name) || "").trim();   // HERESY 2462: a / is refused in the dialog, never taken out quietly
-            return n ? act(Object.assign({ op: "ws-create", workspace: n }, v.emoji ? { emoji: v.emoji } : {}), null, true).then(function (ok) { return ok ? n : ""; }) : "";
+            return n ? act(Object.assign({ op: "ws-create", workspace: n, realm: realm === "reader" ? "reader" : "creator" }, v.emoji ? { emoji: v.emoji } : {}), null, true).then(function (ok) { return ok ? n : ""; }) : "";
           });
         });
     };
+    var viewRealm = function () { return realmNow() === "reader" ? "reader" : "creator"; };
     if ($("collWsAddBtn")) $("collWsAddBtn").addEventListener("click", function () {
       var n = names();
       if (!n.length) return;
-      wsChoose(tr("Add {0} to a workspace").replace("{0}", n.length)).then(function (w) { if (w) act({ op: "ws-add", workspace: w, names: n }, n.length + " added to “" + w + "”"); });
+      wsChoose(tr("Add {0} to a workspace").replace("{0}", n.length), undefined, takesRealm(n) || viewRealm(), true).then(function (w) { if (w) act({ op: "ws-add", workspace: w, names: n }, n.length + " added to “" + w + "”"); });
     });
     if ($("collWsMoveBtn")) $("collWsMoveBtn").addEventListener("click", function () {
       var n = names();
       if (!n.length) return;
-      wsChoose(tr("Move {0} to a workspace").replace("{0}", n.length), state.place).then(function (w) { if (w) moveTo(w, n, true); });
+      var R = takesRealm(n);
+      if (!R) return toast(mixedSaid(n), true);     // HERESY 2941: a move keeps each take in its realm
+      wsChoose(tr("Move {0} to a workspace").replace("{0}", n.length), state.place, R, false).then(function (w) { if (w) moveTo(w, n, true); });
     });
     // HERESY 2058 (Viktor's playlist, the audit of 04.11.2026: no «Add to playlist» in the bar): the checked into the playlist, first, last or anywhere, or
     // into an album (a new one too), from the bar's own small overlay, closed by a click away and Esc as ⤓'s
@@ -2897,14 +3013,14 @@
   function tl(s) { return window.RuachI18n ? window.RuachI18n.t(s) : s; }
   // HERESY 2165: at = { place, shown } when another view asks (the Creator's Takes column: its workspace, "" for every one, and the names it shows),
   // so «You stand in …» and «not shown» speak of that view and not of the Librarian's place; without it, the Librarian's place as before
-  function reach(list, own, at) {
+  function reach(list, own, at, home) {               // home (HERESY 2941): a move out of every other reaches only its realm's workspaces, its links stay
     var byWs = {}, none = 0, gems = 0, seen = {}, place = at ? String(at.place || "") : state.place;
     if (at) (at.shown || []).forEach(function (n) { seen[n] = 1; }); else shown().forEach(function (r) { seen[r.name] = 1; });
     list.forEach(function (name) {
       var r = rowOf(name), tops = {};
       if (!r) return;
-      if (!r.workspaces.length) none++;
-      r.workspaces.forEach(function (w) { tops[w.split(SEP)[0]] = 1; });
+      if (noWs(r)) none++;                           // HERESY 2941
+      r.workspaces.forEach(function (w) { if (!home || !realmsOn() || wsRealm(w) === rowRealm(r)) tops[w.split(SEP)[0]] = 1; });
       Object.keys(tops).forEach(function (w) { byWs[w] = (byWs[w] || 0) + 1; });
       if (Object.keys(tops).some(function (w) { return w.indexOf("\ud83d\udc8e") === 0; })) gems++;
     });
@@ -3180,7 +3296,7 @@
       if (!r.hidden) return false;
       if (!iceAt(r, place)) return false;            // HERESY 2058b: what the place's list shows, no more (Hidden holds no archived take)
       if (place === "") return !r.frozen && !r.archived;
-      if (place === "__none") return !r.workspaces.length;
+      if (place === "__none") return noWs(r);       // HERESY 2941
       if (place === "__hidden") return !disOutOfList(r);   // HERESY 2074: nor a disliked take the list leaves out, so the menu sends and counts what it shows
       return inTree(r, place);
     });
@@ -3388,16 +3504,14 @@
     if (!window.HeresyDialog) return;
     var subs = state.ws.filter(function (x) { return x.indexOf(w + SEP) === 0; });
     var height = Math.max.apply(null, [w].concat(subs).map(function (x) { return wsParts(x).length; })) - wsParts(w).length;
-    var items = treeOrder(state.ws.filter(function (x) { return x !== w && x.indexOf(w + SEP) !== 0 && !closedWs(x) && wsLeaf(x) !== SOURCED; }), treeOpts().sort === "az" ? "az" : "group").map(function (x) {   // HERESY 2919
-      var n = state.rows.filter(function (r) { return inTree(r, x); }).length;
-      return { value: x, label: lvlShow(x), depth: wsParts(x).length - 1, path: pathShow(x), note: String(n) };   // 1853: path; 2919: their emoji
-    });
+    // HERESY 2956: the tree of its realm with its emoji column, itself and its own sections out; what takes nothing in, muted with why
+    var items = wsChoiceTree({ realm: wsRealm(w), keep: function (x) { return x !== w && x.indexOf(w + SEP) !== 0; }, why: wsClosedWhy });
     // HERESY 2363 (Viktor 11.11.2026: «Нечаянно переместил в пространство как подпространство VLA. А вот вернуть или в корень его обратно — никак»): a
     // section is offered the top level first (a workspace of its own again, its sections and takes along, its name kept); the workspace it stands in
     // takes only its takes (as a section it is there already)
     var TOP = "\u0000top", home = wsParts(w).slice(0, -1).join(SEP);
-    if (home) items.unshift({ value: TOP, label: "The top level", words: true, depth: 0, note: "" });
-    window.HeresyDialog.choose("Move “" + w + "” into", items, { cancel: "Cancel", filter: "Filter the workspaces" }).then(function (to) {
+    if (home) items.unshift({ value: TOP, label: "The top level", words: true, depth: 0, note: "", em: undefined });
+    window.HeresyDialog.choose("Move “" + w + "” into", items, { cancel: "Cancel", filter: "Filter the workspaces", petals: true }).then(function (to) {   // HERESY 2956
       if (!to) return;
       if (to === TOP) {
         var top = wsLeaf(w);
@@ -4594,7 +4708,7 @@
                               keepState: function () { return { s: Object.assign({}, state), ws: recall(WS_KEY) }; },
                               putState: function (k) { Object.keys(k.s).forEach(function (x) { state[x] = k.s[x]; }); store(WS_KEY, k.ws || ""); paint(); paintCurrent(); },
                               datasheet: openDatasheet, sung: sungMany, sungOf: function (n) { return (state.sung || {})[n]; }, sungMark: sungMark, tailOf: function (n) { return (state.tail || {})[n] || null; }, tailMark: tailMark, modelLine: modelLine, reveal: function (name) { return (state.loaded ? Promise.resolve() : load()).then(function () { reveal(name); }); },
-                              row: rowOf, workspaces: function () { return state.ws.slice(); }, act: act, openSheet: openSheet, requestOf: requestOf, fitHead: fitHead, matcher: matcher,   // 2028: for the checks   // 2023: fitHead for the checks
+                              row: rowOf, workspaces: function () { return state.ws.slice(); }, wsTree: wsTreeList, wsFace: wsMenuFace, wsChoice: wsChoiceTree, wsClosedWhy: wsClosedWhy, /* HERESY 2956 */ wsRealm: wsRealm, takesRealm: takesRealm, mixedSaid: mixedSaid, askWs: askWs, noWs: noWs, /* HERESY 2940 · 2941 */ act: act, openSheet: openSheet, requestOf: requestOf, fitHead: fitHead, matcher: matcher,   // 2028: for the checks   // 2023: fitHead for the checks
                               selected: names, place: function () { return state.place; }, moveTo: moveTo,
                               albumMenu: plAlbumMenu, albums: function () { return (state.albums || []).map(function (a) { return a.name; }); }, plTags: plTags,   // HERESY 2050
                               idQuery: idQuery, plRootCount: plRootCount, plTagOk: plTagOk, tagsOn: function (t) { if (t) state.plTags = t.slice(); return state.plTags.slice(); },   // HERESY 2058: for the checks

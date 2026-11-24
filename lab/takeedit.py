@@ -135,6 +135,9 @@ def make(outputs, name, body, take_dir):
     abc = body.get("abc")
     if abc is not None and (not isinstance(abc, str) or len(abc) > 2 ** 20):
         raise ValueError("the score: ABC text, a megabyte at most")
+    lyrics = body.get("lyrics")                        # HERESY 2945: the words the edit leaves (the Section editor's Repeat and Remove), or as they were
+    if lyrics is not None and (not isinstance(lyrics, str) or len(lyrics) > 2 ** 18):
+        raise ValueError("the lyrics: text, 256 KB at most")
     stem = re.sub(r"[^a-z0-9]+", "-", name.split("-", 3)[-1].lower()).strip("-")[:40] or "take"
     new = time.strftime("%Y%m%d-%H%M%S") + "-01-" + op + "-" + stem
     d = Path(outputs) / new
@@ -170,6 +173,8 @@ def make(outputs, name, body, take_dir):
                 req["abc"] = abc
             else:
                 req.pop("abc", None)
+        if lyrics:                                     # HERESY 2945
+            req["lyrics"] = lyrics
         req.pop("parent", None)                        # not the same music under another decoder: its own lineage is «edited»
         req["edited"] = how
         (tmp / "meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=4), encoding="utf-8")

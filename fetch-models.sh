@@ -1,8 +1,9 @@
 #!/bin/bash
 # Ruach Studio · fetch-models.sh — the models a song needs, each said with its size before anything comes.
 #
-#   ./fetch-models.sh                  the least a song needs: the Studio's default backbone at this card's quant and the decoders
-#                                      (m-a-p's Standard, which also encodes, and our YuE2-VAE-RS x3 v1, the default: HERESY 2329)
+#   ./fetch-models.sh                  the whole of YuE2 (HERESY 2952): the Studio's default backbone and m-a-p's own at this card's quant,
+#                                      the decoders (m-a-p's Standard, which also encodes, and our YuE2-VAE-RS x3 v1, the default: HERESY 2329),
+#                                      the transcriber (SheetSage2 with MERT-v2-FullSong, F32) and its Refined mode (anime-song's, CC BY-NC 4.0)
 #   ./fetch-models.sh --quant Q8_0     the backbone at another quant: BF16, Q8_0, Q6_K, or Q5_K_M (m-a-p's own: no fine-tune at it)
 #   ./fetch-models.sh --only PACKS     packs instead, a comma list: base, extras, whisper, transcriber, upscale, loras, stems, fw
 #   ./fetch-models.sh --all            the least a song needs and every pack (what an install brought before 2.0.7)
@@ -19,6 +20,8 @@
 # pinned downloader (tools/hf-env.sh), and counts as here only when it has the pinned size.
 # Viktor 08.11.2026, the AppImage's first start on his laptop: «Нужно сообщение, предупреждающее и дохерища файлов для
 # скачивания»; «Пересмотри, чтобы ничего лишнего не скачивалось при первой установке или при апдейте версии Студии».
+# HERESY 2952 (Viktor 23.11.2026, after a tester's «Cover or Remix» stayed dead on Windows: «и под Линь и под наши форки Винды и мака в базовые скачивания включи полный набор всех моделей бекбона YuE2»; asked what the whole set is, «Весь YuE2»): an install brings every model of YuE2 so every room works from its first start, each file still said
+# with its size and asked first; an update brings the transcriber and its Refined mode once where they are not here («newdefault»).
 set -u
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # HERESY 2330: every weight's place (launcher/paths.sh, lab/paths.py's twin): the repos keep 2.0.6's layout, each file lands in models/<room>/
@@ -45,7 +48,8 @@ if [ $CHECK = 1 ]; then   # as before 2.0.7: the backbone, the decoder and the t
   rc=0
   echo "${B}1 · YuE2 (goldhub/Ruach_Studio_Models_v2: m-a-p's models as Serveurperso made them GGUF, byte for byte)${X}"
   mapfile -t bbs < <(rs_backbones); [ ${#bbs[@]} -gt 0 ] || bbs=("$RS_ENGINE_YUE2/YuE2-3B-*.gguf")
-  for f in "${bbs[@]}" "$RS_ENGINE_VAE/YuE2-Vae-F32.gguf" "$RS_ENGINE_VAE/YuE2-VAE-RS-x3_v1-F32.gguf"; do
+  for f in "${bbs[@]}" "$RS_ENGINE_VAE/YuE2-Vae-F32.gguf" "$RS_ENGINE_VAE/YuE2-VAE-RS-x3_v1-F32.gguf" \
+           "$RS_MISC/SheetSage2-F32.gguf" "$RS_MISC/MERT-v2-FullSong-F32.gguf" "$RS_MISC/SheetSage2-Refined-F16.gguf"; do   # HERESY 2952
     [ -s "$f" ] && echo "here      ${f#"$ROOT"/}" || { echo "missing   ${f#"$ROOT"/}"; rc=1; }
   done
   echo; echo "${B}2 · the packs${X}"
@@ -59,6 +63,7 @@ V2=goldhub/Ruach_Studio_Models_v2      # HERESY 1445: m-a-p's GGUFs (Serveurpers
 FT=goldhub/YuE2-RS-Finetunes           # HERESY 1794: Ruach Studio's own fine-tunes; 2065: RS-TW 2.0x0.75, the Studio's default
 RS=$FT                                 # HERESY 2329: our decoders, YuE2-VAE-RS x3 v1 (the Studio's default, 2306) and v2, float32; HERESY 2330 (11.11.2026): public now, in goldhub/YuE2-RS-Finetunes under VAE-RS/ (the private goldhub/YuE2-VAE-RS no more)
 V2R=$(hf_rev $V2); FTR=$(hf_rev $FT); RSR=$(hf_rev $RS)
+V2REF=$(awk -v k="$V2#refined" '$1 == k {print $2; exit}' "$ROOT/heresy/hf-revisions.txt" 2>/dev/null)   # HERESY 2388: the Refined mode's own pin
 if [ -z "$QUANT" ]; then   # this card's, as launcher/install.sh and the AppImage take it (launcher/env.sh's ruach_quant)
   QUANT=$(bash -c '. "$1/launcher/env.sh" >/dev/null 2>&1; ruach_quant' _ "$ROOT" 2>/dev/null); QUANT=${QUANT:-BF16}
 fi
@@ -86,6 +91,18 @@ backbone() {
     done
   fi
   add $V2 "$V2R" "models/YuE2-3B-$QUANT.gguf" "" song   # paths: repo
+}
+# HERESY 2952 (Viktor 23.11.2026, after a tester's «Cover or Remix» stayed dead on Windows: «и под Линь и под наши форки Винды и мака в базовые скачивания включи полный набор всех моделей бекбона YuE2»; asked what the whole set is, «Весь YuE2»): the rest of YuE2 beside the backbone and the decoders, in the pack $1 (yue2 for an install,
+# newdefault for an update: models_plan.py wants those though not here). m-a-p's own backbone at the quant (a line backbone() wrote already
+# counts once: models_plan.py keeps the first of a repo's path), the transcriber in F32 (HERESY 2625), the Refined mode at its own pin with its
+# LICENSE and NOTICE (HERESY 2388). An update leaves m-a-p's backbone out: a backbone is a choice, the transcriber is what the rooms need
+yue2_full() {
+  [ "$1" = newdefault ] || add $V2 "$V2R" "models/YuE2-3B-$QUANT.gguf" "" "$1"   # paths: repo
+  add $V2 "$V2R" "models/SheetSage2-F32.gguf" "" "$1"; add $V2 "$V2R" "models/MERT-v2-FullSong-F32.gguf" "" "$1"   # paths: repo
+  if [ -n "$V2REF" ]; then
+    add $V2 "$V2REF" "models/SheetSage2-Refined-F16.gguf" "" "$1"; add $V2 "$V2REF" "models/SheetSage2-Refined/LICENSE" "" "$1"   # paths: repo
+    add $V2 "$V2REF" "models/SheetSage2-Refined/NOTICE.md" "" "$1"   # paths: repo
+  fi
 }
 pack_entries() {
   local q
@@ -117,9 +134,10 @@ if [ $UPDATE = 1 ]; then
   # HERESY 2329: our decoder is the Studio's default from 2.0.7, so an update brings it once («newdefault»: wanted though not here);
   # v2 only where it is here already (a newer pin)
   add $RS "$RSR" "VAE-RS/YuE2-VAE-RS-x3_v1-F32.gguf" "" newdefault; add $RS "$RSR" "VAE-RS/YuE2-VAE-RS-x3_v2-F32.gguf" "" song
+  yue2_full newdefault   # HERESY 2952: before pack_entries, whose transcriber lines would come first and not be wanted though not here
   want="${PACKS#,}"; want="${want/,fw,/,}"; pack_entries
 else
-  [ -z "$ONLY" ] && { backbone; add $V2 "$V2R" "models/YuE2-Vae-F32.gguf" "" song; add $RS "$RSR" "VAE-RS/YuE2-VAE-RS-x3_v1-F32.gguf" "" song; }   # paths: repo
+  [ -z "$ONLY" ] && { backbone; add $V2 "$V2R" "models/YuE2-Vae-F32.gguf" "" song; add $RS "$RSR" "VAE-RS/YuE2-VAE-RS-x3_v1-F32.gguf" "" song; yue2_full yue2; }   # paths: repo · HERESY 2952
   pack_entries
 fi
 
@@ -141,7 +159,7 @@ if [ $UPDATE = 0 ]; then
 fi
 
 # the plan, said
-label() { case "$1" in song) echo "for a song" ;; newdefault) echo "the Studio's default decoder, new in 2.0.7" ;; base) echo "m-a-p's backbone" ;; extras) echo "extra decoders" ;; *) echo "$1" ;; esac; }
+label() { case "$1" in song) echo "for a song" ;; yue2) echo "the whole of YuE2" ;; newdefault) echo "new in the Studio's base set" ;; base) echo "m-a-p's backbone" ;; extras) echo "extra decoders" ;; *) echo "$1" ;; esac; }
 lines=$(awk -F'\t' '$1 == "get" || $1 == "changed" {print}' "$P")
 TEXT=""
 while IFS=$'\t' read -r st sz repo rev path base pack; do
@@ -212,7 +230,7 @@ while IFS=$'\t' read -r st sz repo rev path base pack; do
   [ -n "$st" ] || continue
   # HERESY 2380: «newdefault» (2329: the Studio's new default decoder, wanted by an update though not here) was planned and said, then
   # skipped here, and the run ended «failed 0» without it; a planned line of a pack this loop does not know is a failure, said, never a silent skip
-  case "$pack" in song|newdefault|base|fw|extras|whisper|transcriber|upscale) ;; loras) [ $UPDATE = 1 ] || continue ;;
+  case "$pack" in song|yue2|newdefault|base|fw|extras|whisper|transcriber|upscale) ;; loras) [ $UPDATE = 1 ] || continue ;;
     *) echo "${R}failed${X}    ${base#.}/$path: planned (pack $pack), but no step here fetches it"; failed=$((failed + 1)); continue ;; esac
   rel="${base#.}"; rel="${rel:+$rel/}$path"
   # HERESY 2330: a file the map places goes through models/.incoming/ (the downloader's records stay there) into its room by a rename
@@ -236,6 +254,8 @@ while IFS=$'\t' read -r st sz repo rev path base pack; do
     fi
     [ $try = 1 ] && { echo "${D}          not yet ($(tail -1 "$LOG" | cut -c1-160)); once more in 30 s${X}"; sleep 30; }
   done
+  # the second channel (Viktor 21.11.2026, tools/hf_channels.py): the guard's «via» line names who delivered a file Hugging Face did not give
+  [ $ok = 1 ] && grep -a '^via ' "$LOG" 2>/dev/null | sed 's/^/          /'
   if [ $ok = 1 ]; then echo "${G}done${X}      $shown"; got=$((got + 1))
   else echo "${R}failed${X}    $shown: $(tail -2 "$LOG" | tr '\n' ' ' | cut -c1-200)"; failed=$((failed + 1)); fi
 done <<< "$lines"

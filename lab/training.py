@@ -20,6 +20,7 @@ it does not hold the lab's heavy lock (Whisper and the stems go on beside it).
 import array, json, math, os, re, shutil, signal, sqlite3, subprocess, sys, threading, time
 from pathlib import Path
 
+import winx                        # HERESY 2934: the environment's Python, nvidia-smi's absence in words
 import paths as studio_paths       # HERESY 2330: where the weights live (not «paths»: paths(kit) below is this file's own)
 
 AUDIO = {".wav", ".flac", ".mp3", ".ogg", ".m4a"}
@@ -207,7 +208,7 @@ def plugin_trainers(kit):
             raw = json.load(open(spec, encoding="utf-8"))
             folder = spec.parent.resolve()
             py = str(raw.get("python") or "")
-            py = (folder / py) if py and not Path(py).is_absolute() else Path(py) if py else kit / ".venv" / "bin" / "python"
+            py = winx.native(folder / py) if py and not Path(py).is_absolute() else Path(py) if py else winx.venv_python(kit)   # HERESY 2934
             for t in raw.get("trainers") or []:
                 tid = str((t or {}).get("id") or "")
                 script = (folder / str(t.get("script") or "")).resolve()
@@ -283,8 +284,10 @@ def gpus():
                              capture_output=True, text=True, timeout=20).stdout
         return [{"index": int(i), "name": n.strip(), "total_mb": int(t), "free_mb": int(f)}
                 for i, n, t, f in (l.split(",") for l in out.strip().splitlines())]
+    except FileNotFoundError:                             # HERESY 2934: no NVIDIA card or driver, said so (the Windows soak: «[WinError 2]»)
+        return {"error": winx.NO_NVSMI}
     except (OSError, ValueError, subprocess.SubprocessError) as e:
-        return {"error": f"nvidia-smi did not answer: {e}"}
+        return {"error": f"nvidia-smi did not answer: {winx.said(e)}"}
 
 
 SECTION = re.compile(r"^\s*\[[^\]]+\]\s*$")
@@ -635,6 +638,65 @@ def _series_extra(d, out, keep):
             else:
                 res.setdefault(key, c)
     return res
+
+
+EVENTS = {}                                           # HERESY 2943: a run's log read on for its events, as TAILS for its points
+
+
+def _events(d):
+    """HERESY 2943 (Viktor 22.11.2026 read the live run's chart together and took the NAR for going bad: the AR's freeze at step 33450 took its CE out of
+    the loss, 2.4 → 0.88, and the running average drew it as a slope of 2000 steps): the run's own events, from its log.jsonl, for the charts to mark
+    with a line and to smooth no curve across. A tower frozen at a step (kind «freeze», its «since»; a tower frozen from the start is no event), a
+    resume from a save (kind «resume»), and a tower's learning-rate curve changed at a start (kind «start», its «towers», against the start before).
+    → [{"step", "kind": freeze | resume | lr, "tower"?, "was"?, "now"?}], sorted by step, each once; [] for a run with no such log."""
+    path = d / "log.jsonl"
+    try:
+        st = path.stat()
+    except OSError:
+        return []
+    t = EVENTS.get(str(path))
+    if not t or t["ino"] != st.st_ino or st.st_size < t["pos"]:
+        t = {"ino": st.st_ino, "pos": 0, "rest": b"", "out": [], "seen": set(), "towers": None}
+        EVENTS[str(path)] = t
+        if len(EVENTS) > 160:
+            EVENTS.pop(next(iter(EVENTS)))
+
+    def add(ev):
+        key = (ev["step"], ev["kind"], ev.get("tower", ""), ev.get("now", ""))
+        if key not in t["seen"]:
+            t["seen"].add(key)
+            t["out"].append(ev)
+    while st.st_size > t["pos"]:
+        with open(path, "rb") as f:
+            f.seek(t["pos"])
+            chunk = f.read(min(st.st_size - t["pos"], 16 << 20))
+        if not chunk:
+            break
+        t["pos"] += len(chunk)
+        parts = (t["rest"] + chunk).split(b"\n")
+        t["rest"] = parts.pop()
+        for ln in parts:
+            if b'"kind": "step"' in ln or b'"kind":"step"' in ln or not ln.strip():
+                continue
+            try:
+                r = json.loads(ln)
+            except ValueError:
+                continue
+            kind = r.get("kind")
+            if kind == "freeze" and isinstance(r.get("since"), int) and r["since"] > 0:
+                add({"step": r["since"], "kind": "freeze", "tower": str(r.get("tower") or "")})
+            elif kind == "resume" and isinstance(r.get("step"), int) and r["step"] > 0:
+                add({"step": r["step"], "kind": "resume"})
+            elif kind == "start" and isinstance(r.get("towers"), dict):
+                now = {k: str((v or {}).get("curve") or "") for k, v in r["towers"].items() if isinstance(v, dict)}
+                was = t["towers"]
+                at = r.get("from_step") if isinstance(r.get("from_step"), int) else 0
+                if was is not None and at > 0:
+                    for k in sorted(now):
+                        if now[k] != was.get(k, now[k]):
+                            add({"step": at, "kind": "lr", "tower": k, "was": was.get(k, ""), "now": now[k]})
+                t["towers"] = now
+    return sorted(t["out"], key=lambda e: (e["step"], e["kind"], e.get("tower", "")))
 
 
 SERIES_LOCK = threading.Lock()                        # HERESY 2442: one reader of the logs at a time (see _series)
@@ -1122,6 +1184,7 @@ def runs(kit, part="", start=0, count=0):
             heads = heads[max(0, start):max(0, start) + count]
     for d, r, live in heads:
         r["series"] = _series(d)
+        r["events"] = _events(d)                              # HERESY 2943: a freeze, a resume, a tower's LR changed: marked on the charts
         vj = d / "output" / d.name / "val.json"               # HERESY 1497: the held-out measures and the best of them
         if vj.is_file():
             try:
@@ -1209,11 +1272,25 @@ def _save_meta(d, meta):
     tmp.replace(d / "run.json")
 
 
+def log_file(kit, run):
+    """HERESY 2934 (the Windows soak's sweep: /train/log answered «[Errno 2] No such file or directory: 'C:\\…\\training\\train.log'»): a run's
+    train.log; ValueError for no run named, FileNotFoundError said in words for a run with no log yet."""
+    name = Path(str(run or "")).name
+    if not name:
+        raise ValueError("which run? (?name=)")
+    f = paths(kit)["runs"] / name / "train.log"
+    if not f.is_file():
+        raise FileNotFoundError(f"no log of the run {name} yet: its training has not written one")
+    return f
+
+
 def log_tail(kit, run, lines=400):
     """HERESY 2208 (the audit of 06.11.2026, item 16: «The log» fetched the whole train.log every 3 s, 5.6 MB, about 110 MB a minute through the door):
     the last lines of a run's train.log, read from its last 512 KiB (tqdm redraws with \\r: each redraw is a line). FileNotFoundError when the run has
     no log yet, said so by the lab, never an empty text."""
     f = _safe_dir(paths(kit)["runs"], run) / "train.log"
+    if not f.is_file():                                   # HERESY 2934: said in words, never the system's «[Errno 2]» with a path
+        raise FileNotFoundError(f"no log of the run {Path(str(run)).name} yet: its training has not written one")
     with open(f, "rb") as fh:
         fh.seek(0, 2)
         size = fh.tell()
@@ -1493,7 +1570,7 @@ def train(kit, spec, gpu_picker, more_cards=None):
     cmd = ["systemd-run", "--user", "--unit=" + _unit(run), "--working-directory=" + str(kit),
            "-p", f"StandardOutput=append:{log}", "-p", f"StandardError=append:{log}"]
     cmd += ["--setenv=" + k + "=" + v for k, v in env.items()]
-    cmd += [str(kit / ".venv" / "bin" / "python")]
+    cmd += [str(winx.venv_python(kit))]                  # HERESY 2934: the same .venv/bin/python on Linux, where a run's unit runs
     if len(cards) > 1:                                 # HERESY 1631: a process a card, torchrun's (the first card writes the log)
         cmd += ["-m", "torch.distributed.run", "--standalone", f"--nproc_per_node={len(cards)}"]
     cmd += [str(kit / "lab" / "trainer" / "train.py"), str(d / "config.json")]
@@ -1769,7 +1846,7 @@ def listen(kit, spec, gpu_picker):
         LISTEN[name] = job
 
     def work():
-        cmd = [str(kit / ".venv" / "bin" / "python"), str(Path(__file__).resolve().parent / "listener.py"),
+        cmd = [str(winx.venv_python(kit)), str(Path(__file__).resolve().parent / "listener.py"),   # HERESY 2934
                name, "--gpu", str(gpu), "--model", str(studio_paths.at(studio_paths.LISTENER, kit) / pick["path"])]
         if pick.get("mmproj"):
             cmd += ["--mmproj", str(studio_paths.at(studio_paths.LISTENER, kit) / pick["mmproj"])]

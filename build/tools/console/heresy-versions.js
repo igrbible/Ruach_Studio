@@ -22,7 +22,7 @@
   function answer(r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || r.status); return j; }); }
   function api(body) { return fetch(url(), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then(answer); }
   function when(t) { return t ? new Date(t * 1000).toLocaleString(document.documentElement.lang || undefined, { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : ""; }
-  var WHY = { generate: "Generate", save: "Ctrl+S", roll: "the piano roll", before: "before a change" };   // HERESY 1596
+  var WHY = { generate: "Generate", save: "Ctrl+S", roll: "the piano roll", before: "before a change", section: "the Section editor" };   // HERESY 1596; 2945
   function lines(s) { return String(s || "").split(/\r?\n/).filter(function (l) { return l.trim(); }).length; }
   // HERESY 1614: a version's branch, as its title carries it («v4.2.3»), «no version» for none
   function branchName(v) { return v && v.version ? "v" + v.version : tr("no version"); }
@@ -96,7 +96,13 @@
       if (row) {
         var n = +row.dataset.n;
         var armed = st.arm; st.arm = false;                // HERESY 1707: after «Compare with…», a plain click picks the second
-        if ((e.ctrlKey || e.metaKey || e.shiftKey || armed) && st.a != null && n !== st.a) st.b = n; else { st.a = n; st.b = null; }
+        if ((e.ctrlKey || e.metaKey || e.shiftKey || armed) && st.a != null && n !== st.a) st.b = n;
+        else {
+          st.a = n; st.b = null;
+          // HERESY 2945: a sub-version the Section editor kept opens with its differences against the version it came from, marked
+          var picked = version(n);
+          if (picked && picked.from != null && version(picked.from)) { st.a = picked.from; st.b = n; }
+        }
         return paint();
       }
       var b = e.target.closest("[data-vr]");
@@ -139,6 +145,8 @@
       st.book = b; st.trash = false;
       var vs = b.versions || [];
       st.a = vs.length ? vs[vs.length - 1].n : null; st.b = null;
+      var top = version(st.a);                                    // HERESY 2945: the newest a sub-version: its differences against its source, marked
+      if (top && top.from != null && version(top.from)) { st.b = st.a; st.a = top.from; }
       back.hidden = false;
       document.body.classList.add("vr-open");
       paint();
@@ -174,7 +182,7 @@
         '<span class="vr-when mono">' + esc(when(v.at)) + "</span>" + (v.star ? '<span class="vr-star" aria-label="starred">★</span>' : "") +
         (v.lock ? '<span class="vr-lock" aria-label="locked">🔒</span>' : "") +
         (v.label ? '<span class="vr-label" translate="no">' + esc(v.label) + "</span>" : "") +
-        '<span class="vr-meta">' + (v.why && WHY[v.why] ? esc(tr(WHY[v.why])) + " · " : "") + esc(tr("lines: {0}").replace("{0}", lines(v.lyrics))) + (v.abc ? " · " + esc(tr("score")) : "") +
+        '<span class="vr-meta">' + (v.why && WHY[v.why] ? esc(tr(WHY[v.why])) + " · " : "") + (v.from != null ? esc(tr("from #{0}").replace("{0}", v.from)) + " · " : "") +   /* HERESY 2945 */ esc(tr("lines: {0}").replace("{0}", lines(v.lyrics))) + (v.abc ? " · " + esc(tr("score")) : "") +
         " · " + esc(tr("takes: {0}").replace("{0}", (v.takes || []).length)) + "</span></button>";
     }).join("") : '<p class="row-hint">Nothing kept under this title yet: every Generate keeps its words here.</p>') +
       (trash.length ? '<button type="button" class="btn ghost small vr-trash-btn" data-vr="trash">' + esc(tr("Trash ({0})").replace("{0}", trash.length)) + "</button>" +

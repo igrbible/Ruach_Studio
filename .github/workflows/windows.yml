@@ -151,6 +151,12 @@ jobs:
               } catch { $bad += "$u failed: $($_.Exception.Message)" }
             }
           }
+          # HERESY 2937 (the 2.1.0-rc1 Windows soak found by hand what CI never asked): every GET route of the lab once, read from its own
+          # handler: no 500 of the Studio's own (a package this runner lacks is the runner's), no [WinError], no traceback
+          if ($ok) {
+            python tools/lab-sweep.py http://127.0.0.1:41870 --out lab-sweep.txt
+            if ($LASTEXITCODE) { $bad += "the lab's GET routes: tools/lab-sweep.py says which failed (above)" }
+          }
           if (-not $p.HasExited) { Stop-Process -Id $p.Id -Force }
           "---- the lab's log (last 60 lines)"
           Get-Content lab-err.txt -Tail 60
@@ -365,12 +371,16 @@ jobs:
           $ok = $false
           foreach ($i in 1..30) {
             Start-Sleep 2
-            try { $r = Invoke-WebRequest http://127.0.0.1:41870/health -UseBasicParsing -TimeoutSec 5; "health: " + $r.Content.Substring(0, [Math]::Min(300, $r.Content.Length)); $ok = $true; break } catch { if ($p.HasExited) { break } }
+            # $hr, never $r: PowerShell names ignore case, and $r overwrote $R, the package root, so lab-sweep.py was looked for inside the health reply (2.1.0-rc2, its first CI round)
+            try { $hr = Invoke-WebRequest http://127.0.0.1:41870/health -UseBasicParsing -TimeoutSec 5; "health: " + $hr.Content.Substring(0, [Math]::Min(300, $hr.Content.Length)); $ok = $true; break } catch { if ($p.HasExited) { break } }
           }
+          $swept = 0                                       # HERESY 2937: every GET route of the packaged lab once
+          if ($ok) { python "$R\tools\lab-sweep.py" http://127.0.0.1:41870 --out lab-sweep-package.txt; $swept = $LASTEXITCODE }
           if (-not $p.HasExited) { Stop-Process -Id $p.Id -Force }
           "---- the lab's log (last 30 lines)"
           Get-Content lab-err.txt -Tail 30
           if (-not $ok) { throw "the packaged lab did not answer on Windows" }
+          if ($swept) { throw "the packaged lab's GET routes: tools/lab-sweep.py says which failed (above)" }
       - name: RuachStudio.exe finds the package, says its status, makes a tester's report, and keeps the lab and the engine as services
         # HERESY 2880: the launcher's Windows half on Windows: its status and report without a running Studio, then --selftest with this
         # runner's Python: the lab and the engine started hidden in job objects, the lab's health, the engine's lines in logs\engine.log (it
@@ -517,7 +527,10 @@ jobs:
             if curl -fs -m 5 -o "$RUNNER_TEMP/health.json" http://127.0.0.1:41870/health; then ok=1; break; fi
             kill -0 "$pid" 2>/dev/null || break
           done
+          swept=0                                          # HERESY 2937: every GET route of the packaged lab once
+          [ "$ok" = 1 ] && { python3 tools/lab-sweep.py http://127.0.0.1:41870 --out "$RUNNER_TEMP/lab-sweep.txt" || swept=1; }
           kill "$pid" 2>/dev/null || true
           echo "---- the lab's log (last 30 lines)"; tail -30 "$RUNNER_TEMP/lab-err.txt"
           [ "$ok" = 1 ] || { echo "the packaged lab did not answer on macOS"; exit 1; }
+          [ "$swept" = 0 ] || { echo "the packaged lab's GET routes: tools/lab-sweep.py says which failed (above)"; exit 1; }
           echo "health: $(head -c 300 "$RUNNER_TEMP/health.json")"

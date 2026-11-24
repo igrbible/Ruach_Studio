@@ -52,7 +52,8 @@ step "⑥ the models: pinned, checked, each with its size"
 Q=$(ruach_quant)
 echo "  the backbone for a card of $(ruach_vram) MiB: ${Q:-BF16}"
 # HERESY 1292: what this step brings, measured on fresh installs (10.10.2026); 1984: by the pinned lists anew (01.11.2026); 12.11.2026: since 2.0.7
-# (fetch-models.sh, 08.11.2026) the least a song needs: Ruach Studio's own fine-tune at the card's quant (m-a-p's own at Q5_K_M) and two decoders, 1.3 GB
+# (fetch-models.sh, 08.11.2026) the least a song needs: Ruach Studio's own fine-tune at the card's quant (m-a-p's own at Q5_K_M) and two decoders, 1.3 GB;
+# HERESY 2952 (Viktor 23.11.2026, «Весь YuE2»): and the rest of YuE2, m-a-p's own backbone beside ours, the transcriber (F32) and its Refined mode
 case "${Q:-BF16}" in BF16) GBS=8.5 ;; Q8_0) GBS=5.1 ;; Q6_K) GBS=4.3 ;; *) GBS=4.0 ;; esac
 echo "  about $GBS GB in all: Ruach Studio's own fine-tune and two decoders, m-a-p's Standard and our YuE2-VAE-RS x3 v1"
 case "$Q" in Q6_K|Q5_K_M) echo "${Y}  under 7 GB: short songs only (a context of 8 192 rows); the Studio is made for 12 GB and more${X}" ;; esac   # HERESY 1304

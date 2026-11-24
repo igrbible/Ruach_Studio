@@ -13,6 +13,8 @@ import subprocess
 import threading
 import time
 
+import winx   # HERESY 2934
+
 KEEP = 120                       # samples a card keeps: four minutes at one every two seconds (HERESY 1625; two minutes at one a second before)
 IDLE = 60                        # seconds without a look before the sampler stops
 QUERY = "index,name,utilization.gpu,memory.used,memory.total,temperature.gpu,power.draw"
@@ -34,8 +36,8 @@ def _run():
     try:
         p = subprocess.Popen(["nvidia-smi", "--query-gpu=" + QUERY, "--format=csv,noheader,nounits", "-lms", "2000"],
                              stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, bufsize=1)
-    except OSError as e:
-        STATE.update(running=False, error=f"no nvidia-smi here ({e})")
+    except OSError as e:                               # HERESY 2934: no «[WinError 2]» in the words
+        STATE.update(running=False, error=winx.NO_NVSMI if isinstance(e, FileNotFoundError) else f"nvidia-smi did not start ({winx.said(e)})")
         return
     STATE["error"] = ""
     try:

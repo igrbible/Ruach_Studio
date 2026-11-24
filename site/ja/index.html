@@ -720,7 +720,7 @@
     <p class="lead">オープンな歌モデル <b>YuE2</b> を中心にした本格的なスタジオ。スタイルと歌詞を書けば、スタジオが<b>あなた自身の GPU</b> で作曲し、歌い、曲をレンダリングします。あなたの歌、言葉、設定がそこから出ることはありません。</p>
     <div class="ctas"><a target="_blank" rel="noopener" class="btn main" href="https://github.com/igrbible/Ruach_Studio">GitHub で入手</a> <a target="_blank" rel="noopener" class="btn" href="https://github.com/igrbible/Ruach_Studio/blob/main/docs/GUIDE.ja.md">ガイドを読む</a> <a target="_blank" rel="noopener" class="btn" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face のモデル</a> <a target="_blank" rel="noopener" class="btn coffee" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ Viktor と Claude に 24 時間コーヒーを</a></div>
     <p class="star">⭐ スタジオが気に入ったら、<a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub の YuE2 Studio リポジトリ</a>にスターをどうぞ。</p>
-    <span class="rc"><b>2.1.0-rc1</b> · プレリリース：セクションエディター、3 列になった朗読、ワークスペースの絵文字、1 つのウィンドウでの MIDI 書き出し · 2026 年 11 月</span>
+    <span class="rc"><b>2.1.0-rc2</b> · プレリリース：トランスクライバーまで含めた YuE2 のすべてをインストールに、ヘブライ語のガイド、ライブラリのツリーになったすべてのワークスペース選択、クリップに重ねる朗読の声 · 2026 年 11 月</span>
   </div>
   </section>
   <div class="wrap hero-after">
@@ -857,7 +857,7 @@
             <tr><td>コード</td><td>オープン（AGPL）、すべての変更に番号と記録</td><td>クローズド</td></tr>
             <tr><td>インターフェース</td><td>1 ページに 8 つの部屋、12 言語。すべての操作にヒント、すべての部屋にガイド。どの部屋にもプレーヤーとテイク。よく使う操作にはキー。アプリとしてインストール可能</td><td>Web アプリとモバイルアプリ</td></tr>
             <tr class="honest"><td>箱から出してすぐの仕上がり</td><td><b>劣る</b>：ミックスがバズることがある（バズ除去が助けます）、歌詞がずれることがある（歌詞チェックが場所を見つけます）、YuE2 が薄くしか、または全く弾けない楽器がある（LoRA が教えます）</td><td><b>勝る</b></td></tr>
-            <tr class="honest"><td>必要なもの</td><td>NVIDIA の GPU（フル精度ですべてに 24 GB、12–16 GB と 8 GB は小さいコピーで）、Linux、ディスク 22.5–25.9 GB</td><td>ブラウザー</td></tr>
+            <tr class="honest"><td>必要なもの</td><td>NVIDIA の GPU（フル精度ですべてに 24 GB、12–16 GB と 8 GB は小さいコピーで）、Linux、ディスク 29.3–36.0 GB</td><td>ブラウザー</td></tr>
           </tbody>
         </table>
       </div>
@@ -1055,7 +1055,7 @@
         <div class="card"><h3>マシン</h3><ul>
           <li><b>NVIDIA の GPU</b>：フル精度ですべてに 24 GB。12–16 GB と 8 GB でも小さいコピーで動きます（映像師は 24 GB が必要）</li>
           <li><b>Linux</b>（Ubuntu 24.04、CUDA 12.8 で作成）。2.0.9 からは <b>Windows 11</b> と <b>Apple Silicon の Mac</b> もベータ版で</li>
-          <li>ディスク<b>約 23–26 GB</b>、新規インストールで計測：プログラムとその Python（17 GB）、モデル（カードにより 5.1〜8.5 GB、<code>fetch-models.sh</code> が取得し、固定し、検証）。絵師のモデルはさらに 39–43 GB、💎 セットは 5.6 GB、どちらも求めたときだけ</li></ul></div>
+          <li>ディスク<b>約 29–36 GB</b>、新規インストールで計測：プログラムとその Python（17 GB）、モデル、YuE2 のすべて（カードにより 11.9〜18.6 GB、<code>fetch-models.sh</code> が取得し、固定し、検証）。絵師のモデルはさらに 39–43 GB、💎 セットは 5.6 GB、どちらも求めたときだけ</li></ul></div>
         <div class="need-side">
         <div class="card"><h3>画面</h3><ul>
           <li><b>1920×1080、100 %</b> のブラウザーウィンドウ向けに作られています</li>
@@ -1067,17 +1067,18 @@
           <li>さらなる GPU：歌と並行してトレーニングとラボの作業を</li></ul></div>
         </div>   <!-- HERESY 2026 (Viktor: «Третьей в ту строку перемести карточку `По желанию`») -->
         <!-- HERESY 1807 (Viktor 28.10.2026: «на всех наших карточках чёрным по белому… предупреди… Слишком массивная она у нас») -->
-        <p class="warn-free"><b>無料のクラウド GPU では動きません。</b>Ruach Studio は Google Colab や Kaggle、無料のノートブック用 GPU では動かないので、そこで一晩を費やさないでください。ノートブックではなく、まるごとのスタジオです。住むマシンの上で C++/CUDA のエンジンをビルドし、その横でサーバーと Python のラボを動かし続け、ディスクを約 23–26 GB（絵師込みで 62–69 GB）使います。無料セッションのカード、メモリ、消えるディスク、数時間の制限では支えきれません。自分の Linux マシンか、借りて持ち続けるサーバーに NVIDIA のカードを。すべてに 24 GB、小さいモデルのコピーなら 16 GB です。</p>
+        <p class="warn-free"><b>無料のクラウド GPU では動きません。</b>Ruach Studio は Google Colab や Kaggle、無料のノートブック用 GPU では動かないので、そこで一晩を費やさないでください。ノートブックではなく、まるごとのスタジオです。住むマシンの上で C++/CUDA のエンジンをビルドし、その横でサーバーと Python のラボを動かし続け、ディスクを約 29–36 GB（絵師込みで 69–79 GB）使います。無料セッションのカード、メモリ、消えるディスク、数時間の制限では支えきれません。自分の Linux マシンか、借りて持ち続けるサーバーに NVIDIA のカードを。すべてに 24 GB、小さいモデルのコピーなら 16 GB です。</p>
       </div>
     </div>
   </section>
 
   <!-- 12.11.2026, engine-fixes lane (Viktor: «5 по размерам выравнивай повсюду»): since 2.0.7 the install is the least a song needs (fetch-models.sh); the models by the pinned lists anew, the program and its Pythons as measured on 01.11.2026 -->
   <!-- HERESY 1984 (Viktor 01.11.2026: «честную таблицу по объёмам данных, скачиваемых на машину пользователя… на сайт визиту ближе к концу») -->
+  <!-- 23.11.2026, 2.1.0-rc2 (HERESY 2952): the install brings the whole of YuE2, m-a-p's own YuE2-3B and the transcriber with its Refined mode beside our fine-tune and the two decoders; the sizes as README's «What It Downloads» (the install 36.0 / 29.3 / 29.3 GB, every room 248.8 / 132.3 / 127.6 GB) -->
   <section id="downloads">
     <div class="wrap">
       <h2>ダウンロードするもの</h2>
-      <p class="sub">スタジオのリポジトリの固定リストと新規インストールのディスクで、ファイルごとに計測（1 GB = 10⁹ バイト）。インストールで入るのは曲に要るものだけ：ミュージシャンと司書、Ruach Studio 独自のファインチューン、二つのデコーダー。ミュージシャンのほかのパーツは エンジン → モデルと LoRA から、ほかの部屋は エンジン → モデルと LoRA → 部屋ごと から。先に空き容量を測り、収まらないものは取得しません。どれも求めたときだけ。</p>
+      <p class="sub">スタジオのリポジトリの固定リストと新規インストールのディスクで、ファイルごとに計測（1 GB = 10⁹ バイト）。インストールで入るのはミュージシャンと司書、そして YuE2 のすべて：Ruach Studio 独自のファインチューンと m-a-p 自身の YuE2-3B（カードに合う量子化で）、二つのデコーダー、Refined モード付きのトランスクライバー。だからカバーもリミックスも最初の起動から使えます。ミュージシャンのほかのパーツは エンジン → モデルと LoRA から、ほかの部屋は エンジン → モデルと LoRA → 部屋ごと から。先に空き容量を測り、収まらないものは取得しません。どれも求めたときだけ。</p>
       <div class="table dl-table">
         <table>
           <thead><tr><th></th><th>24 GB のカード</th><th>12–16 GB のカード</th><th>8 GB のカード</th></tr></thead>
@@ -1085,16 +1086,18 @@
             <tr><td>プログラムと、ここでビルドするエンジン（ダウンロード 0.2 GB）</td><td>0.9 GB</td><td>0.9 GB</td><td>0.9 GB</td></tr>
             <tr><td>二つの Python、それぞれに CUDA 12.8 用の PyTorch（ダウンロード 8.7 GB）</td><td>16.5 GB</td><td>16.5 GB</td><td>16.5 GB</td></tr>
             <tr><td>Ruach Studio 独自の YuE2 ファインチューン、カードに合う量子化で</td><td>7.2 GB</td><td>3.8 GB</td><td>3.8 GB</td></tr>
+            <tr><td>その隣に m-a-p 自身の YuE2-3B、同じ量子化で</td><td>7.2 GB</td><td>3.8 GB</td><td>3.8 GB</td></tr>
             <tr><td>デコーダー二つ：エンコードもする m-a-p の Standard と、私たち自身のもの</td><td>1.3 GB</td><td>1.3 GB</td><td>1.3 GB</td></tr>
-            <tr class="sum"><td>インストール</td><td>25.9 GB</td><td>22.5 GB</td><td>22.5 GB</td></tr>
-            <tr><td>+ ミュージシャンのパーツ：私たちの二つ目のデコーダー、トランスクライバー、Whisper、ステムのモデル、UniverSR と Apollo-vocal、LoRA</td><td>8.8 GB</td><td>8.8 GB</td><td>8.8 GB</td></tr>
+            <tr><td>カバー用のトランスクライバーとその Refined モード</td><td>2.9 GB</td><td>2.9 GB</td><td>2.9 GB</td></tr>
+            <tr class="sum"><td>インストール</td><td>36.0 GB</td><td>29.3 GB</td><td>29.3 GB</td></tr>
+            <tr><td>+ ミュージシャンのパーツ：私たちの二つ目のデコーダー、Whisper、ステムのモデル、UniverSR と Apollo-vocal、LoRA</td><td>7.8 GB</td><td>7.8 GB</td><td>7.8 GB</td></tr>
             <tr><td>+ ライター：llama.cpp で動く言語モデル</td><td>7.4 GB</td><td>7.4 GB</td><td>6.2 GB</td></tr>
             <tr><td>+ 仕上げ師：MuScriptor と FlashSR</td><td>6.1 GB</td><td>6.1 GB</td><td>6.1 GB</td></tr>
             <tr><td>+ 朗読：Fish Audio Drama 3（24 GB なら Q8_0、それ未満は Q4_K）、アクセント辞書と audio.cpp</td><td>42.1 GB</td><td>26.0 GB</td><td>26.0 GB</td></tr>
             <tr><td>+ 絵師：助手と Qwen-Image 2512（24 GB で Q6、それ未満は Q4）</td><td>42.9 GB</td><td>39.3 GB</td><td>39.3 GB</td></tr>
             <tr><td>+ 映像師：MiniMax H3 と SeedVR2</td><td>86.3 GB</td><td>24 GB が必要</td><td>24 GB が必要</td></tr>
             <tr><td>+ LoRA トレーナー：ベースとスタイルの聞き手</td><td>20.2 GB</td><td>16.3 GB</td><td>12.9 GB</td></tr>
-            <tr class="sum"><td>すべての部屋</td><td>239.7 GB</td><td>126.5 GB</td><td>121.8 GB</td></tr>
+            <tr class="sum"><td>すべての部屋</td><td>248.8 GB</td><td>132.3 GB</td><td>127.6 GB</td></tr>
           </tbody>
         </table>
       </div>
@@ -1105,7 +1108,7 @@
   <section id="next">
     <div class="wrap">
       <h2>これから</h2>
-      <p class="sub">2.1.0-rc1 は、私たちが毎日自分の曲と朗読を作っている Studio です。2.1.0 以降に向けて進んでいる大きな部分はこちら。</p>
+      <p class="sub">2.1.0-rc2 は、私たちが毎日自分の曲と朗読を作っている Studio です。2.1.0 以降に向けて進んでいる大きな部分はこちら。</p>
       <ul class="feats">
         <li><b>朗読、さらに。</b>章付きの一つのファイルとしてダウンロードできる本、一部だけの編集と本全体を仕上げ師へ、そして文脈から母音を補って読むヘブライ語。</li>
         <li><b>DAW、さらに。</b>MIDI キーボードの演奏を譜面に書き込むピアノロール、そして DAW 用プロジェクトにまだ必要な REAPER、Waveform、Bitwig でのクラッシュテスト。</li>
@@ -1442,7 +1445,7 @@
     </div>
   </div>
   <div class="wrap">
-    <div class="foot-by">ルアハ・スタジオ · 2.1.0-rc1 · <a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a> の作品</div> <div class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Awesome-YUE2" title="YuE2 コミュニティが作ったものすべてを集めた、私たちの厳選リスト">Awesome YUE2</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">変更履歴</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ 24時間コーヒー</a></div>
+    <div class="foot-by">ルアハ・スタジオ · 2.1.0-rc2 · <a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a> の作品</div> <div class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Awesome-YUE2" title="YuE2 コミュニティが作ったものすべてを集めた、私たちの厳選リスト">Awesome YUE2</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">変更履歴</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ 24時間コーヒー</a></div>
   </div>
 </footer>
 

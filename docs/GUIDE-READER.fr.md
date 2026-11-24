@@ -74,6 +74,8 @@ La liste « Quantification » colore chaque quantification d’après le test br
 
 **Voix du lecteur** : la voix du moteur lui-même, tenue depuis le premier morceau ; ou **Ta propre voix…**, un court extrait d'une voix que le moteur suit, pris seulement sous l'avertissement rouge et avec le consentement coché (cloner une voix sans le consentement de son propriétaire est un délit dans bien des pays, et la responsabilité est la tienne). Aucune voix toute faite ne vient avec le Studio. La hauteur de chaque morceau est mesurée à la lecture ; un morceau dont la voix est passée à l'autre genre est relu avec une autre graine.
 
+**Une voix pour chaque paragraphe.** Dans une narration, une petite puce ↳ se tient dans la marge près de la première ligne de chaque paragraphe : un clic choisit la voix qui lit ce paragraphe (une de tes voix, un groupe, ou de nouveau la voix au-dessus du texte), et les paragraphes suivants la gardent jusqu'à ce que l'un d'eux en reçoive une autre ; une fine bande de la couleur de cette voix les longe. Le texte lui-même reste propre, et les voix suivent leurs paragraphes quand tu le modifies ; un dialogue a plutôt une voix par personnage, et une lecture par versets aucune.
+
 Les émotions et les sons vont entre crochets, comme Drama 3 les lit : `[calm]`, `[sad]`, `[whispering]`, `[pause]`, `[laughs]`. **Palette de balises** les insère : une émotion, un tempo ou un style au début de sa phrase, une pause ou un son au curseur. **Lire les balises en ligne** est activé par défaut dans un dialogue et coupé dans une narration, où l'on veut une lecture de livre propre. **Style** donne à toute la lecture un crochet à elle, comme `calm, warm, unhurried narration`.
 
 ### Accents toniques et l'aigu <!-- #stresses-and-the-acute -->

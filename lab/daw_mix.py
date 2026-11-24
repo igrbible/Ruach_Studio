@@ -234,13 +234,16 @@ def parse(value: Any, names: list[str], rate: int) -> dict:
             raise PlenioUserError(f"{where}: edits is a list of at most {MAX_EDITS}.")
         for j, ed in enumerate(raw_edits):
             ew = f"{where} edit {j + 1}"
-            ed = _known(ed, {"op", "a", "b", "to"}, ew)
+            ed = _known(ed, {"op", "a", "b", "to", "path"}, ew)
             if ed.get("op") not in ("copy", "move"):
                 raise PlenioUserError(f"{ew}: op is copy or move.")
             ea, eb, eto = _num(ed.get("a", 0), ew + " a", 0, 86400), _num(ed.get("b", 0), ew + " b", 0, 86400), _num(ed.get("to", 0), ew + " to", 0, 86400)
             if eb - ea < 0.01:
                 raise PlenioUserError(f"{ew}: b comes after a.")
-            edits.append((ed["op"], ea, eb, eto))
+            ep = ed.get("path") or ""                # HERESY 2948: a stretch comped from another version of the stem (whoever renders loads it)
+            if not isinstance(ep, str) or len(ep) > 400 or "\x00" in ep or (ep and ed["op"] != "copy"):
+                raise PlenioUserError(f"{ew}: path is a version of this stem, for a copy.")
+            edits.append((ed["op"], ea, eb, eto, ep))
         strips[name] = {"gain_db": _num(s.get("gain_db", 0), where + " gain_db", -60, 12), "mute": _flag(s.get("mute", False), where + " mute"),
                         "auto": auto, "autos": autos, "edits": edits,   # HERESY 2318: laid out already (expand)
                         "solo": _flag(s.get("solo", False), where + " solo"), "muted": muted,
@@ -535,12 +538,21 @@ def curve(pts, frames: int, rate: int) -> np.ndarray:
     return np.interp(np.arange(frames) / rate, ts, vs)
 
 
-def place(y: np.ndarray, x: np.ndarray, rate: int, edits) -> np.ndarray:
+def place(y: np.ndarray, x: np.ndarray, rate: int, edits, alts: dict | None = None) -> np.ndarray:
     """HERESY 1564: each edit's stretch of the stem as it came (x) laid over the lane (y) at its «to», 10 ms raised-cosine crossfades
-    at both edges; a move's source silenced first, as a cut of its own edges. In order; a later one over an earlier."""
+    at both edges; a move's source silenced first, as a cut of its own edges. In order; a later one over an earlier.
+    HERESY 2948 (comping): an edit that names a path lays that stretch from another version of the stem (alts[path], the lane as its
+    channel and shift make it), the version heard everywhere else; a path not given is refused, never the lane's own sound in its place."""
     frames = y.shape[1]
     k0 = max(1, round(EDGE_SECONDS * rate))
-    for op, a, b, to in edits:
+    for e in edits:
+        op, a, b, to = e[:4]
+        path = e[4] if len(e) > 4 else ""
+        src = x
+        if path:
+            src = (alts or {}).get(path)
+            if src is None:
+                raise PlenioUserError(f"a stretch comped from {path}: that version was not given to the render.")
         i0 = round(a * rate)
         n = min(frames, round(b * rate)) - i0
         if n <= 0:
@@ -557,7 +569,7 @@ def place(y: np.ndarray, x: np.ndarray, rate: int, edits) -> np.ndarray:
             ramp = 0.5 - 0.5 * np.cos(np.pi * (np.arange(k) + 0.5) / k)
             w[:k], w[-k:] = ramp, ramp[::-1]
         y = y.copy()
-        y[:, d0:d0 + m] = y[:, d0:d0 + m] * (1 - w) + x[:, i0:i0 + m] * w
+        y[:, d0:d0 + m] = y[:, d0:d0 + m] * (1 - w) + src[:, i0:i0 + m] * w
     return y
 
 
@@ -570,8 +582,12 @@ def pre(x: np.ndarray, rate: int, s: dict, item: dict) -> np.ndarray:
         y = y * env
         item["muted_seconds"] = round(float((1 - env).sum()) / rate, 3)
     if s.get("edits"):                                # HERESY 1564: copies and moves over the cuts
-        y = place(y, np.asarray(x, dtype=np.float64), rate, s["edits"])
+        alts = {p: lane_of(a, rate, s) for p, a in (s.get("alts") or {}).items()}   # HERESY 2948: the versions comped from, as the lane is
+        y = place(y, np.asarray(x, dtype=np.float64), rate, s["edits"], alts)
         item["edits"] = len(s["edits"])
+        comped = sum(1 for e in s["edits"] if len(e) > 4 and e[4])
+        if comped:
+            item["comped"] = comped
     g = db(s["trim_db"]) * (-1.0 if s["invert"] else 1.0)
     if g != 1.0:
         y = y * g
@@ -659,13 +675,33 @@ def ir_wav(rate: int, preset: str) -> bytes:
     return buf.getvalue()
 
 
-def render(rate: int, signals: list[tuple[str, np.ndarray]], value: Any, *, keep: bool = False):
+def with_alts(v: dict, alts: dict | None) -> dict:
+    """HERESY 2948: each strip's comped versions ({strip: {path: [channels, frames]}}) beside its parsed settings, for pre()'s place()."""
+    for n, d in (alts or {}).items():
+        if n in v["strips"] and d:
+            v["strips"][n] = dict(v["strips"][n], alts=d)
+    return v
+
+
+def comp_paths(value: Any) -> dict:
+    """HERESY 2948: {strip: [paths]} the mix's comped stretches name, for whoever loads them (each checked as a version of its stem there)."""
+    out = {}
+    for n, s in ((value or {}).get("strips") or {}).items() if isinstance(value, dict) else []:
+        for ed in (s or {}).get("edits") or [] if isinstance(s, dict) else []:
+            p = ed.get("path") if isinstance(ed, dict) else None
+            if isinstance(p, str) and p and p not in out.setdefault(n, []):
+                out[n].append(p)
+    return {n: ps for n, ps in out.items() if ps}
+
+
+def render(rate: int, signals: list[tuple[str, np.ndarray]], value: Any, *, keep: bool = False, alts: dict | None = None):
     """The mixdown of ``signals`` ([(name, [channels, frames]) …], the rest among them) as ``value`` says.
 
     Returns (mix, report, printed): ``printed`` the audible strips after their pan (their sends not in them) and the two returns,
-    when ``keep``; a mix lowered to −0.3 dBFS when it peaked above it, the report says by how much."""
+    when ``keep``; a mix lowered to −0.3 dBFS when it peaked above it, the report says by how much. ``alts`` (HERESY 2948): the versions
+    the comped stretches name, {strip: {path: [channels, frames]}}."""
     names = [n for n, _x in signals]
-    v = parse(value, names, rate)
+    v = with_alts(parse(value, names, rate), alts)
     shape = signals[0][1].shape
     gr = v["groups"]                                  # HERESY 1543: the VCAs over their members
     vca = {n: sum(g["gain_db"] for g in gr if n in g["members"]) for n in names}
@@ -768,7 +804,7 @@ def render(rate: int, signals: list[tuple[str, np.ndarray]], value: Any, *, keep
                  "peak_db": round(20 * math.log10(pk), 2) if pk > 0 else None, "lowered_db": lowered, "notes": v["notes"]}, printed
 
 
-def bounce(rate: int, signals: list[tuple[str, np.ndarray]], value: Any, members: list[str], dry: bool = False):
+def bounce(rate: int, signals: list[tuple[str, np.ndarray]], value: Any, members: list[str], dry: bool = False, alts: dict | None = None):
     """HERESY 2316 (Viktor's plan of 08.11.2026, §2.4: «Bounce in place: шина или группа полос в новую полосу одним действием»): what the strips
     `members` put into the master as the mix stands, as one stretch: each one's strip as it is heard (its mute and solo and its VCAs as the
     mix has them), through its bus when its whole bus is among them, with their share of the room and the delay (the returns are linear: what
@@ -776,9 +812,9 @@ def bounce(rate: int, signals: list[tuple[str, np.ndarray]], value: Any, members
     chain and the song's fade after it as before. A bus that holds strips left out is refused: its compressor hears all of them.
     HERESY 2366 (Viktor 11.11.2026, «сухой баунс — сделать вариантом»): dry, the stretch without their share of the room and the delay (the same as
     with both returns muted); the report says it.
-    Returns (stretch, report)."""
+    Returns (stretch, report). ``alts`` as render's (HERESY 2948)."""
     names = [n for n, _x in signals]
-    v = parse(value, names, rate)
+    v = with_alts(parse(value, names, rate), alts)
     dry_print = bool(dry)                             # HERESY 2366: `dry` is the strips' own sum below
     want = [m for m in dict.fromkeys(members or []) if m in names]
     if not want:

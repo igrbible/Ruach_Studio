@@ -13,9 +13,12 @@ Defaults when the file is missing: the Studio on GPU0; training on every other c
 it is the only one (then synthesis waits while it trains); jobs on every card."""
 import json
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
+
+import winx                         # HERESY 2934: the engine found and read without systemd and /proc
 
 
 def path(kit):
@@ -109,17 +112,22 @@ def studio_now():
     (HERESY 1109), an older start's CUDA_VISIBLE_DEVICES did; neither means the first card, the engine's own choice.
     The saved choice may wait for a restart."""
     try:
-        pid = subprocess.run(["systemctl", "--user", "show", "-p", "MainPID", "--value", "ruach-studio"],
-                             capture_output=True, text=True, timeout=10).stdout.strip()
+        if shutil.which("systemctl"):
+            pid = subprocess.run(["systemctl", "--user", "show", "-p", "MainPID", "--value", "ruach-studio"],
+                                 capture_output=True, text=True, timeout=10).stdout.strip()
+        else:                                          # HERESY 2934: no systemd (RuachStudio.exe on Windows, macOS): the engine is who listens on its port
+            pid = str(winx.listener_pid(int(os.environ.get("YUE2CPP_PORT") or 7777)) or "")
         if not pid or pid == "0":
             return None
-        env = dict(e.split(b"=", 1) for e in Path(f"/proc/{pid}/environ").read_bytes().split(b"\0") if b"=" in e)
+        env = {k.encode(): v.encode() for k, v in winx.proc_environ(pid).items()}   # HERESY 2934: /proc on Linux, psutil elsewhere
         # HERESY 1680: a studio on the Intel Arc (start.sh's YUE2_ENGINE=sycl, or the SYCL engine alone, 1656) computes on no CUDA card: the
         # Arc's index, so a run training on GPU0 never makes its syntheses wait and the live graphs frame the Arc
         try:
-            exe = os.readlink(f"/proc/{pid}/exe")
+            exe = os.readlink(f"/proc/{pid}/exe") if winx.PROC else winx.proc_exe(pid)   # HERESY 2934
         except OSError:
             exe = ""
+        if not winx.PROC and (sys.platform == "darwin" or os.path.basename(os.path.dirname(exe)).lower() == "cpu"):
+            return None                                # HERESY 2934: the Windows package's engine\cpu, a Mac's Metal engine: no CUDA card of ours
         if "build-sycl" in exe or env.get(b"YUE2_ENGINE", b"").strip() == b"sycl":
             sel = env.get(b"ONEAPI_DEVICE_SELECTOR", b"").decode().strip()      # HERESY 2029: level_zero:N is the N-th Intel card
             n = sel.split(":", 1)[1] if sel.startswith("level_zero:") else ""

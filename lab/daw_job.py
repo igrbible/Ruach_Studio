@@ -56,11 +56,21 @@ for s in info["strips"]:
     names.append(s["name"])
     signals.append((own if path == s["path"] else fit(read(path))).astype(np.float32))
     used[s["name"]] = path
+# HERESY 2948 (comping): the versions the mix's comped stretches name, each a version of its own stem, read as the picked one is
+alts, comped = {}, daw_mix.comp_paths(spec.get("mix")) if (spec.get("mix") or {}).get("schema") == daw_mix.SCHEMA else {}
+for s in info["strips"]:
+    for p in comped.get(s["name"], []):
+        if p not in [v["path"] for v in s["versions"]]:
+            raise SystemExit(f"{p} is not a version of {s['name']}")
+        alts.setdefault(s["name"], {})[p] = fit(read(p)).astype(np.float64)
+for n in comped:
+    if n not in alts:
+        raise SystemExit(f"a stretch comped on {n}, which is no stem of this set")
 files = [{"name": "mix", "file": "mix.flac", "seconds": round(frames / info["rate"], 2)}]
 out.mkdir(parents=True, exist_ok=True)
 if spec.get("bounce"):                                 # HERESY 2316: what the members put into the master, a lane of its own
     b = spec["bounce"]
-    y, report = daw_mix.bounce(info["rate"], [(n, x.astype(np.float64)) for n, x in zip(names, signals)] + [(daw.REST, residual)], spec["mix"], b["members"],
+    y, report = daw_mix.bounce(info["rate"], [(n, x.astype(np.float64)) for n, x in zip(names, signals)] + [(daw.REST, residual)], spec["mix"], b["members"], alts=alts,
                                dry=bool(b.get("dry")))   # HERESY 2366
     pk = float(np.max(np.abs(y))) if y.size else 0.0
     gain_db, fname = 0.0, "bounce.flac"
@@ -79,7 +89,7 @@ if spec.get("bounce"):                                 # HERESY 2316: what the m
     sys.exit(0)
 if (spec.get("mix") or {}).get("schema") == daw_mix.SCHEMA:     # HERESY 1531: the Refiner's mixer
     mixed, report, printed = daw_mix.render(info["rate"], [(n, x.astype(np.float64)) for n, x in zip(names, signals)] + [(daw.REST, residual)],
-                                           spec["mix"], keep=bool(spec.get("print")))
+                                           spec["mix"], keep=bool(spec.get("print")), alts=alts)   # HERESY 2948
     lowered = report["lowered_db"]
     if printed:
         (out / "stems").mkdir(exist_ok=True)

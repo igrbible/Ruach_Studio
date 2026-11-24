@@ -54,7 +54,10 @@ elif src:
             a_, r_ = sf_v.read(str(v), dtype="float32", always_2d=True)
             sf_v.write(str(mixdir / f"{x}.flac"), a_, r_, subtype="PCM_24")
         else:
-            os.link(v or sd / f"{x}.flac", mixdir / f"{x}.flac")
+            try:
+                os.link(v or sd / f"{x}.flac", mixdir / f"{x}.flac")
+            except OSError:                          # HERESY 2934: no hard link (exFAT, FAT32, another drive): a copy
+                shutil.copy2(v or sd / f"{x}.flac", mixdir / f"{x}.flac")
     stems = db.find_stems(str(mixdir))
     db.apply_preset(stems, cfg.get("preset", "balanced"))
     for s in stems:                                  # the page's own levels win over the preset

@@ -720,7 +720,7 @@
     <p class="lead">围绕开放歌曲模型 <b>YuE2</b> 的完整工作室。写下风格和歌词，工作室就在<b>你自己的 GPU</b> 上作曲、演唱并渲染歌曲。你的歌曲、文字和设置永远不会离开它。</p>
     <div class="ctas"><a target="_blank" rel="noopener" class="btn main" href="https://github.com/igrbible/Ruach_Studio">在 GitHub 获取</a> <a target="_blank" rel="noopener" class="btn" href="https://github.com/igrbible/Ruach_Studio/blob/main/docs/GUIDE.zh.md">阅读指南</a> <a target="_blank" rel="noopener" class="btn" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face 上的模型</a> <a target="_blank" rel="noopener" class="btn coffee" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ 给 Viktor 和 Claude 的 24/7 咖啡</a></div>
     <p class="star">⭐ 喜欢这个工作室的话，请给<a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub 上的 YuE2 Studio 仓库</a>点亮一颗星。</p>
-    <span class="rc"><b>2.1.0-rc1</b> · 预发布版：分段编辑器、三栏布局的朗读、工作区表情符号、一个窗口完成 MIDI 导出 · 2026 年 11 月</span>
+    <span class="rc"><b>2.1.0-rc2</b> · 预发布版：安装即带完整的 YuE2，转录器也在内；希伯来语指南；所有工作区选择器都成了资料库的树；短片上的朗读配音 · 2026 年 11 月</span>
   </div>
   </section>
   <div class="wrap hero-after">
@@ -857,7 +857,7 @@
             <tr><td>代码</td><td>开放（AGPL），每次更改都有编号和记录</td><td>封闭</td></tr>
             <tr><td>界面</td><td>一页八个房间，十二种语言；每个控件都有提示，每个房间都有指南；每个房间都有播放器和片段；常用操作有快捷键；可以作为应用安装</td><td>网页应用和手机应用</td></tr>
             <tr class="honest"><td>开箱即用的精致度</td><td><b>较少</b>：混音可能有嗡声（去嗡声有帮助），歌词可能偏离（歌词检查会找到位置），有些乐器 YuE2 弹得单薄或根本不会（LoRA 能教会它）</td><td><b>较多</b></td></tr>
-            <tr class="honest"><td>你需要</td><td>NVIDIA 显卡（全精度运行全部需 24 GB；12–16 GB 和 8 GB 用较小副本），Linux，22.5–25.9 GB 磁盘</td><td>一个浏览器</td></tr>
+            <tr class="honest"><td>你需要</td><td>NVIDIA 显卡（全精度运行全部需 24 GB；12–16 GB 和 8 GB 用较小副本），Linux，29.3–36.0 GB 磁盘</td><td>一个浏览器</td></tr>
           </tbody>
         </table>
       </div>
@@ -1055,7 +1055,7 @@
         <div class="card"><h3>机器</h3><ul>
           <li><b>NVIDIA 显卡</b>：全精度运行全部需 24 GB；12–16 GB 和 8 GB 用较小副本也能运行（影像室需要 24 GB）</li>
           <li><b>Linux</b>（在 Ubuntu 24.04、CUDA 12.8 上制作）；自 2.0.9 起，<b>Windows 11</b> 和 <b>Apple Silicon 的 Mac</b> 提供测试版</li>
-          <li><b>约 23–26 GB</b> 磁盘，在全新安装上实测：程序及其 Python（17 GB），模型（视显卡 5.1 到 8.5 GB，由 <code>fetch-models.sh</code> 下载、固定版本并校验）；画室的模型另需 39–43 GB，💎 素材集 5.6 GB，都只在你要求时才下载</li></ul></div>
+          <li><b>约 29–36 GB</b> 磁盘，在全新安装上实测：程序及其 Python（17 GB），模型，即完整的 YuE2（视显卡 11.9 到 18.6 GB，由 <code>fetch-models.sh</code> 下载、固定版本并校验）；画室的模型另需 39–43 GB，💎 素材集 5.6 GB，都只在你要求时才下载</li></ul></div>
         <div class="need-side">
         <div class="card"><h3>屏幕</h3><ul>
           <li>为 <b>1920×1080、100 %</b> 的浏览器窗口而做</li>
@@ -1067,17 +1067,18 @@
           <li>更多 GPU：在做歌的同时进行训练和实验室的工作</li></ul></div>
         </div>   <!-- HERESY 2026 (Viktor: «Третьей в ту строку перемести карточку `По желанию`») -->
         <!-- HERESY 1807 (Viktor 28.10.2026: «на всех наших карточках чёрным по белому… предупреди… Слишком массивная она у нас») -->
-        <p class="warn-free"><b>不能用免费的云端 GPU。</b>Ruach Studio 无法在 Google Colab、Kaggle 或任何免费的笔记本 GPU 上运行，所以别在那儿浪费一个晚上：它是一整个工作室，不是一个笔记本。它在所在的机器上编译自己的 C++/CUDA 引擎，旁边一直运行着一个服务器和一组 Python 服务，并占用约 23–26 GB 磁盘（加上画室约 62–69 GB）。免费会话的显卡、内存、会被清空的磁盘和几小时的时限都撑不住。它需要你自己的 Linux 电脑，或你租下并长期保留的服务器，配一块 NVIDIA 显卡：全部功能 24 GB，用较小的模型副本 16 GB。</p>
+        <p class="warn-free"><b>不能用免费的云端 GPU。</b>Ruach Studio 无法在 Google Colab、Kaggle 或任何免费的笔记本 GPU 上运行，所以别在那儿浪费一个晚上：它是一整个工作室，不是一个笔记本。它在所在的机器上编译自己的 C++/CUDA 引擎，旁边一直运行着一个服务器和一组 Python 服务，并占用约 29–36 GB 磁盘（加上画室约 69–79 GB）。免费会话的显卡、内存、会被清空的磁盘和几小时的时限都撑不住。它需要你自己的 Linux 电脑，或你租下并长期保留的服务器，配一块 NVIDIA 显卡：全部功能 24 GB，用较小的模型副本 16 GB。</p>
       </div>
     </div>
   </section>
 
   <!-- 12.11.2026, engine-fixes lane (Viktor: «5 по размерам выравнивай повсюду»): since 2.0.7 the install is the least a song needs (fetch-models.sh); the models by the pinned lists anew, the program and its Pythons as measured on 01.11.2026 -->
   <!-- HERESY 1984 (Viktor 01.11.2026: «честную таблицу по объёмам данных, скачиваемых на машину пользователя… на сайт визиту ближе к концу») -->
+  <!-- 23.11.2026, 2.1.0-rc2 (HERESY 2952): the install brings the whole of YuE2, m-a-p's own YuE2-3B and the transcriber with its Refined mode beside our fine-tune and the two decoders; the sizes as README's «What It Downloads» (the install 36.0 / 29.3 / 29.3 GB, every room 248.8 / 132.3 / 127.6 GB) -->
   <section id="downloads">
     <div class="wrap">
       <h2>它下载什么</h2>
-      <p class="sub">按工作室各仓库的固定清单和全新安装的磁盘逐文件测量（1 GB = 10⁹ 字节）。安装只带来一首歌所需的部分：音乐人和资料馆、Ruach Studio 自有的微调模型和两个解码器。音乐人的其他部件经由 引擎 → 模型与 LoRA 下载，其他房间经由 引擎 → 模型与 LoRA → 按房间，它先测量可用空间，放不下的不下载；都只在你要求时才下载。</p>
+      <p class="sub">按工作室各仓库的固定清单和全新安装的磁盘逐文件测量（1 GB = 10⁹ 字节）。安装带来音乐人和资料馆，以及完整的 YuE2：Ruach Studio 自有的微调模型和 m-a-p 原版的 YuE2-3B（采用适合显卡的量化）、两个解码器，以及带 Refined 模式的转录器，所以翻唱和混音从第一次启动就能用。音乐人的其他部件经由 引擎 → 模型与 LoRA 下载，其他房间经由 引擎 → 模型与 LoRA → 按房间，它先测量可用空间，放不下的不下载；都只在你要求时才下载。</p>
       <div class="table dl-table">
         <table>
           <thead><tr><th></th><th>24 GB 显卡</th><th>12–16 GB 显卡</th><th>8 GB 显卡</th></tr></thead>
@@ -1085,16 +1086,18 @@
             <tr><td>程序及在本机构建的引擎（下载 0.2 GB）</td><td>0.9 GB</td><td>0.9 GB</td><td>0.9 GB</td></tr>
             <tr><td>两套 Python 环境，各含适配 CUDA 12.8 的 PyTorch（下载 8.7 GB）</td><td>16.5 GB</td><td>16.5 GB</td><td>16.5 GB</td></tr>
             <tr><td>Ruach Studio 自有的 YuE2 微调模型，采用适合显卡的量化</td><td>7.2 GB</td><td>3.8 GB</td><td>3.8 GB</td></tr>
+            <tr><td>旁边是 m-a-p 原版的 YuE2-3B，采用相同的量化</td><td>7.2 GB</td><td>3.8 GB</td><td>3.8 GB</td></tr>
             <tr><td>两个解码器：m-a-p 的 Standard（它也负责编码）和我们自己的</td><td>1.3 GB</td><td>1.3 GB</td><td>1.3 GB</td></tr>
-            <tr class="sum"><td>安装</td><td>25.9 GB</td><td>22.5 GB</td><td>22.5 GB</td></tr>
-            <tr><td>+ 音乐人的部件：我们的第二个解码器、转录器、Whisper、分轨模型、UniverSR 与 Apollo-vocal、LoRA</td><td>8.8 GB</td><td>8.8 GB</td><td>8.8 GB</td></tr>
+            <tr><td>用于翻唱的转录器及其 Refined 模式</td><td>2.9 GB</td><td>2.9 GB</td><td>2.9 GB</td></tr>
+            <tr class="sum"><td>安装</td><td>36.0 GB</td><td>29.3 GB</td><td>29.3 GB</td></tr>
+            <tr><td>+ 音乐人的部件：我们的第二个解码器、Whisper、分轨模型、UniverSR 与 Apollo-vocal、LoRA</td><td>7.8 GB</td><td>7.8 GB</td><td>7.8 GB</td></tr>
             <tr><td>+ 写作室：经 llama.cpp 运行的语言模型</td><td>7.4 GB</td><td>7.4 GB</td><td>6.2 GB</td></tr>
             <tr><td>+ 精修室：MuScriptor 与 FlashSR</td><td>6.1 GB</td><td>6.1 GB</td><td>6.1 GB</td></tr>
             <tr><td>+ 朗读：Fish Audio Drama 3（24 GB 用 Q8_0，以下用 Q4_K）、重音词典与 audio.cpp</td><td>42.1 GB</td><td>26.0 GB</td><td>26.0 GB</td></tr>
             <tr><td>+ 画室：其助手与 Qwen-Image 2512（24 GB 用 Q6，以下用 Q4）</td><td>42.9 GB</td><td>39.3 GB</td><td>39.3 GB</td></tr>
             <tr><td>+ 影像室：MiniMax H3 与 SeedVR2</td><td>86.3 GB</td><td>需要 24 GB</td><td>需要 24 GB</td></tr>
             <tr><td>+ LoRA 训练室：其基座与风格聆听者</td><td>20.2 GB</td><td>16.3 GB</td><td>12.9 GB</td></tr>
-            <tr class="sum"><td>全部房间</td><td>239.7 GB</td><td>126.5 GB</td><td>121.8 GB</td></tr>
+            <tr class="sum"><td>全部房间</td><td>248.8 GB</td><td>132.3 GB</td><td>127.6 GB</td></tr>
           </tbody>
         </table>
       </div>
@@ -1105,7 +1108,7 @@
   <section id="next">
     <div class="wrap">
       <h2>接下来</h2>
-      <p class="sub">2.1.0-rc1 是我们每天创作自己的歌曲和朗读所用的 Studio。以下是正在路上的较大部分，面向 2.1.0 及以后。</p>
+      <p class="sub">2.1.0-rc2 是我们每天创作自己的歌曲和朗读所用的 Studio。以下是正在路上的较大部分，面向 2.1.0 及以后。</p>
       <ul class="feats">
         <li><b>朗读，更进一步。</b>整本书作为一个带章节的文件下载，单独编辑某一部分并把整本书送进精修室，以及根据上下文带元音朗读希伯来文。</li>
         <li><b>DAW，更进一步。</b>把你在 MIDI 键盘上弹的写进乐谱的钢琴卷帘，以及 DAW 工程在 REAPER、Waveform 和 Bitwig 中仍需要的崩溃测试。</li>
@@ -1442,7 +1445,7 @@
     </div>
   </div>
   <div class="wrap">
-    <div class="foot-by">鲁阿赫工作室 · 2.1.0-rc1 · <a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a> 的作品</div> <div class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Awesome-YUE2" title="我们精选的 YuE2 社区全部作品清单">Awesome YUE2</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">更新记录</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ 24/7 咖啡</a></div>
+    <div class="foot-by">鲁阿赫工作室 · 2.1.0-rc2 · <a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a> 的作品</div> <div class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Awesome-YUE2" title="我们精选的 YuE2 社区全部作品清单">Awesome YUE2</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">更新记录</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ 24/7 咖啡</a></div>
   </div>
 </footer>
 

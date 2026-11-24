@@ -290,7 +290,7 @@
       var oa = {};                                    // HERESY 1559
       Object.keys(AUTO_P).forEach(function (k2) { var pp = s.autos[k2]; if (k2 !== "volume" && Array.isArray(pp) && pp.length) oa[k2] = pp.slice().sort(function (a, b) { return a[0] - b[0]; }).map(function (p) { return shaped(p, [rnd(p[0], 3), rnd(p[1], 3)]); }); });
       if (Object.keys(oa).length) o.autos = oa;
-      if (s.edits.length) o.edits = s.edits.map(function (e2) { return { op: e2.op === "move" ? "move" : "copy", a: rnd(e2.a, 3), b: rnd(e2.b, 3), to: rnd(e2.to, 3) }; });   // HERESY 1564
+      if (s.edits.length) o.edits = s.edits.map(function (e2) { var oe = { op: e2.op === "move" ? "move" : "copy", a: rnd(e2.a, 3), b: rnd(e2.b, 3), to: rnd(e2.to, 3) }; if (e2.path && oe.op === "copy") oe.path = String(e2.path); return oe; });   // HERESY 1564; 2948: a comped stretch's version
       if (Object.keys(o).length) out.strips[n] = o;
     });
     out.reverb = { preset: b.reverb.preset };
@@ -521,8 +521,8 @@
       gridLoad();                                      // HERESY 2313: the take's bar grid, heard once a take
     }).catch(function (e) { if (token === S.token) say(e.message, true); });
   }
-  function loadPeaks(name) {
-    var path = versionOf(name), k = name + "|" + path;
+  function loadPeaks(name, other) {                  // HERESY 2948: `other`, a comped stretch's version, its wave for the stretch
+    var path = other || versionOf(name), k = name + "|" + path;
     if (S.peaks[k]) return draw(name);
     getJson("/daw/peaks?" + q({ name: S.take.name, set: S.set, strip: name, path: path })).then(function (d) {
       S.peaks[k] = d.peaks;
@@ -930,8 +930,11 @@
       if (xb < 0 || xa > w) return;
       g.clearRect(xa, 0, xb - xa, h);
       g.fillStyle = acc; g.globalAlpha = 0.12; g.fillRect(xa, 0, xb - xa, h); g.globalAlpha = 1;
-      if (sp && sp.data) specCols(c, g, n, Math.max(0, Math.floor(xa)), Math.min(w, Math.ceil(xb)), w, function (px) { return e2.a + (xt(px, w) - e2.to); }, false);   // 2871
-      else if (pk) {
+      var epk = e2.path ? S.peaks[n + "|" + e2.path] : pk;   // HERESY 2948: a comped stretch shows its own version's wave (none while it comes)
+      if (e2.path && !epk) loadPeaks(n, e2.path);
+      if (sp && sp.data && !e2.path) specCols(c, g, n, Math.max(0, Math.floor(xa)), Math.min(w, Math.ceil(xb)), w, function (px) { return e2.a + (xt(px, w) - e2.to); }, false);   // 2871
+      else if (epk) {
+        var pk0 = pk; pk = epk;
         g.fillStyle = on;
         var base2 = h / 2, amp2 = h / 2 - 1;
         for (var px2 = Math.max(0, Math.floor(xa)); px2 < Math.min(w, Math.ceil(xb)); px2++) {
@@ -940,9 +943,11 @@
           var yy = Math.max(1, Math.min(amp2, mm * amp2 * vg(px2)));   // 1968: the level's line over a laid stretch too
           g.fillRect(px2, base2 - yy, 1, 2 * yy);
         }
+        pk = pk0;
       }
       g.strokeStyle = acc; g.lineWidth = 1; g.strokeRect(Math.round(xa) + 0.5, 0.5, Math.max(1, Math.round(xb - xa) - 1), h - 1);
-      if (xb - xa > 40) { g.fillStyle = acc; g.font = "10px sans-serif"; g.fillText((e2.op === "move" ? "\u21e2 " : "\u29c9 ") + clock(e2.a), xa + 4, 11); }
+      if (e2.path && xb - xa > 24) { g.fillStyle = acc; g.font = "10px sans-serif"; g.fillText("\u21c4 " + compLabel(n, e2.path), xa + 4, 11); }   // HERESY 2948: which version it is from
+      else if (xb - xa > 40) { g.fillStyle = acc; g.font = "10px sans-serif"; g.fillText((e2.op === "move" ? "\u21e2 " : "\u29c9 ") + clock(e2.a), xa + 4, 11); }
     });
     var fz = fadeOf();                                // HERESY 1756: the song's fade over the lane, dark as it is low; after the end, dark
     if (fz.fin > 0 || fz.fout > 0 || fz.endSet) {
@@ -1536,7 +1541,7 @@
     strip(n).edits.forEach(function (e2) {
       var d0 = e2.to, d1 = Math.min(end, e2.to + (e2.b - e2.a)), s0 = Math.max(d0, at, S.startAt), s1 = Math.min(d1, at + CHUNK);
       if (s1 - s0 < 0.005) return;
-      fetch("/lab/daw/chunk?" + q({ name: S.take.name, set: S.set, strip: n, path: versionOf(n), start: Math.max(0, e2.a + (s0 - d0) - (strip(n).offset_s || 0)), seconds: s1 - s0 }))   // HERESY 1989
+      fetch("/lab/daw/chunk?" + q({ name: S.take.name, set: S.set, strip: n, path: e2.path || versionOf(n), start: Math.max(0, e2.a + (s0 - d0) - (strip(n).offset_s || 0)), seconds: s1 - s0 }))   // HERESY 1989; 2948: a comped stretch from its version
         .then(function (r) { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
         .then(function (buf) { return ctx.decodeAudioData(buf); })
         .then(function (b) {
@@ -2225,8 +2230,8 @@
       var ea = e2.to, eb = e2.to + (e2.b - e2.a);
       if (eb <= a || ea >= b) { eds.push(e2); return; }
       if (e2.op === "move") cuts.push([e2.a, e2.b]);   // a move's source stays silent when the move is cut into pieces
-      if (ea < a && a - ea >= 0.01) eds.push({ op: "copy", a: e2.a, b: r3(e2.a + (a - ea)), to: e2.to });
-      if (eb > b && eb - b >= 0.01) eds.push({ op: "copy", a: r3(e2.a + (b - ea)), b: e2.b, to: r3(b) });
+      if (ea < a && a - ea >= 0.01) eds.push(withPath({ op: "copy", a: e2.a, b: r3(e2.a + (a - ea)), to: e2.to }, e2));   // 2948: a comped one keeps its version
+      if (eb > b && eb - b >= 0.01) eds.push(withPath({ op: "copy", a: r3(e2.a + (b - ea)), b: e2.b, to: r3(b) }, e2));
     });
     cuts.push(f ? [r3(a), r3(b), f, f] : [r3(a), r3(b)]);   // HERESY 1975: its fades when it is a stretch cut out
     s.muted = mergeCuts(cuts);
@@ -2241,11 +2246,32 @@
     emit("change", { n: n, key: "muted" });
     say(tr("Silenced {0}–{1}: a right-click on it gives it back").replace("{0}", clock(p.a)).replace("{1}", clock(p.b)));
   }
+  // HERESY 2948 (the agent's item E18 after 2.1.0-rc1; Viktor 11.11.2026 «Делай как советуешь»: the lane's spectral view (2871), then comping by the
+  // stem's versions): the selection taken from another version of the same stem, laid over the lane at its own place as any laid stretch (10 ms
+  // crossfades), the version heard everywhere else; drawn with that version's wave and name; a right-click takes it away as any laid stretch.
+  // Rendered the same on Forge (daw_mix's edits with a path, daw_play's pieces); a version gone since is said by the render, never replaced
+  function withPath(o, from) { if (from && from.path) o.path = from.path; return o; }
+  function stemVersions(n) { var st = S.info ? S.info.strips.filter(function (x) { return x.name === n; })[0] : null; return st ? st.versions || [] : []; }
+  function compLabel(n, path) { var v = stemVersions(n).filter(function (x) { return x.path === path; })[0]; return v ? verLabel(v) : tr("a version gone"); }
+  function compFrom(n, path) {
+    var p = S.pick, s = S.strips[n] || (S.strips[n] = {});
+    if (!p || p.n !== n) return;
+    if (!Array.isArray(s.edits)) s.edits = [];
+    if (s.edits.length >= MAX_EDITS) { say(tr("A lane holds at most 64 laid stretches: take one away first (a right-click on it)"), true); return; }
+    var own = s.edits.filter(function (e2) { return e2.to <= p.a + 0.002 && p.b <= e2.to + (e2.b - e2.a) + 0.002; }).pop();
+    var sa = own ? r3(own.a + (p.a - own.to)) : r3(p.a);   // inside a laid stretch: the same moment of the song as it lays there
+    mark();
+    s.edits.push({ op: "copy", a: sa, b: r3(sa + (p.b - p.a)), to: r3(p.a), path: path });
+    keep(); loadPeaks(n, path); draw(n); rangesNow(n);
+    if (S.playing) play(pos());
+    emit("change", { n: n, key: "edits" });
+    say(tr("{0}–{1} now from «{2}»").replace("{0}", clock(p.a)).replace("{1}", clock(p.b)).replace("{2}", compLabel(n, path)));
+  }
   function clipTake(kk) {                            // Ctrl+C keeps the selection to lay; Ctrl+X keeps it and silences it here at once
     var p = S.pick;
     S.clip = { n: p.n, a: p.a, b: p.b, op: "copy" };
     var s = S.strips[p.n], own = s && Array.isArray(s.edits) ? s.edits.filter(function (e2) { return e2.to <= p.a + 0.002 && p.b <= e2.to + (e2.b - e2.a) + 0.002; }).pop() : null;
-    if (own) { S.clip.a = r3(own.a + (p.a - own.to)); S.clip.b = r3(S.clip.a + (p.b - p.a)); }   // inside a laid stretch: what it lays there
+    if (own) { S.clip.a = r3(own.a + (p.a - own.to)); S.clip.b = r3(S.clip.a + (p.b - p.a)); withPath(S.clip, own); }   // inside a laid stretch: what it lays there (2948: from its version)
     if (kk === "x") {
       mark(); silenceRange(p.n, p.a, p.b, HOLE_F); S.pick = null;   // HERESY 1975: the place cut out fades into its silence and rises out of it
       keep(); draw(p.n); rangesNow(p.n); if (S.playing) play(pos());
@@ -2258,7 +2284,7 @@
     if (!Array.isArray(sc.edits)) sc.edits = [];
     if (sc.edits.length >= MAX_EDITS) { say(tr("A lane holds at most 64 laid stretches: take one away first (a right-click on it)"), true); return; }
     mark();
-    sc.edits.push({ op: "copy", a: cl.a, b: cl.b, to: to });
+    sc.edits.push(withPath({ op: "copy", a: cl.a, b: cl.b, to: to }, cl));
     S.pick = { n: cl.n, a: to, b: r3(Math.min(S.info.seconds, to + (cl.b - cl.a))) };
     keep(); draw(cl.n); rangesNow(cl.n);
     if (S.playing) play(pos());
@@ -2274,11 +2300,11 @@
     if (!(whole && !copy) && s.edits.length >= MAX_EDITS - 2) { say(tr("A lane holds at most 64 laid stretches: take one away first (a right-click on it)"), true); draw(n); return; }
     mark();
     if (whole) {
-      if (copy) s.edits.push({ op: "copy", a: own.a, b: own.b, to: to }); else own.to = to;
+      if (copy) s.edits.push(withPath({ op: "copy", a: own.a, b: own.b, to: to }, own)); else own.to = to;
     } else if (own) {                                 // a part of a laid stretch: that part of what it lays, the rest of it stays
       var sa = r3(own.a + (p.a - own.to));
       if (!copy) silenceRange(n, p.a, p.b, HOLE_F);
-      s.edits.push({ op: "copy", a: sa, b: r3(sa + len), to: to });
+      s.edits.push(withPath({ op: "copy", a: sa, b: r3(sa + len), to: to }, own));
     } else {                                          // HERESY 1975: the lane's own sound carried away leaves a cut that fades and rises (its handles, a right-drag, its box)
       if (!copy) s.muted = mergeCuts((Array.isArray(s.muted) ? s.muted : []).concat([[p.a, p.b, HOLE_F, HOLE_F]]));
       s.edits.push({ op: "copy", a: p.a, b: p.b, to: to });   // laid from the sound as it was (the render cuts first, then lays)
@@ -2391,6 +2417,13 @@
     b._key = function (e) { if (e.key === "Escape") { e.stopImmediatePropagation(); e.preventDefault(); fadeBoxClose(); } };   // its Esc its own: not the canvas window's under it
     document.addEventListener("pointerdown", b._out, true); window.addEventListener("keydown", b._key, true);
   }
+  function compItem(n) {                             // HERESY 2948: the selection from another version of this stem (its versions but the lane's own)
+    var cur = versionOf(n), vs = stemVersions(n).filter(function (v) { return v.path !== cur; });
+    if (n === REST || !vs.length) return { label: "Take it from another version", icon: "\u21c4", muted: true,
+      hint: n === REST ? "The rest has no versions" : "This stem has one version: a file made from it (a cleaned voice…) is another" };
+    return { label: "Take it from another version", icon: "\u21c4", hint: "The selection from another version of this stem, laid over the lane with 10 ms crossfades; the lane's own version everywhere else",
+      items: vs.map(function (v) { return { label: verLabel(v), raw: true, action: function () { compFrom(n, v.path); } }; }) };
+  }
   function pickMenu(n, x, y) {
     var p = S.pick;
     window.HeresyMenu.open(x, y, [
@@ -2398,6 +2431,7 @@
       { label: "Cut out", icon: "✂", action: function () { clipTake("x"); } },
       { label: "Lay at the playhead", icon: "↓", disabled: !S.clip || S.clip.n !== n, action: function () { clipLay(); } },
       { label: "Silence it", icon: "✕", action: function () { pickSilence(); } },
+      compItem(n),                                   // HERESY 2948
       { sep: true },
       { label: "Fade in from silence", icon: "◢", action: function () { pickLevel(n, "in"); } },
       { label: "Fade out into silence", icon: "◣", action: function () { pickLevel(n, "out"); } },
@@ -3531,6 +3565,7 @@
     grid: { data: gridData, load: gridLoad, set: gridSet, toggle: gridToggle, snap: function (n, t, c) { return snapT(n, t, c, null); } },   // HERESY 2313
     ref: { choose: refChoose, title: refTitle, menu: refMenu },   // HERESY 2315
     bounce: bounceRun, bounceItems: bounceItems,                  // HERESY 2316
+    comp: { pick: function (n, a, b) { pickSet(n, a, b); }, item: compItem, from: compFrom },   // HERESY 2948: comping, for the checks
     shapes: { expand: expandPts, lfo: lfoPoints, set: shapeSet, seg: segAt },   // HERESY 2318
     state: function () { var g = S.graph; return { take: S.take && S.take.name, set: S.set, sets: S.sets.length, strips: names(), playing: S.playing, at: pos(), srcs: S.srcs.length, versions: S.versions, busy: S.busy,
       zoom: S.view.zoom, t0: S.view.t0, loop: S.loop, loopOn: S.loopOn, focus: S.focus, meters: Object.assign({}, S.meters),   // HERESY 1501

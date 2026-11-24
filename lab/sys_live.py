@@ -12,6 +12,7 @@ Windows the disks are its drives (HERESY 2924).
 import collections
 import os
 import platform
+import re
 import shutil
 import threading
 import time
@@ -95,6 +96,8 @@ def _disks():
         return DISKS["list"]
     if winx.NT:                                          # HERESY 2924: no /proc on Windows: its drives
         return _disks_nt()
+    if not winx.PROC:                                    # HERESY 2934: macOS, no /proc either: its disks by psutil (the bar listed none)
+        return _disks_mac()
     found = {}
     try:
         with open("/proc/self/mounts") as f:
@@ -173,6 +176,106 @@ def _disks_nt():
     return out
 
 
+def _disks_mac():
+    """HERESY 2934: a Mac's disks (no /proc there, so the bar listed none): one a whole disk (diskN, an APFS container with its volumes) by
+    psutil's partitions, shown by the volume a person knows it by (/ for the system's, else its first); the system's disk first, then the
+    Studio's. Its free room is the container's, read once through that volume (APFS volumes share it)."""
+    try:
+        import psutil
+        parts = psutil.disk_partitions(all=False)
+    except Exception:  # noqa: BLE001   a disk that will not say leaves the bar without disks, never the lab without its bar
+        parts = []
+    found = {}
+    for p in parts:
+        m = re.match(r"^/dev/(disk\d+)", p.device or "")
+        mnt = p.mountpoint or ""
+        if not m or (mnt.startswith("/System/Volumes/") and mnt != "/System/Volumes/Data"):
+            continue                                     # the system's own volumes (VM, Preboot, Update…): not where anything is kept
+        found.setdefault(m.group(1), {"mounts": [], "fs": p.fstype or ""})["mounts"].append(mnt)
+    studio = set()
+    for w in WATCH:
+        try:
+            studio.add(os.stat(w).st_dev)
+        except OSError:
+            pass
+    out = []
+    for disk, d in found.items():
+        devs = set()
+        for mnt in d["mounts"]:
+            try:
+                devs.add(os.stat(mnt).st_dev)
+            except OSError:
+                pass
+        role = " ".join(r for r, ok in (("system", "/" in d["mounts"]), ("studio", bool(devs & studio))) if ok)
+        shown = "/" if "/" in d["mounts"] else sorted(d["mounts"], key=lambda m: (len(m), m))[0]
+        out.append({"id": disk, "kind": "", "usb": False, "model": f"{disk} {d['fs']}".strip(), "mounts": [shown], "role": role, "devs": [disk]})
+    rank = {"system studio": 0, "system": 0, "studio": 1, "": 2}
+    out.sort(key=lambda d: (rank.get(d["role"], 2), d["id"]))
+    DISKS.update(list=out, at=time.time())
+    return out
+
+
+NT_DRIVE = {}                                            # HERESY 2934: a Windows drive letter's physical disk number, asked once a letter
+
+
+def _drive_number(letter):
+    """HERESY 2934: the physical disk a Windows drive letter lies on (its PhysicalDriveN's N), by IOCTL_STORAGE_GET_DEVICE_NUMBER on the
+    volume opened with no access asked (no administrator needed); None when it will not say (a volume over several disks, a network drive)."""
+    if letter in NT_DRIVE:
+        return NT_DRIVE[letter]
+    n = None
+    try:
+        import ctypes
+        from ctypes import wintypes
+        k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        k32.CreateFileW.restype = wintypes.HANDLE
+        k32.CreateFileW.argtypes = [wintypes.LPCWSTR, wintypes.DWORD, wintypes.DWORD, wintypes.LPVOID, wintypes.DWORD, wintypes.DWORD,
+                                    wintypes.HANDLE]
+        k32.DeviceIoControl.argtypes = [wintypes.HANDLE, wintypes.DWORD, wintypes.LPVOID, wintypes.DWORD, wintypes.LPVOID, wintypes.DWORD,
+                                        ctypes.POINTER(wintypes.DWORD), wintypes.LPVOID]
+        k32.CloseHandle.argtypes = [wintypes.HANDLE]
+        h = k32.CreateFileW("\\\\.\\" + str(letter).rstrip("\\/"), 0, 3, None, 3, 0, None)   # FILE_SHARE_READ | WRITE, OPEN_EXISTING
+        if h and h != ctypes.c_void_p(-1).value:
+            try:
+                class Number(ctypes.Structure):
+                    _fields_ = [("kind", wintypes.DWORD), ("number", wintypes.DWORD), ("partition", wintypes.DWORD)]
+                got, size = Number(), wintypes.DWORD()
+                if k32.DeviceIoControl(h, 0x2D1080, None, 0, ctypes.byref(got), ctypes.sizeof(got), ctypes.byref(size), None):
+                    n = int(got.number)
+            finally:
+                k32.CloseHandle(h)
+    except (OSError, AttributeError, ValueError, TypeError):
+        n = None
+    NT_DRIVE[letter] = n
+    return n
+
+
+def _diskstats_psutil(ids):
+    """HERESY 2934 (the third Windows soak: the system bar's disk speeds were «—»): /proc/diskstats' three numbers from psutil's counters, in
+    its units (bytes as 512-byte sectors, ms busy). Windows counts physical disks (PhysicalDriveN), each drive letter read from the disk it lies
+    on (two letters of one disk show the same speeds); a Mac its diskN. Busy is the system's own where it keeps one, else the reads' and writes'
+    own times (Windows), which the bar caps at 100 %."""
+    try:
+        import psutil
+        io = psutil.disk_io_counters(perdisk=True) or {}
+    except Exception:  # noqa: BLE001   no counters (no psutil, or the system's switched off): no speeds, «—» as before
+        return {}
+    out = {}
+    for d in ids:
+        key = d
+        if winx.NT:
+            n = _drive_number(d)
+            key = f"PhysicalDrive{n}" if n is not None else None
+        c = io.get(key) if key else None
+        if c is None:
+            continue
+        busy = getattr(c, "busy_time", None)
+        if busy is None:
+            busy = (getattr(c, "read_time", 0) or 0) + (getattr(c, "write_time", 0) or 0)
+        out[d] = (int(c.read_bytes) // 512, int(c.write_bytes) // 512, int(busy))
+    return out
+
+
 def _free(disks):
     """Free and total bytes of each disk (all it has mounted, each filesystem once), every FREE_EVERY seconds."""
     if DISKS["free"] and time.time() - DISKS["free_at"] < FREE_EVERY:
@@ -198,6 +301,8 @@ def _free(disks):
 
 def _diskstats(ids):
     """{disk: (sectors read, sectors written, ms busy)} for the disks named."""
+    if not winx.PROC:                                    # HERESY 2934: Windows and macOS, from psutil's counters
+        return _diskstats_psutil(ids)
     out = {}
     try:
         with open("/proc/diskstats") as f:
@@ -236,7 +341,7 @@ def _run():
                 used, total, cache, sw_used, sw_total = _meminfo()
                 _free(disks)
             except OSError as e:
-                STATE["error"] = f"the kernel's numbers could not be read ({e})"
+                STATE["error"] = f"the kernel's numbers could not be read ({winx.said(e)})"   # HERESY 2934
                 time.sleep(1)
                 continue
             STATE["error"] = ""

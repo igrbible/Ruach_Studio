@@ -49,4 +49,6 @@ fi
 # the browser opens once the engine answers (up to five minutes); the engine itself runs in this window
 ( t=0; while [ $t -lt 300 ]; do up http://127.0.0.1:7777/hardware && { open http://127.0.0.1:7777; exit 0; }; sleep 2; t=$((t + 2)); done
   echo "The Studio did not answer in 5 minutes: the lines above say why." ) &
-exec .venv/bin/python launcher/start.py
+# HERESY 2980 (a tester's debug journal, Windows native 2.1.0-rc1, 23.11.2026: its studio.log and lab.log said «no journal … [WinError 2]» and nothing else): the engine's lines to tmp/logs/engine.log too, as the lab's
+[ "$(wc -c < tmp/logs/engine.log 2>/dev/null || echo 0)" -gt 4000000 ] && mv -f tmp/logs/engine.log tmp/logs/engine.1.log
+.venv/bin/python launcher/start.py 2>&1 | tee -a tmp/logs/engine.log

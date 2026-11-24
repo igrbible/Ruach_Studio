@@ -667,11 +667,14 @@ check("  in a lifted frame (drawn 1.2 larger) the mark sits on the words: inside
 const tpMusic = await ev(`(() => { const s = document.getElementById("setupLib"); s.value = "b0"; s.dispatchEvent(new Event("change", { bubbles: true }));
   return { off: document.getElementById("tpRow").classList.contains("is-off"), pick: document.getElementById("tpPick").disabled, apply: document.getElementById("tpApply").disabled,
     tip: document.getElementById("tpRow").dataset.tip || "" }; })()`);
+// HERESY 2942 (Viktor 22.11.2026: «В Музыкальной модели… убрать профили наррации»): the built-in Speech is gone (readings live in the Narrator); the
+// text profile waits for a speech profile of one's own, his built-in music one leaves it off too
 const tpSpeech = await ev(`(() => { const s = document.getElementById("setupLib"); s.value = "b1"; s.dispatchEvent(new Event("change", { bubbles: true }));
-  const out = { off: document.getElementById("tpRow").classList.contains("is-off"), pick: document.getElementById("tpPick").disabled, apply: document.getElementById("tpApply").disabled };
+  const out = { off: document.getElementById("tpRow").classList.contains("is-off"), pick: document.getElementById("tpPick").disabled, apply: document.getElementById("tpApply").disabled,
+    builtin: [...s.querySelectorAll('optgroup[label="built in"] option')].map((o) => o.textContent).join("|") };
   s.value = "b0"; s.dispatchEvent(new Event("change", { bubbles: true })); return out; })()`);
-check("  the text profile is off (dimmed, its tip saying why) with a music profile chosen, and on with Speech",
-  tpMusic.off && tpMusic.pick && tpMusic.apply && /pick a Speech profile/.test(tpMusic.tip) && !tpSpeech.off && !tpSpeech.pick && !tpSpeech.apply,
+check("  the text profile is off (dimmed, its tip saying why) with a music profile chosen, his own too; no built-in Speech (2942: readings live in the Narrator)",
+  tpMusic.off && tpMusic.pick && tpMusic.apply && /speech profile of your own/.test(tpMusic.tip) && tpSpeech.off && tpSpeech.pick && tpSpeech.apply && !/Speech/.test(tpSpeech.builtin),
   JSON.stringify({ tpMusic, tpSpeech }));
 await ev(`(() => { const a = document.getElementById("lyrics"); a.value = ""; a.dispatchEvent(new Event("input", { bubbles: true })); return true; })()`);
 
@@ -8937,7 +8940,7 @@ const pf01 = await ev(`(async () => {
   document.querySelector('.topbar [data-tab="create"]').click(); await wait(200);
   const toasts = () => [...document.querySelectorAll("#toasts .toast")].map((t) => t.textContent);
   const before = { cfg: $("cfg").value, touched: $("cfg").dataset.touched, lyr: $("cfgLyrics").value, len: $("maxLength").value };
-  for (const v of ["b2", "b1", "b0"]) {                 // the engine's own defaults (b0) last: the checks after this one find the form as they knew it
+  for (const v of ["b1", "b0"]) {                       // the engine's own defaults (b0) last: the checks after this one find the form as they knew it (2942: Speech gone)
     $("setupLib").value = v; $("setupLib").dispatchEvent(new Event("change", { bubbles: true })); await wait(60);
     $("setupApply").click(); await wait(250);
     const said = toasts().slice(-1).join(" | ");           // the newest (a full stack drops its oldest, so its length need not grow)
@@ -8947,8 +8950,8 @@ const pf01 = await ev(`(async () => {
   $("cfg").value = before.cfg; $("cfg").dataset.touched = before.touched || ""; $("cfgLyrics").value = before.lyr; $("maxLength").value = before.len;
   $("cfg").dispatchEvent(new Event("input", { bubbles: true }));
   return out; })()`);
-check("the three built-in profiles apply without an error, each at 1.6 / 2.2 (the lights green); his «Musical Heresy of Creator's Ear» the third, 10 minutes long",
-  pf01.length === 3 && pf01.every((p) => p.ok && parseFloat(p.cfg) === 1.6 && parseFloat(p.lyr) === 2.2 && p.light === "is-green") &&
+check("the built-in profiles (2942: Music and his own) apply without an error, each at 1.6 / 2.2 (the lights green); his «Musical Heresy of Creator's Ear» the second, 10 minutes long",
+  pf01.length === 2 && pf01.every((p) => p.ok && parseFloat(p.cfg) === 1.6 && parseFloat(p.lyr) === 2.2 && p.light === "is-green") &&
   /Musical Heresy of Creator's Ear/.test(pf01[0].name) && parseFloat(pf01[0].len) >= 600, JSON.stringify(pf01));
 // HERESY 1402 (Viktor: «Перенеси кнопку Reset sampling на новую строку с выключкой вправо. Она вылазит за границу»)
 const rs02 = await ev(`(async () => {
@@ -11223,7 +11226,8 @@ const wg34 = await ev(`(async () => {
     return real(u, o); };
   const was = localStorage.getItem("yue2.workspace"), o = { was: localStorage.getItem("yue2.workspace") };
   document.querySelectorAll(".hd-back:not(.is-leaving) .hd-no").forEach((b) => b.click()); await wait(250);   // one an earlier check left open
-  const items = () => [...document.querySelectorAll(".hd-back:not(.is-leaving) .hd-item .hd-item-label")].map((e) => e.textContent);
+  const items = () => [...document.querySelectorAll(".hd-back:not(.is-leaving) .hd-item:not(.is-muted) .hd-item-label")].map((e) => e.textContent);   // HERESY 2956: the closed ones there, muted
+  const mutedRows = () => [...document.querySelectorAll(".hd-back:not(.is-leaving) .hd-item.is-muted .hd-item-label")].map((e) => e.textContent);
   localStorage.setItem("yue2.workspace", "💎 Probes / Strings");
   await HC.reload(); await wait(80);
   o.closed = [HC.current(), HC.landable(), HC.closedWs("💎 Probes"), HC.closedWs("Ice"), HC.closedWs("Album / B-sides"), document.getElementById("wsCurrent").classList.contains("is-closed")];
@@ -11234,7 +11238,7 @@ const wg34 = await ev(`(async () => {
   const g1 = window.ruachWsGuard(), g2 = window.ruachWsGuard();
   await until(() => document.querySelector(".hd-back:not(.is-leaving) .hd-item"), 3000);
   o.dialogs = document.querySelectorAll(".hd-back:not(.is-leaving)").length;
-  o.offered = items();
+  o.offered = items(); o.muted = mutedRows();
   o.said = (document.querySelector(".hd-back:not(.is-leaving) .hd-title") || {}).textContent || "";
   [...document.querySelectorAll(".hd-back:not(.is-leaving) .hd-item")].find((b) => b.textContent.startsWith("Album")).click();
   o.got = await Promise.race([Promise.all([g1, g2]), wait(5000).then(() => ["timeout", String(!!document.querySelector(".hd-back"))])]);
@@ -11266,8 +11270,8 @@ const wg34 = await ev(`(async () => {
   return o; })()`);
 check("a 💎 set's section in hand is no place for new takes (marked so in the header), and a take landing then is added nowhere",
   JSON.stringify(wg34.closed) === '["💎 Probes / Strings","",true,true,false,true]' && wg34.landedSent === 0, JSON.stringify(wg34));
-check("  two runs sent together ask once, naming why; the 💎 sets and the frozen one not offered; the pick answers both",
-  wg34.dialogs === 1 && wg34.offered.join("|") === "Album|B-sides" && /takes no new takes/.test(wg34.said) && wg34.got.join() === "Album,Album" && wg34.after === "Album", JSON.stringify(wg34));
+check("  two runs sent together ask once, naming why; the 💎 sets and the frozen one not offered (there, muted: 2956); the pick answers both",
+  wg34.dialogs === 1 && wg34.offered.join("|") === "Album|B-sides" && (wg34.muted || []).join("|") === "Ice|Probes|Strings" && /takes no new takes/.test(wg34.said) && wg34.got.join() === "Album,Album" && wg34.after === "Album", JSON.stringify(wg34));
 check("  «Send nothing» sends nothing; a new install gets «My songs» made and in hand without a question; a silent lab: nothing sent, said why",
   /^Nothing sent: choose a workspace/.test(wg34.refused) && wg34.first.join("|") === "My songs|My songs|My songs" && /^Nothing sent: the Librarian/.test(wg34.down),
   JSON.stringify({ refused: wg34.refused, first: wg34.first, down: wg34.down, was: wg34.was }));
@@ -11999,7 +12003,7 @@ check("A GPU step shows «GPU» beside its button (a CPU step does not); its «p
   pl65.picked === "derived/stems-eight/lead_vocal.flac" && pl65.plainPicked === "" && pl65.kept === "", JSON.stringify(pl65));
 
 // HERESY 1169 · 1468 (Viktor 15.10.2026: «Для муз профиля я бы макс на 10 минут ограничил, но дефолт 8 минут… В дикторском… макс на 15 минут»; «выводи также время вывода… под замком»)
-section("The song's length kept by its mode (music 10:00, Direct 15:00); Output's length beside «Song ≈» in the LoRAs, locked, and from there Max length; Export to DAW says how Chrome lets a .dawproject through");
+section("The song's length kept within 10:00 (2942: Direct too, its 15:00 was Speech's, now the Narrator's); Output's length beside «Song ≈» in the LoRAs, locked, and from there Max length; Export to DAW says how Chrome lets a .dawproject through");
 const ln68 = await ev(`(async () => {
   const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, o = {};
   const A = "test-1468/a/lora.safetensors";
@@ -12055,8 +12059,8 @@ const ln68 = await ev(`(async () => {
   o.chrome = ch ? ch.textContent : "";
   window.HeresyDaw.close();
   return o; })()`);
-check("Music's Max length kept within 10:00 (12:00 typed comes back as 10:00, said); Direct takes 14:00 and stops at 15:00; back in music 15:00 comes down to 10:00",
-  ln68.music === "600/10:00" && ln68.musicSaid && ln68.direct === "840/14:00" && ln68.directTop === "900" && ln68.back === "600/10:00", JSON.stringify(ln68));
+check("Music's Max length kept within 10:00 (12:00 typed comes back as 10:00, said); Direct too since 2942 (14:00 and 16:00 come back to 10:00); back in music 10:00",
+  ln68.music === "600/10:00" && ln68.musicSaid && ln68.direct === "600/10:00" && ln68.directTop === "600" && ln68.back === "600/10:00", JSON.stringify(ln68));
 check("  the LoRAs: Output's length (6:00) beside «Song ≈», locked; the lock opens it, 9:30 there is Max length's 9:30, 11:00 stops at 10:00, the lock shuts it again; the form as it was",
   ln68.out === "6:00/true/true" && ln68.afterLen && ln68.open && ln68.set === "570/9:30/9:30" && ln68.capped === "600/10:00" && ln68.relocked && ln68.restored, JSON.stringify(ln68));
 check("  Export to DAW says how Chrome lets a held-back .dawproject through (Downloads, Ctrl+J, Keep)",
@@ -14011,8 +14015,9 @@ const cv06 = await ev(`(async () => {
   try { localStorage.removeItem("yue2.refinerCanvasPos"); } catch (e) {}
   document.querySelector('.topbar [data-tab="create"]').click(); await wait(250);
   return o; })()`);
+// HERESY 2949: the Compare node is a node of the canvas too, beside the take, the import and the made node
 check("the canvas: Canvas in the room's head; every step a node with the take and the import (1598: no Chain node), wired; the canvas a window above the player, every node inside its world (1951)",
-  cv06.btnHidden && cv06.on && cv06.nodes === cv06.steps + 3 && cv06.wires >= 9 && cv06.fits, JSON.stringify(cv06));
+  cv06.btnHidden && cv06.on && cv06.nodes === cv06.steps + 4 && cv06.wires >= 9 && cv06.fits, JSON.stringify(cv06));
 check("  a click on a node lifts its panel (titled with its number); › and Alt+← go along, each panel back where it stood; Esc closes; the take's node lifts its tree",
   cv06.lifted && /^\d+ · DAW$/.test(cv06.title) && /^(?!dawPanel)[A-Za-z-]+\|true\|true$/.test(cv06.next) && cv06.back === "dawPanel" && cv06.closed && cv06.tree && cv06.treeBack && cv06.takeNoWin,
   JSON.stringify({ title: cv06.title, next: cv06.next, back: cv06.back, closed: cv06.closed, tree: cv06.tree, treeBack: cv06.treeBack, takeNoWin: cv06.takeNoWin, lifted: cv06.lifted }));
@@ -18216,7 +18221,8 @@ check("1.3 together → eased ×0.769 to 1.0 (0.385, 0.385, 0.231), the sound ha
 
 // HERESY 1169 · 1618 (Viktor 20.10.2026: a Bold plan sung with its voices out of order: «галлюцинации и смазывание голоса»)
 section("A score the page plans itself is read before it is sung: the Bold plan of 20.10 (two Ins lines in a row) is broken, its sibling reads");
-const pl18 = JSON.parse((await import("fs")).readFileSync(process.env.HOME + "/Documents/AI/Ruach_Studio/heresy/MISC/claude-tc/plans-1618.json", "utf-8"));
+// HERESY 2938: the two plans come with the suite (tools/plans-1618.json): read from the kitchen through $HOME they stopped a clone elsewhere
+const pl18 = JSON.parse(readFileSync(resolve(ROOT, "tools", "plans-1618.json"), "utf-8"));
 const bk18 = await ev(`(() => { const p = ${JSON.stringify(pl18)}; return JSON.stringify({ bad: window.ruachPlanBroken(p.bad), good: window.ruachPlanBroken(p.good) }); })()`);
 const b18 = JSON.parse(bk18);
 check("the broken plan is said broken (its reason), the good one reads", /Vocal/.test(b18.bad) && b18.good === "", bk18);
@@ -19278,6 +19284,9 @@ section("The Trainer's Rank is the sound half's, the music half takes half of it
 const rk68 = await ev(`(async () => { const wait = (ms) => new Promise((r) => setTimeout(r, ms)), tabWas = document.body.dataset.tab, o = {};
   try {
     document.querySelector('.topbar [data-tab="train"]').click(); await wait(300);
+    // HERESY 2960: a run chosen shows its own steps; the rank is typed into a new run's form, opened as a user opens it
+    const begun = !!document.querySelector("#view-train .tr-pane.is-runof [data-newrun]");
+    if (begun) { document.querySelector('#view-train .tr-pane.is-runof [data-newrun="fresh"]').click(); await wait(100); }
     const f = document.getElementById("tr_rank"), was = f.value;
     o.max = f.max; o.tip = /1:2/.test(f.dataset.tip || f.getAttribute("data-tip") || "");
     f.value = "32"; f.dispatchEvent(new Event("input", { bubbles: true })); await wait(50);
@@ -19285,6 +19294,7 @@ const rk68 = await ev(`(async () => { const wait = (ms) => new Promise((r) => se
     f.value = "384"; f.dispatchEvent(new Event("input", { bubbles: true })); await wait(50);
     o.big = document.getElementById("trSayTrain").textContent;
     f.value = was; f.dispatchEvent(new Event("input", { bubbles: true }));
+    if (begun) { const back = document.querySelector("#view-train [data-runof-back]"); if (back) back.click(); }
   } finally { const t = document.querySelector('.topbar [data-tab="' + (tabWas || "create") + '"]'); if (t) t.click(); await wait(300); }
   return JSON.stringify(o); })()`);
 const RK68 = JSON.parse(rk68);
@@ -25194,7 +25204,7 @@ check("  a song opened before the engraver lands shows its ABC at once and its s
 section("a server without transcriber or library");
 await fetch(BASE + "mock/flags", { method: "POST", body: JSON.stringify({ transcriber: false, outputs: false }) });
 check("the page reloads against the switched-off server", !!(await navigate(0)));
-check("no transcriber: the button is off and says how to get one", (await ev(`document.getElementById("coverFromAudio").disabled && /--transcriber/.test(document.getElementById("coverAudioStatus").textContent)`)) === true);
+check("no transcriber: the button is off and says how to get one (2955: in plain words, with its button to Engine → Models)", (await ev(`document.getElementById("coverFromAudio").disabled && /needs the transcriber/.test(document.getElementById("coverAudioStatus").textContent) && !!document.querySelector('#coverAudioStatus button[data-pack="transcriber"]')`)) === true);
 check("no library: the list says the takes stay in this tab", /keeps no library/.test(await ev(`document.getElementById("libList").innerText`)));
 await ev(`(() => { const set = (id, v) => { document.getElementById(id).value = v; }; set("title", "Tab Song"); set("style", "folk"); set("lyrics", "[Verse]\\nla la");
   set("abc", ""); set("lmSeed", ""); set("soundSeed", ""); set("versions", "1"); return true; })()`);
@@ -32881,7 +32891,7 @@ check("  «Learning rate and memory» has a box for each tower's rate", tw75.mul
 
 // HERESY 2876 (Viktor 19.11.2026, about 23:35 and 20.11 00:25: «чтобы не лгал на горящем ране ни на одной карточке»): with a run open, steps 1–3 say
 // they are the form for a new run; a live run's card shows its command line as its unit runs it and its base model when its plugin names one
-section("A run's card does not lie (2876): with a run open, steps 1–3 say they are the new run's form; a live run's command line and its base model among its facts");
+section("A run's card does not lie (2876, 2960): with a run open, steps 1–3 are its own (2960; they said they were the new run's form); a live run's command line and its base model among its facts");
 const tr76 = await ev(`(async () => {
   const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch;
   const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
@@ -32912,7 +32922,8 @@ const tr76 = await ev(`(async () => {
     document.querySelector('.topbar [data-tab="create"]').click(); await wait(300);
   }
   return o; })()`);
-check("with a run open, steps 1–3 say they are the form for a new run", !tr76.err && tr76.pills.length === 3 && tr76.pills.every((t) => /^new run: /.test(t)), JSON.stringify(tr76));
+check("with a run open, steps 1–3 are that run's own (2960): its set unknown to the prepared ones said so, its set's name, its kind, epochs and trainer",
+  !tr76.err && tr76.pills.length === 3 && tr76.pills[0] === "not recorded" && tr76.pills[1] === "zz-set-x" && tr76.pills[2] === "3B · zz layers · 4.3 epochs · ZZ Trainer · zzx", JSON.stringify(tr76));
 check("  the live run's command line among its facts, its paths short; its base model as its plugin names it",
   tr76.cmd === "-m torch.distributed.run --nproc_per_node=2 zz_train.py --accum 4 --zz-flag" && /^base models\/zz\/zz-base\.safetensors/.test(tr76.base), JSON.stringify({ cmd: tr76.cmd, base: tr76.base }));
 
@@ -33051,6 +33062,7 @@ const em19 = await ev(`(async () => {
     document.getElementById("wsCurrent").click();
     await until(() => document.querySelector(".hd-back.is-on .hd-item"), 3000);
     o.chooser = [...document.querySelectorAll(".hd-back.is-on .hd-item .hd-item-label")].map((e) => e.textContent).slice(0, 8);
+    o.chooserEm = (([...document.querySelectorAll(".hd-back.is-on .hd-item")].find((b) => b.querySelector(".hd-item-label").textContent === "Гитара") || document.body).querySelector(".hd-item-em") || {}).textContent || "";   // HERESY 2956
     document.querySelector(".hd-back.is-on .hd-no").click(); await wait(250);
     // the upgrade's moves followed: a kept name that went is the new one (the workspace in hand, the folded sections)
     cat = Object.assign({}, cat, { workspaces: cat.workspaces.filter((w) => w.indexOf("🧪 Probe P9") !== 0).concat(["Probe P9", "Probe P9 / Круг", "Probe P9 / Пламя"]).sort(),
@@ -33085,8 +33097,8 @@ check("  the chooser by «Workspaces»: grouped (the default), A to Z with the e
   em19.azPicked && JSON.stringify(em19.az) === JSON.stringify(["Alpha", "🧪 Beta", "Empty", "Ice", "🧪 Probe P9", "🧪 Probe P9 / Круг", "🧪 Probe P9 / 🔥 Пламя", "zeta", "Борей", "🙈 Вслепую", "Гитара", "Гитара / Бой", "🌶️ Перец", "💎 Demo Set"]) &&
   /"sort":"az"/.test(em19.keptAz || "") && em19.count[0] === "🧪 Probe P9" && em19.count[em19.count.length - 1] === "💎 Demo Set" && em19.noIce && em19.noEmpty && em19.archIn && em19.backToDefault &&
   (em19.menu || []).length === 8 && (em19.menu || []).indexOf("Fold every section") >= 0, JSON.stringify({ az: em19.az, count: em19.count, menu: em19.menu, keptAz: em19.keptAz }));
-check("  the bar, a take's badge and the choosers say a workspace's own emoji before its name, the choosers in the tree's order",
-  em19.bar === "🎸 Гитара / 🥁 Бой" && (!em19.badge || em19.badge === "🎸 Гитара / 🥁 Бой") && (em19.chooser || []).indexOf("🎸 Гитара") >= 0 && em19.chooser[0] === "Alpha", JSON.stringify({ bar: em19.bar, badge: em19.badge, chooser: em19.chooser }));
+check("  the bar and a take's badge say a workspace's own emoji before its name; the choosers in the tree's order, its emoji in their column (2956)",
+  em19.bar === "🎸 Гитара / 🥁 Бой" && (!em19.badge || em19.badge === "🎸 Гитара / 🥁 Бой") && (em19.chooser || []).indexOf("Гитара") >= 0 && em19.chooserEm === "🎸" && em19.chooser[0] === "Alpha", JSON.stringify({ bar: em19.bar, badge: em19.badge, chooser: em19.chooser, em: em19.chooserEm }));
 check("  New workspace: the emoji's button inside the field before the name, faint; its grid with a «no emoji», his own first (🧪 the most worn), feelings, the message, sound, making, nature; no 💎 🙈 ❄ 🔒 👁‍🗨, no hearts, no poop; Esc shuts the grid alone; the choice sent with the name, kept as recent",
   em19.dlg && em19.grid.none && em19.grid.n >= 80 && em19.grid.first[0] === "🧪" && em19.grid.reserved.length === 0 && em19.grid.poop.length === 0 && em19.grid.caps.join("|") === "Ours|Feeling|Message|Sound|Making|Nature" && em19.escPickerOnly &&
   em19.btnAfter === "🎸" && !!em19.created && em19.created.workspace === "Новое" && em19.created.emoji === "🎸" && /🎸/.test(em19.recent || ""), JSON.stringify({ dlg: em19.dlg, grid: em19.grid, esc: em19.escPickerOnly, created: em19.created }));
@@ -33381,6 +33393,1415 @@ check("Sampling, LoRA and Style opened and closed: Generate's row ends at the Co
 check("  at 1920 and at 2560 the same, the Sampling block open or closed; something past the frame's foot and a focus on it move nothing (the frame put back at once, never left scrolled)",
   !!gr23w && [1920, 2560].every((w) => (gr23w[w] || []).length === 3 && gr23w[w].every((g) => Math.abs(g) <= 2)) && gr23.pushed.scroll === 0 && Math.abs(gr23.pushed.gap) <= 2 && gr23.pushed.ov === "hidden",
   JSON.stringify({ sizes: gr23w, pushed: gr23.pushed }));
+
+// HERESY 2934 (the 2.1.0-rc1 Windows soak's sweep: /audio/devices spoke ALSA's words on Windows): the Audio I/O tab on Windows and macOS says in
+// one sentence, in the page's language, that it reads ALSA, Linux's sound system
+section("Audio I/O on Windows and macOS: one sentence that the tab reads ALSA, Linux's sound system, in the page's language; no /proc/asound, no aplay");
+const au2934 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), o = {}, real = window.fetch;
+  const json = (b) => Promise.resolve(new Response(JSON.stringify(b), { status: 200, headers: { "Content-Type": "application/json" } }));
+  const NOT_HERE = "the audio interfaces are read through ALSA, Linux's sound system: on Windows and macOS none are listed yet, and the analog gateway and the monitor run on Linux for now";
+  window.fetch = (u, opt) => { u = String(u);
+    if (u.startsWith("/lab/audio/devices")) return json({ physical: [], virtual: [], said: [NOT_HERE], gateway: { out: "", in: "", rate: 0 }, monitor: { out: "", rate: 0 },
+      playing: { playing: false }, linux_only: true });
+    return real(u, opt); };
+  try {
+    document.querySelector('.topbar [data-tab="post"]').click(); await wait(300);
+    if (HeresyPost.canvas.on()) { HeresyPost.canvas.set(false); await wait(150); }
+    o.was = ((document.querySelector("#postSteps .ps-step.is-active") || {}).dataset || {}).stepPanel || "";
+    HeresyPost.select("audioPanel"); HeresyPost.audio.load();
+    for (let i = 0; i < 40 && !/ALSA/.test(document.getElementById("auSaid").textContent); i++) await wait(50);
+    o.en = document.getElementById("auSaid").textContent;
+    await window.RuachI18n.set("es"); await wait(200); HeresyPost.audio.load();
+    for (let i = 0; i < 40 && !/sistema de sonido/.test(document.getElementById("auSaid").textContent); i++) await wait(50);
+    o.es = document.getElementById("auSaid").textContent;
+  } finally {
+    window.fetch = real;
+    if (window.RuachI18n.lang() !== "en") { await window.RuachI18n.set("en"); await wait(300); }
+    if (o.was) HeresyPost.select(o.was);
+    document.querySelector('.topbar [data-tab="create"]').click(); await wait(250);
+  }
+  return o; })()`);
+check("Audio I/O on Windows: «read through ALSA, Linux's sound system» once, no /proc/asound nor aplay; in Spanish «el sistema de sonido de Linux»",
+  /read through ALSA, Linux's sound system/.test(au2934.en) && !/asound|aplay/.test(au2934.en) && /el sistema de sonido de Linux/.test(au2934.es), JSON.stringify(au2934));
+
+// HERESY 2934 (the Windows soak's lab log: the LoRA profile's measure of the base model died in its thread, «No module named 'gguf'», and the page
+// never knew): the adapter's tip says why «how far it moves a layer» is not known
+section("A LoRA's tip when the base model's measure failed: why «how far it moves a layer» is not known, under where it pushes, in the page's language");
+const lb2934 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, o = {};
+  const json = (b) => Promise.resolve(new Response(JSON.stringify(b), { status: 200, headers: { "Content-Type": "application/json" } }));
+  const A = "test-2934/epic/lora.safetensors";
+  window.fetch = (u, x) => { u = String(u);
+    if (u.startsWith("/lab/lora/profile")) return json({ adapters: { [A]: { rank: 8, full: false, halves: { ar: { total: 33.9, layers: { "0": 1, "1": 1 },
+        bins: { "0.attn": 0.6, "0.mlp": 0.8, "1.attn": 0.6, "1.mlp": 0.8 }, moves_percent: null } } } },
+      errors: {}, pairs: [], groups: { ar: [[A]], nar: [] }, base: false, base_error: "ModuleNotFoundError: No module named 'gguf'", overlap_group: 0.5 });
+    return real(u, x); };
+  const before = YueLoras.kept();
+  const tip = () => ((document.querySelector('#loraPicker .lora-row[data-ids="' + A + '"] .lora-name') || {}).dataset || {}).tip || "";
+  try {
+    YueLoras.setCatalog([{ id: A, name: "Epic 2934", halves: ["ar"], rank: 8, size_mb: 33 }]);
+    YueLoras.set([{ id: A, ar: 0.8, nar: 0 }], []);
+    for (let i = 0; i < 40 && !/gguf/.test(tip()); i++) await wait(50);
+    o.en = tip();
+    await window.RuachI18n.set("es"); await wait(200);
+    YueLoras.set([], []); await wait(50); YueLoras.set([{ id: A, ar: 0.8, nar: 0 }], []);
+    for (let i = 0; i < 40 && !/no está medido/.test(tip()); i++) await wait(50);
+    o.es = tip();
+  } finally {
+    window.fetch = real;
+    if (window.RuachI18n.lang() !== "en") { await window.RuachI18n.set("en"); await wait(300); }
+    YueLoras.set(before, []);
+  }
+  return o; })()`);
+check("a LoRA whose base could not be measured: «How far it moves a layer is not measured: ModuleNotFoundError: No module named 'gguf'» under «Where it pushes»; in Spanish «no está medido»",
+  /Where it pushes:[\s\S]*How far it moves a layer is not measured: ModuleNotFoundError: No module named 'gguf'/.test(lb2934.en) && /no está medido: ModuleNotFoundError/.test(lb2934.es),
+  JSON.stringify(lb2934));
+
+// HERESY 2936 (Viktor 21.11.2026: «Для Windows по умолчанию только этот компьютер, конечно… Тогда запроса нет»): on Windows and macOS the
+// first start's question and Engine → Security say the Studio listens on this computer alone, that private networks make the firewall ask
+// once, and that a restart opens it; on Linux they say what they said
+section("Who may open the Studio on Windows: this computer alone and why the firewall asks nothing; private networks make it ask once, after a restart (the tray's Restart the Studio); Linux as before");
+const ac2936 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, o = {};
+  const json = (b) => Promise.resolve(new Response(JSON.stringify(b), { status: 200, headers: { "Content-Type": "application/json" } }));
+  let A = { mode: "local", nets: [], acknowledged: "", you: "127.0.0.1", you_local: true, you_private: false, public: false, kept: true };
+  let L = { system: "windows", engine: { host: "127.0.0.1", port: 7777 }, launcher: "native" };
+  window.fetch = (u, x) => { u = String(u);
+    if (u === "/access") return json(A);
+    if (u.startsWith("/lab/engine/where")) return json(L);   /* 2936b */
+    return real(u, x); };
+  const ask = async () => {
+    const a = await window.ruachAccess.refresh();
+    window.ruachAccessAsk(a);
+    for (let i = 0; i < 40 && !document.querySelector(".acc-back .acc-box"); i++) await wait(25);
+    const box = document.querySelector(".acc-back .acc-box");
+    const r = { guide: (box.querySelector(".acc-guide") || {}).textContent || "", modes: [...box.querySelectorAll(".acc-mode small")].map((s) => s.textContent) };
+    box.querySelector(".hd-no").click(); await wait(200);
+    return r;
+  };
+  try {
+    o.win = await ask();
+    A = Object.assign({}, A, { mode: "private", acknowledged: "2026-11-21 21:00" });
+    await window.ruachAccess.refresh();
+    o.still = document.getElementById("accWhy").textContent;
+    o.stillShown = !document.getElementById("accWhy").hidden;
+    await window.RuachI18n.set("es"); await wait(300);
+    await window.ruachAccess.refresh();
+    o.es = document.getElementById("accWhy").textContent;
+    await window.RuachI18n.set("en"); await wait(300);
+    L = { system: "windows", engine: { host: "0.0.0.0", port: 7777 }, launcher: "native" };
+    await window.ruachAccess.refresh();
+    o.opened = document.getElementById("accWhy").textContent;
+    A = Object.assign({}, A, { mode: "local", acknowledged: "" });
+    L = { system: "linux", engine: null, launcher: "" };
+    o.linux = await ask();
+  } finally {
+    window.fetch = real;
+    if (window.RuachI18n.lang() !== "en") { await window.RuachI18n.set("en"); await wait(300); }
+    document.querySelectorAll(".acc-back").forEach((b) => b.remove());
+    await window.ruachAccess.refresh();
+  }
+  return o; })()`);
+check("Windows, this computer only: «listens on this computer alone now … Windows has nothing to ask of its firewall»; the open choices say «Windows asks once … when it starts again», this computer only says nothing of it",
+  /listens on this computer alone now \(port \d+\): no other computer or phone can open it, and Windows has nothing to ask of its firewall/.test(ac2936.win.guide) &&
+  ac2936.win.modes.length === 3 && !/firewall/.test(ac2936.win.modes[0]) && /Windows asks once whether to let the Studio through its firewall, when it starts again/.test(ac2936.win.modes[1]) &&
+  /Windows asks once/.test(ac2936.win.modes[2]), JSON.stringify(ac2936.win));
+check("  private networks chosen, the engine still on 127.0.0.1: Security says to restart it from its icon beside the clock (Restart the Studio), and that Windows asks once; in Spanish «reinícielo»; once it listens on the network, nothing more",
+  ac2936.stillShown && /still listens on this computer alone: restart it \(its icon beside the clock → Restart the Studio\) to open it to your network, and Windows asks once about its firewall/.test(ac2936.still) &&
+  /reinícielo \(su icono junto al reloj → Restart the Studio\)/.test(ac2936.es) && !/still listens/.test(ac2936.opened), JSON.stringify({ still: ac2936.still, es: ac2936.es, opened: ac2936.opened }));
+check("  on Linux the question says what it said: «listens on port … of every network», no firewall words",
+  /The Studio listens on port \d+ of every network this computer is on/.test(ac2936.linux.guide) && !ac2936.linux.modes.some((m) => /firewall/.test(m)), JSON.stringify(ac2936.linux));
+
+// HERESY 2940 (Viktor 22.11.2026: «По контекстному меню список пространств нужно доделать. Эмоджи туда также, и сортировку в том же синхроне с главным
+// списком и сортировкой пространств, как в левой колонке Библиотекаря») · HERESY 2941 («в ПЕРЕМЕСТИТЬ в пространство, если песня… в списке не должны появляться
+// пространства из Чтеца, и наоборот. А вот ДОБАВИТЬ в пространство — это легитимно линковать и в другой мир… внутренние связи и логику по пространствам и их
+// связи по трекам нужно перепроверить и зафиксить»): a take's menu of workspaces on a catalog of the section's own, the lab stood in
+section("The take's menu of workspaces (2940, 2941): the Library's own tree in it (its order in every sort, each emoji in a column of its own, the frozen muted, the empty and the frozen hidden when the tree hides them, the archived under Archived); Move to the take's realm alone, Workspaces links into the other's; takes of both realms checked move nowhere, said why; a new workspace of the take's realm with its emoji; a link is no home (Not in a workspace, Out of the other workspaces, the pin from a room)");
+const wm40 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), o = {}, real = window.fetch, HC = window.HeresyCollection, sent = [], $ = (id) => document.getElementById(id);
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b) => Promise.resolve(new Response(JSON.stringify(b), { status: 200, headers: { "Content-Type": "application/json" } }));
+  const kept = {}, tabWas = document.body.dataset.tab || "create";
+  for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (/^yue2[.](coll|workspace|wsTree|libRealm)/.test(k)) kept[k] = localStorage.getItem(k); }
+  const names = [...document.querySelectorAll("#libList .take[data-name]:not(.is-fav):not([data-run])")].map((c) => c.dataset.name);
+  if (names.length < 3) return { err: "fewer than three takes in the Musician's column: " + names.length };
+  const A = names[0], B = names[1], C = names[2];
+  o.names = [A, B, C];
+  const row = (n, ws, extra) => Object.assign({ name: n, title: "ws40 " + n.slice(-6), created: Math.floor(Date.now() / 1000) - 600, seconds: 60, favorite: false, kind: "generated", cot: "off", derived: [],
+    hidden: false, workspaces: ws, rating: 0, note: "", seeds: null, fresh: false, regen_of: "", frozen: false, protected: false, realm: "creator" }, extra || {});
+  // A: a song at home in Alpha, linked into the book's chapter; B: a song only linked into the book (no home); C: a reading in the book, linked into the archived Old
+  const rows = [row(A, ["Alpha", "Книга / Глава"]), row(B, ["Книга"]), row(C, ["Книга", "Old"], { realm: "reader", kind: "narrated" })];
+  const WS = ["Alpha", "Empty", "Ice", "Old", "Zed", "Гитара", "Гитара / Бой", "Книга", "Книга / Глава", "Свитки", "🧪 Beta", "💎 Demo Set"];
+  const cat = () => ({ takes: rows, workspaces: WS.slice().sort(), ws_emoji: { "Гитара": "🎸", "Книга": "📖" }, ws_realm: { "Книга": "reader", "Свитки": "reader" },
+    frozen: ["Ice"], archived: ["Old"], blind: [], trash_days: 0, locks: {}, pins: {} });
+  window.fetch = (u, opt) => { u = String(u);
+    if (u.startsWith("/lab/catalog")) return json(cat());
+    if (u === "/lab/collection" && opt && opt.body) { sent.push(JSON.parse(opt.body)); return json(cat()); }
+    return real(u, opt); };
+  const card = (n) => document.querySelector('#collGrid .coll-card[data-name="' + n + '"]');
+  const side = () => $("collSide");
+  const mainTree = () => { const out = []; let on = false; for (const el of side().children) { if (el.classList && el.classList.contains("coll-cap-ws")) { on = true; continue; } if (on && el.classList.contains("coll-cap")) break; if (on && el.dataset && el.dataset.place) out.push(el.dataset.place); } return out; };
+  const tops = (list) => list.filter((w) => w.indexOf(" / ") < 0).map((w) => window.ruachWsEm(w).name);
+  const lvl = () => { const ms = document.querySelectorAll(".hm-menu"); return ms.length ? [...ms[ms.length - 1].querySelectorAll(".hm-item")] : []; };
+  const read = () => lvl().map((x) => { const e = x.querySelector(".hm-em"); return { label: x.querySelector(".hm-label").textContent, em: e ? (e.querySelector("ellipse") ? "stack" : e.querySelector(".wse-sprig") ? "leaf" : e.textContent) : null,
+    faint: !!e && e.classList.contains("is-faint"), ex: e ? Math.round(e.getBoundingClientRect().left) : null, more: !!x.querySelector(".hm-more"), on: x.getAttribute("aria-checked") === "true", muted: x.getAttribute("aria-disabled") === "true" }; });
+  const open = async (label) => { const it = lvl().find((x) => x.querySelector(".hm-label").textContent === label); if (!it) return false; it.click(); await wait(160); return true; };
+  const shut = async () => { for (let i = 0; i < 5 && document.querySelector(".hm-menu"); i++) { document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })); await wait(60); } };
+  const menu = async (n) => { await shut(); const c = card(n); if (!c) return false; const rc = c.getBoundingClientRect(); c.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: rc.left + 20, clientY: rc.top + 10 })); await wait(160); return !!document.querySelector(".hm-menu"); };
+  const list = async (n, which) => { if (!(await menu(n))) return null; if (!(await open("Library"))) return null; if (!(await open(which))) return null; return read(); };
+  const reload = async () => { await HC.reload(); await wait(250); };
+  const plain = (rs) => (rs || []).filter((r) => r.em !== null && r.label !== "New workspace…").map((r) => r.label);
+  try {
+    document.querySelector('.topbar [data-tab="collection"]').click();
+    await until(() => !$("view-collection").classList.contains("is-hidden"), 3000);
+    localStorage.setItem("yue2.libRealm", "creator"); localStorage.removeItem("yue2.wsTree"); localStorage.setItem("yue2.workspace", "Zed"); localStorage.setItem("yue2.workspace.creator", "Zed");
+    await reload();
+    const all = side().querySelector('[data-place=""]'); if (all) all.click(); await wait(200);
+    // the tree and the menu, in each of the tree's orders
+    o.sorts = {};
+    for (const s of ["group", "az", "count"]) {
+      if (s === "group") localStorage.removeItem("yue2.wsTree"); else localStorage.setItem("yue2.wsTree", JSON.stringify({ sort: s }));
+      await reload();
+      const rs = await list(A, "Workspaces");
+      o.sorts[s] = { tree: tops(mainTree()), menu: plain(rs).filter((l) => l !== "Archived" && l !== "Link into the Narrator's") };
+      if (s === "group") {
+        o.rows = rs;
+        await open("Link into the Narrator's"); o.links = read();
+        await open("Книга"); o.book = read();
+      }
+      await shut();
+    }
+    localStorage.removeItem("yue2.wsTree"); await reload();
+    o.move = await list(A, "Move to"); await shut();
+    o.archived = (await list(A, "Workspaces")) && (await open("Archived")) ? read() : null; await shut();
+    // the tree's chooser: the frozen and the empty out of sight, the archived in the tree
+    localStorage.setItem("yue2.wsTree", JSON.stringify({ ice: true, empty: true, arch: true })); await reload();
+    o.filtered = { tree: tops(mainTree()), menu: plain(await list(A, "Workspaces")) }; await shut();
+    localStorage.removeItem("yue2.wsTree"); await reload();
+    // the Narrator's take: its own realm, and the Musician's under «Link into…»
+    localStorage.setItem("yue2.libRealm", "both"); await reload();
+    o.readerWs = plain(await list(C, "Workspaces")); await shut();
+    o.readerMove = plain(await list(C, "Move to")); await shut();
+    // takes of both realms checked: no move, said why
+    const tick = (n) => { const b = card(n) && card(n).querySelector(".coll-check input"); if (b) b.click(); return !!b; };
+    o.ticked = tick(A) && tick(C); await wait(150);
+    if (await menu(A)) { await open("Library"); o.mixed = read().find((r) => /^Move 2 to$/.test(r.label)) || null; }
+    await shut();
+    const none = $("collSelNone"); if (none) none.click(); await wait(150);
+    // a new workspace from a song's menu: the emoji beside its name, the song's realm
+    if ((await list(A, "Workspaces")) && (await open("New workspace…"))) {
+      const dlg = await until(() => document.querySelector(".hd-back.is-on .hd-emfield"), 3000);
+      o.newDlg = !!dlg;
+      if (dlg) {
+        dlg.querySelector(".hd-em").click(); await until(() => document.querySelector(".wse-pop"), 2000);
+        const pick = document.querySelector('.wse-pop [data-wse="🎸"]'); if (pick) pick.click(); await wait(100);
+        const inp = document.querySelector(".hd-back.is-on .hd-input"); inp.value = "zz Fresh 2941"; inp.dispatchEvent(new Event("input", { bubbles: true }));
+        document.querySelector(".hd-back.is-on .hd-yes").click(); await wait(300);
+      }
+      o.newSent = sent.filter((b) => b.op === "ws-add" && b.workspace === "zz Fresh 2941").pop() || null;
+    }
+    await shut();
+    // the realm a workspace is made in: an add or a move makes its takes' realm, a making alone the realm in view
+    localStorage.setItem("yue2.libRealm", "reader");
+    await HC.act({ op: "ws-add", workspace: "zz Song 2941", names: [A] }, null, true);
+    await HC.act({ op: "ws-add", workspace: "zz Read 2941", names: [C] }, null, true);
+    await HC.act({ op: "ws-create", workspace: "zz Empty 2941" }, null, true);
+    o.made = ["zz Song 2941", "zz Read 2941", "zz Empty 2941"].map((w) => { const b = sent.filter((x) => x.workspace === w).pop(); return b ? (b.realm || "creator") : "none"; });
+    // a link is no home: the song only in the book counts in the Musician's «Not in a workspace»
+    localStorage.setItem("yue2.libRealm", "creator"); await reload();
+    const nw = side().querySelector('[data-place="__none"] .coll-n'); o.noneN = nw ? nw.textContent : "";
+    side().querySelector('[data-place="__none"]').click(); await wait(250);
+    o.noneCards = [...document.querySelectorAll("#collGrid .coll-card[data-name]")].map((c) => c.dataset.name);
+    // «Out of the other workspaces» from Alpha leaves the song's link in the book alone (so with no other of its realm it is not offered)
+    side().querySelector('[data-place="Alpha"]').click(); await wait(250);
+    if (await menu(A)) { await open("Library"); o.outOther = read().map((r) => r.label).filter((l) => /Out of the other workspaces/.test(l)); }
+    await shut();
+    // the pin from a room: in the song's own realm, by that realm's workspace in hand
+    localStorage.setItem("yue2.workspace", "Книга / Глава"); localStorage.setItem("yue2.workspace.creator", "Alpha"); localStorage.setItem("yue2.workspace.reader", "Книга / Глава");
+    o.pin = (HC.pinTarget(A) || {}).place || "";
+    // a move asked across the realms: a link offered, after a question that says why
+    const before = sent.length;
+    const mv = HC.moveTo("Свитки", [B], false);
+    const q = await until(() => document.querySelector(".hd-back.is-on .hd-yes"), 2000);
+    o.crossAsk = q ? /never takes a take out of its realm/.test(q.closest(".hd-box").textContent) : false;
+    if (q) q.click(); await mv; await wait(200);
+    o.crossSent = sent.slice(before).map((b) => b.op + ":" + b.workspace);
+  } catch (e) { o.err = String(e && e.stack || e); }
+  finally {
+    await shut();
+    const back = document.querySelector(".hd-back.is-on .hd-no"); if (back) back.click();
+    if (window.HeresyWsEmoji) window.HeresyWsEmoji.close();
+    window.fetch = real;
+    for (let i = localStorage.length - 1; i >= 0; i--) { const k = localStorage.key(i); if (/^yue2[.](coll|workspace|wsTree|libRealm)/.test(k) && !(k in kept)) localStorage.removeItem(k); }
+    Object.keys(kept).forEach((k) => localStorage.setItem(k, kept[k]));
+    await HC.reload(); await wait(150);
+    const allb = document.querySelector('#collSide [data-place=""]'); if (allb) allb.click();
+    const t = document.querySelector('.topbar [data-tab="' + tabWas + '"]'); if (t) t.click(); await wait(200);
+  }
+  return o;
+})()`);
+const s40 = wm40.sorts || {};
+check("the menu's Workspaces list is the Library's tree, in the same order in each of its sorts (by emoji, A to Z, most takes)",
+  !wm40.err && ["group", "az", "count"].every((k) => s40[k] && s40[k].menu.length > 3 && JSON.stringify(s40[k].menu) === JSON.stringify(s40[k].tree)), JSON.stringify(wm40.err ? wm40 : s40));
+const r40 = wm40.rows || [];
+const em40 = (l) => r40.find((r) => r.label === l) || {};
+check("  each workspace's emoji in a column of its own, even down the menu (one x); one with none shows the column's faint icon; a section's row with its own (🎸 Гитара, 🧪 Beta, 💎 Demo Set)",
+  em40("Гитара").em === "🎸" && em40("Beta").em === "🧪" && em40("Demo Set").em === "💎" && em40("Alpha").em === "stack" && em40("Alpha").faint && em40("Гитара").more &&
+  new Set(r40.filter((r) => r.em !== null).map((r) => r.ex)).size === 1, JSON.stringify(r40));
+check("  a song's Workspaces: its own realm in the list (no Книга, no Свитки), the Narrator's under «Link into the Narrator's», ticked where it is linked (Книга › Глава); the frozen muted",
+  !r40.some((r) => /Книга|Свитки/.test(r.label)) && em40("Link into the Narrator's").on && em40("Ice").muted && (wm40.links || []).some((r) => r.label === "Книга" && r.em === "📖" && r.on) &&
+  (wm40.book || []).some((r) => r.label === "Глава" && r.on), JSON.stringify({ rows: r40, links: wm40.links, book: wm40.book }));
+check("  Move to: the song's realm alone, no link into the other realm; the archived under Archived, in the tree's order",
+  wm40.move && !wm40.move.some((r) => /Книга|Свитки|Link into/.test(r.label)) && wm40.move.some((r) => r.label === "Alpha") && (wm40.archived || []).some((r) => r.label === "Old"), JSON.stringify({ move: wm40.move, archived: wm40.archived }));
+check("  the tree's chooser hides the frozen and the empty and shows the archived in the tree: the menu the same",
+  wm40.filtered && JSON.stringify(wm40.filtered.menu.filter((l) => l !== "Link into the Narrator's")) === JSON.stringify(wm40.filtered.tree) && wm40.filtered.menu.indexOf("Ice") < 0 && wm40.filtered.menu.indexOf("Empty") < 0 && wm40.filtered.menu.indexOf("Old") >= 0, JSON.stringify(wm40.filtered));
+check("  a reading's Workspaces: the Narrator's tree, the Musician's under «Link into the Musician's»; its Move to the Narrator's alone",
+  JSON.stringify((wm40.readerWs || []).filter((l) => l !== "Link into the Musician's")) === JSON.stringify(["Свитки", "Книга"]) && (wm40.readerWs || []).indexOf("Link into the Musician's") >= 0 &&
+  JSON.stringify(wm40.readerMove) === JSON.stringify(["Свитки", "Книга"]), JSON.stringify({ ws: wm40.readerWs, move: wm40.readerMove }));
+check("  a song and a reading checked: «Move 2 to» muted, no list (each take stays in its realm)", wm40.ticked && wm40.mixed && wm40.mixed.muted && !wm40.mixed.more, JSON.stringify({ ticked: wm40.ticked, mixed: wm40.mixed }));
+check("  New workspace… from a song's menu: the column's dialog with the emoji beside the name; the add sent with its emoji and the song's realm",
+  wm40.newDlg && wm40.newSent && wm40.newSent.emoji === "🎸" && wm40.newSent.realm === "creator" && JSON.stringify(wm40.newSent.names) === JSON.stringify([(wm40.names || [])[0]]), JSON.stringify({ dlg: wm40.newDlg, sent: wm40.newSent }));
+check("  with the switch on the Narrator, an add makes its takes' realm (a song's: the Musician's, a reading's: the Narrator's), a making alone the Narrator's",
+  JSON.stringify(wm40.made) === JSON.stringify(["creator", "reader", "reader"]), JSON.stringify(wm40.made));
+check("  a link is no home: the song only in the Narrator's book counts in the Musician's «Not in a workspace» and shows there",
+  wm40.noneN === "1" && JSON.stringify(wm40.noneCards) === JSON.stringify([(wm40.names || [])[1]]), JSON.stringify({ n: wm40.noneN, cards: wm40.noneCards }));
+check("  «Out of the other workspaces» from Alpha leaves the song's link in the book alone (not offered: no other of its realm); the pin from a room goes to the song's realm's workspace in hand",
+  wm40.outOther && wm40.outOther.length === 0 && wm40.pin === "Alpha", JSON.stringify({ out: wm40.outOther, pin: wm40.pin }));
+check("  a move asked across the realms: the question says a move never takes a take out of its realm, and the yes links it (an add, no move)",
+  wm40.crossAsk && JSON.stringify(wm40.crossSent) === JSON.stringify(["ws-add:Свитки"]), JSON.stringify({ ask: wm40.crossAsk, sent: wm40.crossSent }));
+
+// HERESY 2942 (Viktor 22.11.2026: «наши самые ранние профили МУЗЫКА/НАРРАЦИЯ, их нужно подчистить. В Музыкальной модели, думаю, нужно убрать профили наррации
+// и предусмотреть максимальные лимиты на выхлоп модели, в блоке семплинга подправить сторожа на макс токенов»): the Musician's built-in profiles without Speech,
+// 10:00 the music's top in every mode, what the window holds of the song at hand beside Max length (the lab's count stood in), no floor sent above its ceiling
+section("The music model's honest limits (2942): Music and his own profile built in, no Speech; Max length 10:00 at most in Direct too; the window of the song at hand beside Max length and under Sound and output, amber past it; a floor above its ceiling never sent");
+const hl42 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), o = {}, real = window.fetch, $ = (id) => document.getElementById(id), asked = [];
+  const json = (b) => Promise.resolve(new Response(JSON.stringify(b), { status: 200, headers: { "Content-Type": "application/json" } }));
+  const was = { tab: document.body.dataset.tab || "create", style: $("style").value, lyrics: $("lyrics").value, abc: $("abc").value, len: $("maxLength").value, cot: (document.querySelector('input[name="cot"]:checked') || {}).value || "full" };
+  let ROOM = { ok: true, context: 24576, text: 1672, cot: "full", score: 3508, score_known: true, prefix: 5182, whole: 387.8, pieces: 775.76, fits: false };
+  window.fetch = (u, opt) => { u = String(u);
+    if (u === "/lab/song/room") { asked.push(JSON.parse(opt.body)); return json(ROOM); }
+    return real(u, opt); };
+  const setLen = async (v) => { $("maxLength").value = v; $("maxLength").dispatchEvent(new Event("input", { bubbles: true })); await wait(1100); };
+  const chip = () => { const k = [...document.querySelectorAll(".knob-room")][0]; return k ? { text: k.textContent, over: k.classList.contains("is-over"), tip: k.dataset.tip || "" } : null; };
+  try {
+    document.querySelector('.topbar [data-tab="create"]').click(); await wait(200);
+    o.builtin = [...$("setupLib").querySelectorAll('optgroup[label="built in"] option')].map((x) => x.textContent);
+    // Direct: 10:00 at most, as in music
+    const cot = (v) => { const r = document.querySelector('input[name="cot"][value="' + v + '"]'); if (r) { r.checked = true; r.dispatchEvent(new Event("change", { bubbles: true })); } };
+    cot("off"); await wait(100);
+    o.directMax = $("maxLength").max;
+    $("maxLength").value = "900"; $("maxLength").dispatchEvent(new Event("change", { bubbles: true })); await wait(150);
+    o.directKept = $("maxLength").value;
+    cot("full"); await wait(100);
+    // the window of the song at hand: asked with the form's texts, shown beside Max length
+    $("style").value = "dark synthwave, 96 bpm"; $("lyrics").value = "[Verse]\\nline one\\nline two\\n\\n[Chorus]\\nla la"; $("abc").value = "";
+    $("lyrics").dispatchEvent(new Event("input", { bubbles: true }));
+    await setLen("480");
+    const last = asked[asked.length - 1] || {};
+    o.ask = { style: last.style, lyrics: last.lyrics, cot: last.cot, length: last.length, context: last.context, n: asked.length };
+    o.over = chip();
+    o.note = $("outHint").textContent;
+    await setLen("360");
+    o.under = chip();
+    o.noteUnder = $("outHint").textContent;
+    // a score the model writes: the band said
+    ROOM = { ok: true, context: 24576, text: 1672, cot: "full", score: 3373, score_known: false, prefix: 5047, whole: 390.5, whole_low: 366.6, whole_high: 402.7, pieces: 750.2, pieces_low: 676.9, pieces_high: 784.4, fits: false };
+    $("lyrics").value += "\\nmore"; $("lyrics").dispatchEvent(new Event("input", { bubbles: true }));
+    await setLen("480");
+    o.band = chip();
+    o.bandNote = $("outHint").textContent;
+    // the lab cannot count (no backbone yet): no chip, the old range
+    ROOM = { ok: false, error: "no backbone GGUF of the engine's yet" };
+    $("lyrics").value += "\\nagain"; $("lyrics").dispatchEvent(new Event("input", { bubbles: true }));
+    await setLen("540");
+    o.none = chip();
+    o.noneNote = $("outHint").textContent;
+    // no floor above its ceiling leaves the page
+    const toastsBefore = document.querySelectorAll("#toasts .toast").length;
+    o.sem = window.ruachFloorsUnderCeilings({ semantic_sampling: { min_tokens: 13000 } }).semantic_sampling;
+    o.abc = window.ruachFloorsUnderCeilings({ abc_sampling: { min_tokens: 7000, max_tokens: 6144 } }).abc_sampling;
+    o.fine = JSON.stringify(window.ruachFloorsUnderCeilings({ semantic_sampling: { min_tokens: 750, max_tokens: 9000 }, abc_sampling: { min_tokens: 200 } }));
+    o.said = [...document.querySelectorAll("#toasts .toast")].slice(toastsBefore).map((t) => t.textContent);
+  } catch (e) { o.err = String(e && e.stack || e); }
+  finally {
+    window.fetch = real;
+    $("style").value = was.style; $("lyrics").value = was.lyrics; $("abc").value = was.abc; $("maxLength").value = was.len;
+    const r = document.querySelector('input[name="cot"][value="' + was.cot + '"]'); if (r) { r.checked = true; r.dispatchEvent(new Event("change", { bubbles: true })); }
+    $("lyrics").dispatchEvent(new Event("input", { bubbles: true })); $("maxLength").dispatchEvent(new Event("input", { bubbles: true }));
+    document.querySelectorAll("#toasts .toast").forEach((t) => t.remove());
+    const t = document.querySelector('.topbar [data-tab="' + was.tab + '"]'); if (t) t.click(); await wait(200);
+  }
+  return o;
+})()`);
+check("the Musician's built-in profiles: Music and his own, no Speech (readings live in the Narrator)",
+  !hl42.err && JSON.stringify(hl42.builtin) === JSON.stringify(["Music · up to 8:00", "Musical Heresy of Creator's Ear"]), JSON.stringify(hl42.err ? hl42 : hl42.builtin));
+check("  Max length 10:00 at most in Direct too: 15:00 typed comes back to 10:00", hl42.directMax === "600" && hl42.directKept === "600", JSON.stringify({ max: hl42.directMax, kept: hl42.directKept }));
+check("  the window of the song at hand asked with the form's style, lyrics, mode, Max length and context",
+  hl42.ask && hl42.ask.style === "dark synthwave, 96 bpm" && /line one/.test(hl42.ask.lyrics || "") && hl42.ask.cot === "full" && hl42.ask.length === 480 && hl42.ask.context === 24576, JSON.stringify(hl42.ask));
+check("  beside Max length «≈ 6:27», amber when Max length 8:00 goes past it, its tip with the tokens; under Sound and output the song's own window, not the old range",
+  hl42.over && hl42.over.text === "≈ 6:27" && hl42.over.over && /1672 tokens, its score 3508, of the 24576/.test(hl42.over.tip) &&
+  /Max length 8:00 is past what the window holds for this song: about 6:27 of music whole/.test(hl42.note) && !/about 6:2\d–/.test(hl42.note), JSON.stringify({ over: hl42.over, note: hl42.note }));
+check("  Max length 6:00 within it: the chip plain, nothing said under Sound and output",
+  hl42.under && !hl42.under.over && hl42.under.text === "≈ 6:27" && !/window/.test(hl42.noteUnder), JSON.stringify({ under: hl42.under, note: hl42.noteUnder }));
+check("  a score the model writes: the middle with its band (6:06–6:42 by the score)", hl42.band && hl42.band.text === "≈ 6:30" && /6:06–6:42 by the score the model writes/.test(hl42.bandNote), JSON.stringify({ band: hl42.band, note: hl42.bandNote }));
+check("  the lab cannot count (no backbone yet): no chip, and at 9:00 the old range said, no number made up", hl42.none === null && /past one window here/.test(hl42.noneNote), JSON.stringify({ none: hl42.none, note: hl42.noneNote }));
+check("no floor above its ceiling leaves the page: the music's 13000 over the default 12000 sent at 12000, the score's 7000 over 6144 at 6144, each said; a sound pair untouched",
+  hl42.sem && hl42.sem.min_tokens === 12000 && hl42.abc && hl42.abc.min_tokens === 6144 && hl42.abc.max_tokens === 6144 &&
+  hl42.fine === JSON.stringify({ semantic_sampling: { min_tokens: 750, max_tokens: 9000 }, abc_sampling: { min_tokens: 200 } }) &&
+  (hl42.said || []).length === 2 && /Min length 8:40 stood above its Max length 8:00/.test(hl42.said[0]) && /Min tokens 7000 stood above its Max tokens 6144/.test(hl42.said[1]), JSON.stringify({ sem: hl42.sem, abc: hl42.abc, fine: hl42.fine, said: hl42.said }));
+
+// HERESY 2943 (Viktor read the live run's curves together on 22.11.2026 and took the NAR for going bad: the data were right, the chart misled): in the
+// together view the held-out dots drawn in each curve's own scale and inside it, the run's events (a freeze, a resume, a tower's LR changed) as thin lines
+// with their words and no running average across them, each scale's span on its box; the side view as it was
+section("The Trainer's curves together (2943): the held-out dots in each curve's scale and inside it; the run's events as lines with their words, no average across them; each scale's span on its box; the side view as it was");
+const tc43 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, o = {};
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b) => Promise.resolve(new Response(JSON.stringify(b), { headers: { "Content-Type": "application/json" } }));
+  const toView = async (name) => { for (let i = 0; i < 4; i++) { const c = document.querySelector("#trRunPane .tr-charts"); const now = !c ? "" : c.classList.contains("is-combined") ? "combined" : c.classList.contains("is-stacked") ? "stacked" : "side"; if (now === name) return true; const b = document.querySelector("#trRunPane [data-stack]"); if (!b) return false; b.click(); await wait(200); } return false; };
+  const keys = ["yue2.trRun", "yue2.trPane", "yue2.trStacked", "yue2.trLayersOff", "yue2.trLayersOff2"], was = keys.map((k) => localStorage.getItem(k));
+  keys.slice(3).forEach((k) => localStorage.removeItem(k));
+  const steps = Array.from({ length: 40 }, (_, i) => 20 * (i + 1));
+  const at = (f) => steps.map((st) => [st, +f(st).toFixed(5)]);
+  const run = { name: "zz-run-2943", status: "running", dataset: "zz-set", kind: "music", engine: "ruach", steps: 800, step: 800, tracks: 100, started: Date.now() / 1000 - 3600,
+    checkpoints: [], options: {},
+    series: { loss: { curve: at((st) => st < 600 ? 2.4 : 0.88), first: 2.4, last: 0.88, min: 0.88 }, flow: { curve: at((st) => 0.884 + 0.03 * ((st / 20) % 2)), first: 0.884, last: 0.884, min: 0.884 },
+      ar_ce: { curve: at((st) => 4.3 - st / 800), first: 4.3, last: 3.3, min: 3.3 }, step_s: { curve: at((st) => st < 600 ? 12 : 8.5), first: 12, last: 8.5, min: 8.5 }, lr: { curve: at(() => 1e-5), first: 1e-5, last: 1e-5, min: 1e-5 } },
+    val: { history: [200, 400, 600, 800].map((st) => ({ step: st, flow: 0.9163 + st * 1e-6, ar_ce: 4.8, kl: 0.38 })) },
+    events: [{ step: 400, kind: "lr", tower: "nar", was: "1.5:5e-05", now: "1.5:1e-05" }, { step: 400, kind: "resume" }, { step: 600, kind: "freeze", tower: "ar" }] };
+  window.fetch = (u, opt) => { u = String(u);
+    if (u.startsWith("/lab/train/datasets")) return json({ raw: [], prepared: [], runs: [run], gpus: [], own: {}, aitk_ready: false });
+    if (u.startsWith("/lab/train/trash")) return json({ trash: [] });
+    return real(u, opt); };
+  try {
+    localStorage.removeItem("yue2.trStacked");
+    document.querySelector('.topbar [data-tab="train"]').click(); window.HeresyTrain.reload();
+    const card = await until(() => document.querySelector('#trRunList [data-open="zz-run-2943"]'), 5000);
+    if (card) card.click();
+    await until(() => document.querySelector("#trRunPane .tr-charts"), 4000);
+    await toView("side"); await until(() => document.querySelectorAll("#trRunPane .tr-chart").length === 8, 4000);
+    const side = document.querySelector('#trRunPane .tr-chart[data-key="flow"]');
+    o.side = { hi: +side.dataset.hi, lo: +side.dataset.lo, hod: document.querySelectorAll("#trRunPane .tr-chart:not(.tr-combined) .hod").length };   // 2961: the event lines are there now (Q3 of 22.11)
+    await toView("combined");
+    const fig = await until(() => document.querySelector('#trRunPane .tr-combined[data-key="combined"]'), 3000);
+    const H = 320, svgBox = fig.querySelector(".tr-plot svg");
+    const pts = (d) => (d || "").split(/(?=[ML])/).map((s) => s.slice(1).trim().split(/\\s+/).map(Number));
+    o.dots = [...fig.querySelectorAll('path.hod[data-k="flow"]')].map((p) => { const m = /^M([-\\d.]+) ([-\\d.]+)/.exec(p.getAttribute("d") || ""); return { y: m ? +m[2] : -1, tip: p.dataset.tip }; });
+    o.flowScale = (() => { const b = fig.querySelector('.tr-scl b[data-scale="flow"]'); return b ? { lo: +b.dataset.lo, hi: +b.dataset.hi } : null; })();
+    o.ev = [...fig.querySelectorAll("line.ev")].length;
+    o.evTips = [...fig.querySelectorAll("line.evh")].map((l) => l.dataset.tip);
+    o.ev2 = document.querySelectorAll('#trRunPane .tr-combined[data-key="combined2"] line.ev').length;
+    const loss = pts((fig.querySelector('path.cl[data-k="loss"]') || {}).getAttribute ? fig.querySelector('path.cl[data-k="loss"]').getAttribute("d") : "");
+    const x600 = 1200 * (600 - +fig.dataset.x0) / (+fig.dataset.x1 - +fig.dataset.x0);
+    const after = loss.filter((q) => q[0] >= x600 - 0.5);
+    o.loss = { first: after.length ? after[0][1] : null, last: loss.length ? loss[loss.length - 1][1] : null, before: loss.filter((q) => q[0] < x600 - 0.5).map((q) => q[1]).pop() };
+    const flowBox = fig.querySelector('.tr-layer input[data-layer="flow"]'), fb = flowBox && flowBox.closest(".tr-layer");
+    o.span = fb ? { text: (fb.querySelector(".tr-span") || {}).textContent || "", tip: fb.dataset.tip || "" } : null;
+    const ceBox = fig.querySelector('.tr-layer input[data-layer="ar_ce"]'), cb = ceBox && ceBox.closest(".tr-layer");
+    o.ceSpan = cb ? (cb.querySelector(".tr-span") || {}).textContent || "" : "";
+  } catch (e) { o.err = String(e && e.stack || e); }
+  finally {
+    window.fetch = real;
+    keys.forEach((k, i) => { if (was[i] === null) localStorage.removeItem(k); else localStorage.setItem(k, was[i]); });
+    document.querySelector('.topbar [data-tab="create"]').click();
+    await wait(300);
+  }
+  return o; })()`);
+check("together: the held-out flow drawn, four dots, each inside the plot and in the flow's own scale, which grows to hold them (the curve tops at 0.914, the dots at 0.917); each dot's tip its step and value",
+  !tc43.err && (tc43.dots || []).length === 4 && tc43.dots.every((d) => d.y >= 0 && d.y <= 320) && tc43.flowScale && tc43.flowScale.hi > 0.9171 &&
+  /held out at step 800: flow 0\.917/.test(tc43.dots[3].tip), JSON.stringify(tc43.err ? tc43 : { dots: tc43.dots, scale: tc43.flowScale }));
+check("  the run's events: a line at each event's step (400, 600) on both charts, its words in its tip (the AR frozen, went on from its save, the NAR's LR curve)",
+  tc43.ev === 2 && tc43.ev2 === 2 && (tc43.evTips || []).some((t) => /^Step 600: the AR frozen: its loss leaves the sum\. The running average begins anew here\.$/.test(t)) &&
+  (tc43.evTips || []).some((t) => /^Step 400: the NAR's learning-rate curve 1\.5:5e-05 → 1\.5:1e-05; went on from its save\./.test(t)), JSON.stringify({ ev: tc43.ev, ev2: tc43.ev2, tips: tc43.evTips }));
+check("  no average across an event: the loss falls 2.4 → 0.88 at the freeze as a step (its first point after it already at the floor), not a slope",
+  tc43.loss && tc43.loss.first !== null && Math.abs(tc43.loss.first - tc43.loss.last) < 0.5 && tc43.loss.before < tc43.loss.first - 100, JSON.stringify(tc43.loss));
+check("  each box says its scale's span (flow «span 0.03x», ar_ce its own), the tip with its range and span",
+  tc43.span && /^span 0\.0[34]\d$/.test(tc43.span.text) && /span 0\.0[34]\d/.test(tc43.span.tip) && /^span 1\.\d\d\d$/.test(tc43.ceSpan), JSON.stringify({ span: tc43.span, ce: tc43.ceSpan }));
+check("  the side view as it was: its flow chart in the curve's own range (no dots there; its event lines since 2961)", tc43.side && tc43.side.hod === 0 && tc43.side.hi < tc43.flowScale.hi, JSON.stringify(tc43.side));
+// HERESY 2943b (Viktor 22.11.2026: «в графиках подправь пустое место после последнего шага. Можно автоужим делать, оставляя 10% пустоты с хвоста…»)
+const af43 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, o = {};
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b) => Promise.resolve(new Response(JSON.stringify(b), { headers: { "Content-Type": "application/json" } }));
+  const toView = async (name) => { for (let i = 0; i < 4; i++) { const c = document.querySelector("#trRunPane .tr-charts"); const now = !c ? "" : c.classList.contains("is-combined") ? "combined" : c.classList.contains("is-stacked") ? "stacked" : "side"; if (now === name) return true; const b = document.querySelector("#trRunPane [data-stack]"); if (!b) return false; b.click(); await wait(200); } return false; };
+  const keys = ["yue2.trRun", "yue2.trPane", "yue2.trStacked"], was = keys.map((k) => localStorage.getItem(k));
+  const run = (upto, status) => ({ name: "zz-run-2943b", status: status, dataset: "zz-set", kind: "music", engine: "ruach", steps: 2000, step: upto, tracks: 100, started: Date.now() / 1000 - 3600,
+    checkpoints: [{ file: "output/a_000000200.safetensors", step: 200, epoch: 2 }, { file: "output/a_000001800.safetensors", step: 1800, epoch: 18 }], options: {},
+    series: { flow: { curve: Array.from({ length: upto / 20 }, (_, i) => [20 * (i + 1), 0.9 - i * 1e-4]), first: 0.9, last: 0.88, min: 0.88 },
+              lr: { curve: Array.from({ length: upto / 20 }, (_, i) => [20 * (i + 1), 1e-5]), first: 1e-5, last: 1e-5, min: 1e-5 } } });
+  let cur = run(500, "running");
+  window.fetch = (u, opt) => { u = String(u);
+    if (u.startsWith("/lab/train/datasets")) return json({ raw: [], prepared: [], runs: [cur], gpus: [], own: {}, aitk_ready: false });
+    if (u.startsWith("/lab/train/trash")) return json({ trash: [] });
+    return real(u, opt); };
+  const ends = () => [...document.querySelectorAll("#trRunPane .tr-chart:not(.is-empty)")].map((f) => +f.dataset.x1);
+  const view = async (v) => { if (v) await toView(v); await window.HeresyTrain.reload(); await wait(250); return ends(); };
+  try {
+    localStorage.removeItem("yue2.trStacked");
+    document.querySelector('.topbar [data-tab="train"]').click(); window.HeresyTrain.reload();
+    const card = await until(() => document.querySelector('#trRunList [data-open="zz-run-2943b"]'), 5000);
+    if (card) card.click();
+    await until(() => document.querySelector("#trRunPane .tr-charts"), 4000);
+    await toView("side"); await until(() => document.querySelectorAll("#trRunPane .tr-chart").length === 8, 4000);
+    o.side = ends();
+    o.ticks = [...document.querySelectorAll('#trRunPane .tr-chart[data-key="flow"] line.th')].length;
+    o.stacked = await view("stacked"); o.together = await view("combined");
+    cur = run(540, "running"); o.kept = await view("side");
+    cur = run(560, "running"); o.jumped = await view("side");
+    const f = document.querySelector('#trRunPane .tr-chart[data-key="flow"]');
+    f.querySelector('[data-zoom="in"]').click(); await wait(120); o.zoomed = ends();
+    document.querySelector('#trRunPane .tr-chart[data-key="flow"] [data-zoom="reset"]').click(); await wait(120); o.reset = ends();   // the chart drawn anew by the zoom
+    cur = run(600, "done"); o.done = await view("side");
+  } catch (e) { o.err = String(e && e.stack || e); }
+  finally {
+    window.fetch = real;
+    keys.forEach((k, i) => { if (was[i] === null) localStorage.removeItem(k); else localStorage.setItem(k, was[i]); });
+    document.querySelector('.topbar [data-tab="create"]').click();
+    await wait(300);
+  }
+  return o; })()`);
+const allAt43 = (a, v) => (a || []).length > 0 && a.every((x) => x === v);
+check("a run training: every chart ends at its last logged step and a tenth of the span more (500 → 556 of 2,000 planned), in the side, stacked and together views alike; a save past it not drawn",
+  !af43.err && allAt43(af43.side, 556) && allAt43(af43.stacked, 556) && allAt43(af43.together, 556) && af43.ticks === 1, JSON.stringify(af43));
+check("  the new steps draw into that tail (540: still 556); at its edge the span is set again (560 → 623); a zoom inside it, «the whole run» back to it; a finished run ends at its last step (600)",
+  allAt43(af43.kept, 556) && allAt43(af43.jumped, 623) && (af43.zoomed || []).every((x) => x < 623) && allAt43(af43.reset, 623) && allAt43(af43.done, 600), JSON.stringify(af43));
+// HERESY 2943c (Viktor 22.11.2026: «добавить глобальный ползунок для сглаживания пиков в графах. Такое все тренеры практикуют»)
+const smo2943 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, o = {};
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b) => Promise.resolve(new Response(JSON.stringify(b), { headers: { "Content-Type": "application/json" } }));
+  const toView = async (name) => { for (let i = 0; i < 4; i++) { const c = document.querySelector("#trRunPane .tr-charts"); const now = !c ? "" : c.classList.contains("is-combined") ? "combined" : c.classList.contains("is-stacked") ? "stacked" : "side"; if (now === name) return true; const b = document.querySelector("#trRunPane [data-stack]"); if (!b) return false; b.click(); await wait(200); } return false; };
+  const keys = ["yue2.trRun", "yue2.trPane", "yue2.trStacked", "yue2.trSmooth"], was = keys.map((k) => localStorage.getItem(k));
+  localStorage.removeItem("yue2.trSmooth"); localStorage.setItem("yue2.trStacked", "2");
+  const at = (f) => Array.from({ length: 40 }, (_, i) => [20 * (i + 1), +f(20 * (i + 1)).toFixed(5)]);
+  const run = { name: "zz-run-2943c", status: "done", dataset: "zz-set", kind: "music", engine: "ruach", steps: 800, step: 800, tracks: 100, started: Date.now() / 1000 - 3600, checkpoints: [], options: {},
+    series: { flow: { curve: at((st) => 0.884 + 0.03 * ((st / 20) % 2)), first: 0.884, last: 0.884, min: 0.884 }, lr: { curve: at((st) => st < 400 ? 1e-4 : 5e-5), first: 1e-4, last: 5e-5, min: 5e-5 } } };
+  window.fetch = (u, opt) => { u = String(u);
+    if (u.startsWith("/lab/train/datasets")) return json({ raw: [], prepared: [], runs: [run], gpus: [], own: {}, aitk_ready: false });
+    if (u.startsWith("/lab/train/trash")) return json({ trash: [] });
+    return real(u, opt); };
+  const pts = (d) => (d || "").split(/(?=[ML])/).map((s) => s.slice(1).trim().split(/\\s+/).map(Number));
+  const swing = () => { const p = document.querySelector('#trRunPane path.cl[data-k="flow"]'); const ys = pts(p && p.getAttribute("d")).slice(-10).map((q) => q[1]); return ys.length ? Math.max(...ys) - Math.min(...ys) : -1; };
+  const lrFlat = () => { const p = document.querySelector('#trRunPane .tr-combined[data-key="combined2"] path.cl'); const ys = pts(p && p.getAttribute("d")).map((q) => q[1]); return new Set(ys.map((y) => Math.round(y))).size; };
+  const set = async (v) => { const s = document.getElementById("trSmooth"); s.value = String(v); s.dispatchEvent(new Event("input", { bubbles: true })); await wait(120); };
+  try {
+    document.querySelector('.topbar [data-tab="train"]').click(); window.HeresyTrain.reload();
+    const card = await until(() => document.querySelector('#trRunList [data-open="zz-run-2943c"]'), 5000);
+    if (card) card.click();
+    await until(() => document.querySelector("#trRunPane .tr-charts"), 4000);
+    await toView("combined"); await until(() => document.querySelector("#trRunPane .tr-combined"), 4000);
+    const slider = document.getElementById("trSmooth");
+    o.def = { v: slider && slider.value, said: (document.getElementById("trSmoothV") || {}).textContent, tip: (slider && slider.closest(".tr-smooth") || {}).dataset ? slider.closest(".tr-smooth").dataset.tip : "", swing: swing(), raw: document.querySelectorAll('#trRunPane path.clr[data-k="flow"]').length, lr: lrFlat() };
+    await set(0);
+    o.zero = { kept: localStorage.getItem("yue2.trSmooth"), same: document.getElementById("trSmooth") === slider, said: document.getElementById("trSmoothV").textContent, swing: swing(), raw: document.querySelectorAll("#trRunPane path.clr").length, lr: lrFlat() };
+    await set(0.5);
+    o.half = { swing: swing(), raw: document.querySelectorAll('#trRunPane path.clr[data-k="flow"]').length };
+    await set(0.92);
+    o.back = { kept: localStorage.getItem("yue2.trSmooth") };
+  } catch (e) { o.err = String(e && e.stack || e); }
+  finally {
+    window.fetch = real;
+    keys.forEach((k, i) => { if (was[i] === null) localStorage.removeItem(k); else localStorage.setItem(k, was[i]); });
+    document.querySelector('.topbar [data-tab="create"]').click();
+    await wait(300);
+  }
+  return o; })()`);
+check("the smoothing slider (2943c): 0.92 by default, said beside it, its tip; the points themselves faint under the smoothed flow; LR as logged",
+  !smo2943.err && smo2943.def && smo2943.def.v === "0.92" && smo2943.def.said === "0.92" && /TensorBoard/.test(smo2943.def.tip) && smo2943.def.raw === 1 && smo2943.def.lr === 2, JSON.stringify(smo2943));
+check("  at 0 the logged points as they are (the flow's swing full, no faint line), drawn as the slider moves, kept in this browser; 0.5 between; back at 0.92 nothing kept; LR never smoothed",
+  smo2943.zero && smo2943.zero.kept === "0" && smo2943.zero.same && smo2943.zero.said === "0.00" && smo2943.zero.raw === 0 && smo2943.zero.swing > smo2943.half.swing && smo2943.half.swing > smo2943.def.swing &&
+  smo2943.half.raw === 1 && smo2943.zero.lr === 2 && smo2943.back.kept === null, JSON.stringify(smo2943));
+
+// HERESY 2945 (the agent's item B9 after 2.1.0-rc1, Viktor's list: «Текст после «Повторить» и «Убрать» — подверсией в Писателе, отличия помечены»): the
+// Section editor's words after Repeat, Remove and Insert (each part's block by its name, a block no part names with the part before it, an instrumental part
+// with none), and the Writer's versions window opening a sub-version with its differences against the version it came from
+section("The words after Repeat, Remove and Insert (2945): the lyrics' blocks follow the score's parts; the Writer opens the Section editor's sub-version with its differences marked");
+const sw45 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), o = {}, real = window.fetch;
+  const W = window.HeresySectionEditor && window.HeresySectionEditor.wordsAfter;
+  if (!W) return { err: "no wordsAfter" };
+  const L = "Title line\\n\\n[Intro]\\n\\n[Verse 1]\\nline a\\nline b\\n\\n[Chorus]\\nla la\\n(soft)\\n\\n[Verse 2]\\nline c\\n\\n[Chorus]\\nla la\\n\\n[Outro]\\nbye";
+  const sp = { parts: [{ name: "Intro", end: 10 }, { name: "Verse 1", end: 30 }, { name: "Chorus", end: 45 }, { name: "Verse 2", end: 60 }, { name: "Chorus", end: 75 }, { name: "Outro", end: 90 }] };
+  const tags = (t) => (t || "").split("\\n").filter((l) => /^\\[/.test(l)).map((l) => l.slice(1, -1)).join(",");
+  o.remove = tags(W(L, sp, [{ op: "remove", data: { parts: [3] } }]));
+  o.copy = tags(W(L, sp, [{ op: "copy", data: { parts: [2, 3] } }]));
+  o.insert = tags(W(L, sp, [{ op: "insert", data: { part: 2, at: 75 } }]));
+  o.both = tags(W(L, sp, [{ op: "remove", data: { parts: [0] } }, { op: "copy", data: { parts: [5] } }]));
+  o.none = W(L, sp, []) === L && W(L, null, [{ op: "remove", data: { parts: [1] } }]) === L;
+  o.title = W(L, sp, [{ op: "remove", data: { parts: [1] } }]).split("\\n")[0];
+  const sp2 = { parts: [{ name: "Start", end: 5 }, { name: "verse 1 · chorus", end: 40 }, { name: "Solo", end: 50 }, { name: "Verse 2", end: 70 }] };
+  o.solo = tags(W(L, sp2, [{ op: "remove", data: { parts: [2] } }]));
+  o.joined = tags(W(L, sp2, [{ op: "remove", data: { parts: [1] } }]));
+  // the Writer's versions: a sub-version opens with its differences against the version it came from
+  const book = { id: "abcdef012345", title: "Song", versions: [
+    { n: 1, at: 1795300000, title: "Song", version: "2.0.3", style: "rock", lyrics: "[Verse 1]\\nline a\\n\\n[Verse 2]\\nline c", abc: "", takes: ["t1"], why: "generate" },
+    { n: 2, at: 1795300100, title: "Song", version: "2.0.3.1", from: 1, style: "rock", lyrics: "[Verse 1]\\nline a", abc: "", takes: ["t2"], why: "section" }], trash: [] };
+  window.fetch = (u, opt) => { u = String(u);
+    if (u.startsWith("/lab/writer/versions")) return Promise.resolve(new Response(JSON.stringify(book), { status: 200, headers: { "Content-Type": "application/json" } }));
+    return real(u, opt); };
+  try {
+    await window.HeresyVersions.open({ title: "Song v2.0.3.1" }); await wait(200);
+    const view = document.getElementById("vrView");
+    o.head = (view.querySelector(".vr-acts strong") || {}).textContent || "";
+    o.gone = [...view.querySelectorAll(".is-del, .vd-del, del")].map((x) => x.textContent).join("|");
+    o.row = [...document.querySelectorAll("#vrList .vr-row")].map((r) => r.textContent).find((t) => /#2/.test(t)) || "";
+  } catch (e) { o.err = String(e && e.stack || e); }
+  finally { window.fetch = real; if (window.HeresyVersions.close) window.HeresyVersions.close(); await wait(100); }
+  return o; })()`);
+check("Remove takes its part's words out, Repeat lays its stretch's words again after it, Insert puts its part's after the part it follows; the lines before the first tag stay",
+  !sw45.err && sw45.remove === "Intro,Verse 1,Chorus,Chorus,Outro" && sw45.copy === "Intro,Verse 1,Chorus,Verse 2,Chorus,Verse 2,Chorus,Outro" &&
+  sw45.insert === "Intro,Verse 1,Chorus,Verse 2,Chorus,Chorus,Outro" && sw45.both === "Verse 1,Chorus,Verse 2,Chorus,Outro,Outro" && sw45.title === "Title line", JSON.stringify(sw45));
+check("  no cut or no score: the words as they were; a part named twice («verse 1 · chorus») takes both blocks; an instrumental part (Solo) takes none; a block no part names goes with the part before it",
+  sw45.none && sw45.solo === "Intro,Verse 1,Chorus,Verse 2,Chorus,Outro" && sw45.joined === "Intro,Verse 2,Chorus,Outro", JSON.stringify(sw45));
+check("  the Writer opens the Section editor's sub-version with its differences against the version it came from (#1 → #2, «[Verse 2]» marked gone), its row saying so",
+  /v2\.0\.3 #1 → v2\.0\.3\.1 #2|#1 → .*#2/.test(sw45.head) && /Verse 2|line c/.test(sw45.gone) && /the Section editor/.test(sw45.row) && /from #1/.test(sw45.row), JSON.stringify(sw45));
+
+// HERESY 2947 (Viktor's «голос по абзацам прямо в редакторе», the Narrator's mockup of 18.11.2026, its variant A: the voice chosen left of the paragraph,
+// the text clean; the lab's side in lab/reader.py par_voices): a chip by each paragraph's first line, «as above» at first; a click picks the voice; the
+// reading sends par_voices, one a paragraph, kept with the text by each paragraph's first words; none in a dialog or a reading by verses
+section("A voice for each paragraph in the Narrator's editor (2947): a chip by each paragraph's first line, «as above» at first; a click picks a voice, held by the paragraphs after it; the reading sends par_voices, kept with the text; none in a dialog or by verses");
+const pv47 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), $ = (id) => document.getElementById(id), o = {}, real = window.fetch, posts = [];
+  const keys = ["yue2.readerEngine", "yue2.readerText", "yue2.readerMode", "yue2.readerParVoices", "yue2.reader.rdSplit", "yue2.readerVoice"], kept = keys.map((k) => [k, localStorage.getItem(k)]);
+  const WG0 = window.HeresyWaitGuard;
+  window.HeresyWaitGuard = { ask: () => Promise.resolve({ hold: null }), bind: function () {}, drop: function () {}, minutes: function () { return 0; } };
+  const J = (b, s) => Promise.resolve(new Response(JSON.stringify(b), { status: s || 200, headers: { "Content-Type": "application/json" } }));
+  const D3 = { id: "drama3", label: "Fish Audio Drama 3", own: false, devices: ["cuda"], ready: { cuda: true }, need_mb: 22500, langs: ["ru"], max_chars: 300, note: "", stress: "acute", seed: true, style: null, license: null,
+    first_run: "", tags: { open: "[", close: "]", groups: [] } };
+  const VO = { voices: [{ id: "va", name: "Anna", kind: "made", gender: "female" }, { id: "vb", name: "Boris", kind: "made", gender: "male" }], groups: [{ id: "male-low", centre: "vb" }] };
+  const chips = () => [...document.querySelectorAll(".rd-pv .rd-pv-chip")];
+  const go = async () => { const n = posts.length; $("rdGo").click(); for (let i = 0; i < 30 && posts.length <= n; i++) await wait(100); await wait(100); return posts[n] || null; };
+  const put = async (t) => { $("rdText").value = t; $("rdText").dispatchEvent(new Event("input", { bubbles: true })); await wait(450); };
+  try {
+    window.fetch = (u, opt) => { const s = String(u && u.url || u);
+      if (s.startsWith("/lab/writer")) return J({ kept: false });
+      if (!s.startsWith("/lab/reader/")) return real(u, opt);
+      const p = s.split("?")[0].slice(11), body = opt && opt.method === "POST" ? JSON.parse(opt.body || "{}") : null;
+      if (p === "/say") { posts.push(body); return J({ id: "20261122-1300" + posts.length + "-pv", of: 3, status: "queued", title: body.title }, 202); }
+      if (p === "/engines") return J({ engines: [D3] });
+      if (p === "/voices") return J(VO);
+      if (p === "/cards") return J({ cuda: [{ index: 2, name: "RTX 3090" }], arc: [], studio: null });
+      if (p === "/runs") return J({ runs: [] });
+      return J({ error: "no such route" }, 404); };
+    localStorage.setItem("yue2.readerEngine", "drama3"); localStorage.setItem("yue2.readerMode", "narration"); localStorage.setItem("yue2.reader.rdSplit", "sentence");
+    localStorage.removeItem("yue2.readerParVoices"); localStorage.setItem("yue2.readerVoice", "v:va");
+    document.querySelector('.topbar [data-tab="read"]').click(); await wait(300);
+    await window.HeresyReader.reload(); await wait(300);
+    o.paras = window.ruachReaderParas("A\\n\\nB [split] C\\nD\\n\\n[split]\\n\\nE").map((p) => p.head + "@" + p.from + "-" + p.to).join(",");
+    await put("Первый абзац читает Анна.\\nЕщё строка первого абзаца.\\n\\nВторой абзац.\\n\\nТретий абзац.");
+    const c0 = chips();
+    o.n = c0.length; o.on = $("rdText").classList.contains("rd-pv-on");
+    o.steps = c0.length === 3 ? [parseFloat(c0[1].style.top) - parseFloat(c0[0].style.top), parseFloat(c0[2].style.top) - parseFloat(c0[1].style.top)] : [];
+    o.lh = parseFloat(getComputedStyle($("rdText")).lineHeight);
+    o.tip0 = c0[0] ? c0[0].dataset.tip : ""; o.mark0 = c0[0] ? c0[0].textContent : "";
+    const r1 = c0[1].getBoundingClientRect(), t1 = r1.top + r1.height / 2, l1 = r1.left + r1.width / 2, hit = document.elementFromPoint(l1, t1);
+    o.hit = !!hit && hit.closest(".rd-pv-chip") === c0[1];
+    c0[1].click(); await wait(200);
+    const m = document.querySelector(".hm-menu");
+    o.menu = m ? [...m.querySelectorAll(".hm-head, .hm-item .hm-label")].map((x) => x.textContent) : [];
+    const pick = m && [...m.querySelectorAll(".hm-item")].find((x) => /Boris/.test(x.textContent));
+    if (pick) pick.click(); await wait(300);
+    const c1 = chips();
+    o.own = c1.map((c) => c.classList.contains("is-own") ? 1 : 0).join("");
+    o.bands = document.querySelectorAll(".rd-pv .rd-pv-band").length;
+    o.tip2 = c1[2] ? c1[2].dataset.tip : "";
+    o.kept = (JSON.parse(localStorage.getItem("yue2.readerParVoices") || "[]") || []).map((x) => x.ref).join("|");
+    const b1 = await go();
+    o.sent1 = b1 ? JSON.stringify(b1.par_voices) : "none";
+    // a paragraph added above: the others keep theirs by their first words
+    await put("Новый первый абзац.\\n\\nПервый абзац читает Анна.\\nЕщё строка первого абзаца.\\n\\nВторой абзац.\\n\\nТретий абзац.");
+    o.n2 = chips().length;
+    const b2 = await go();
+    o.sent2 = b2 ? JSON.stringify(b2.par_voices) : "none";
+    // the run's own voice again from the fourth
+    chips()[3].click(); await wait(200);
+    const m2 = document.querySelector(".hm-menu"), own = m2 && [...m2.querySelectorAll(".hm-item")].find((x) => /The voice above the text|Голос над текстом/.test(x.textContent));
+    if (own) own.click(); await wait(300);
+    const b3 = await go();
+    o.sent3 = b3 ? JSON.stringify(b3.par_voices) : "none";
+    // a dialog: no chips, nothing sent; by verses: the same
+    $("rdMode").value = "dialog"; $("rdMode").dispatchEvent(new Event("change", { bubbles: true })); await wait(400);
+    o.dialog = { n: chips().length, on: $("rdText").classList.contains("rd-pv-on") };
+    await put("Анна: Здравствуй.\\nБорис: Привет.");
+    const b4 = await go();
+    o.dialog.sent = b4 ? ("par_voices" in b4 ? "sent" : "absent") : "none";
+    $("rdMode").value = "narration"; $("rdMode").dispatchEvent(new Event("change", { bubbles: true })); await wait(200);
+    $("rdSplit").value = "verse"; $("rdSplit").dispatchEvent(new Event("change", { bubbles: true }));
+    await put("1 Первый стих.\\n\\n2 Второй стих.");
+    o.verse = { n: chips().length };
+    const b5 = await go();
+    o.verse.sent = b5 ? ("par_voices" in b5 ? "sent" : "absent") : "none";
+  } catch (e) { o.err = String(e && e.stack || e); }
+  finally {
+    window.fetch = real; window.HeresyWaitGuard = WG0;
+    try { const m = document.querySelector(".hm-menu"); if (m) document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })); } catch (e) {}
+    try { $("rdTitle").value = ""; if ($("rdTitleVer")) $("rdTitleVer").value = ""; $("rdText").value = ""; $("rdSplit").value = "sentence"; } catch (e) {}
+    kept.forEach(([k, v]) => { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); });
+    try { await window.HeresyReader.reload(); } catch (e) {}
+    document.querySelector('.topbar [data-tab="create"]').click(); await wait(200);
+  }
+  return o; })()`);
+check("a chip by each paragraph's first line (three, a line apart as the lines run: 2 and 1 rows of the page and a blank between), in the page's margin, the box's margin wider for them; «as above» at first, its tip naming the voice it reads in",
+  !pv47.err && pv47.n === 3 && pv47.on && pv47.steps.length === 2 && Math.abs(pv47.steps[0] - 3 * pv47.lh) < 1 && Math.abs(pv47.steps[1] - 2 * pv47.lh) < 1 && pv47.hit &&
+  /as the one above/.test(pv47.tip0) && pv47.mark0 === "↳", JSON.stringify(pv47));
+check("  the paragraphs counted as the lab counts them: a blank line, a [split] anywhere (its own line or inside one)", pv47.paras === "A@0-0,B@2-2,C@2-3,E@7-7", pv47.paras);
+check("  a click: the menu with «As above», the voice above the text, the groups and the voices; Boris chosen: the second paragraph its own, the third held to it (two bands), kept by the browser",
+  pv47.menu[0] === "This paragraph reads in" && pv47.menu.includes("As above") && pv47.menu.includes("The voice above the text") && pv47.menu.includes("Anna") && pv47.menu.includes("Boris") &&
+  pv47.own === "010" && pv47.bands === 2 && /Boris/.test(pv47.tip2) && pv47.kept === "|v:vb|", JSON.stringify({ menu: pv47.menu, own: pv47.own, bands: pv47.bands, tip2: pv47.tip2, kept: pv47.kept }));
+check("  the reading sends par_voices, one a paragraph; a paragraph added above keeps the others' by their first words; «the voice above the text» sends «*»",
+  pv47.sent1 === JSON.stringify(["", "v:vb", ""]) && pv47.n2 === 4 && pv47.sent2 === JSON.stringify(["", "", "v:vb", ""]) && pv47.sent3 === JSON.stringify(["", "", "v:vb", "*"]),
+  JSON.stringify({ s1: pv47.sent1, n2: pv47.n2, s2: pv47.sent2, s3: pv47.sent3 }));
+check("  a dialog: no chips, the margin as before, nothing sent; a reading by verses: the same",
+  !!pv47.dialog && pv47.dialog.n === 0 && !pv47.dialog.on && pv47.dialog.sent === "absent" && !!pv47.verse && pv47.verse.n === 0 && pv47.verse.sent === "absent", JSON.stringify({ d: pv47.dialog, v: pv47.verse }));
+
+// HERESY 2948 (the agent's item E18 after 2.1.0-rc1; Viktor 11.11.2026 «Делай как советуешь»: the lane's spectral view, then comping by the stem's
+// versions): a selection taken from another version of its stem, laid over the lane as any laid stretch; heard from that version (its chunks
+// asked by its path), drawn with its wave, sent to Mix with its path; one version or the rest: said why, nothing laid; undone as any edit
+section("Comping in the DAW (2948): a selection taken from another version of its stem, heard and drawn from it, sent to Mix with its path; a stem of one version and the rest say why; undone as any edit");
+const cp48 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, o = {}, T = "x-2948-take", asked = [], chunkPaths = [], peakPaths = [];
+  const json = (b, st) => Promise.resolve(new Response(JSON.stringify(b), { status: st || 200, headers: { "Content-Type": "application/json" } }));
+  const wav = (secs) => { const sr = 48000, n = Math.round(secs * sr), b = new ArrayBuffer(44 + n * 4), v = new DataView(b), w = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+    w(0, "RIFF"); v.setUint32(4, 36 + n * 4, true); w(8, "WAVE"); w(12, "fmt "); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 2, true); v.setUint32(24, sr, true);
+    v.setUint32(28, sr * 4, true); v.setUint16(32, 4, true); v.setUint16(34, 16, true); w(36, "data"); v.setUint32(40, n * 4, true); return b; };
+  const CLEAN = "derived/plugin-x-vocal-1/vocal.flac";
+  const strips = ["lead_vocal", "drums"].map((n) => ({ name: n, title: n === "lead_vocal" ? "Lead Vocal" : "Drums", path: "derived/stems-eight/" + n + ".flac",
+    versions: [{ id: "", label: "as split", path: "derived/stems-eight/" + n + ".flac" }].concat(n === "lead_vocal" ? [{ id: "plugin-x-vocal-1", label: "Clean voice", path: CLEAN, created: "2026-10-15 21:10" }] : []) }));
+  let made = false;
+  window.fetch = (u, opt) => { u = String(u);
+    const qp = (k) => { try { return new URL(u, location.origin).searchParams.get(k) || ""; } catch (e) { return ""; } };
+    if (u.startsWith("/lab/daw/set")) return json({ set: "derived/stems-eight", mode: "eight", source: "audio.wav", seconds: 40, rate: 48000, channels: 2, strips, rest: "rest" });
+    if (u.startsWith("/lab/daw/peaks")) { peakPaths.push(qp("path")); return json({ peaks: Array.from({ length: 1200 }, (_, i) => Math.abs(Math.sin(i / 30)) * 0.8), seconds: 40 }); }
+    if (u.startsWith("/lab/daw/chunk")) { chunkPaths.push(qp("strip") + "|" + qp("path")); return Promise.resolve(new Response(wav(8), { status: 200, headers: { "Content-Type": "audio/wav" } })); }
+    if (u.startsWith("/lab/daw/ir")) return Promise.resolve(new Response(wav(0.2), { status: 200, headers: { "Content-Type": "audio/wav" } }));
+    if (u.startsWith("/lab/daw/mixes")) return json({ named: [], working: null });
+    if (u === "/lab/daw/mix") { asked.push(JSON.parse(opt.body)); setTimeout(() => { made = true; }, 400); return json({ status: "running", kind: "daw", id: "daw-2948", name: T }, 202); }
+    if (u.startsWith("/lab/derived?name=" + T)) return json({ name: T, derived: made ? [{ id: "daw-2948", kind: "daw", loudness: { integrated_lufs: -14.0, true_peak_dbtp: -0.5 }, lowered_db: 0, files: [] }] : [],
+      running: made ? [] : [{ id: "daw-2948", kind: "daw", status: "running" }] });
+    return real(u, opt); };
+  const tabWas = document.body.dataset.tab, stepWas = (document.querySelector("#postSteps .is-active[data-step-panel]") || {}).dataset;
+  try {
+    document.querySelector('.topbar [data-tab="post"]').click(); await wait(300);
+    document.querySelector('#postSteps [data-step-panel="dawPanel"]').click(); await wait(200);
+    try { localStorage.removeItem("yue2.mixer:" + T + ":derived/stems-eight"); } catch (e) {}
+    HeresyMixer.setTake({ name: T, label: "Take 2948", seconds: 40 });
+    window.dispatchEvent(new CustomEvent("heresy-derived", { detail: { name: T, files: [{ kind: "stems", source: "derived/stems-eight/lead_vocal.flac", label: "↳ Lead Vocal (Stems, eight stems)" }] } }));
+    for (let i = 0; i < 40 && document.querySelectorAll("#mxLanes .mx-lane").length < 3; i++) await wait(100);
+    await wait(300);
+    const C = HeresyMixer.comp;
+    const one = C.item("drums"), rest = C.item("rest");
+    o.one = { muted: !!one.muted, items: !!one.items, hint: one.hint || "" }; o.rest = { muted: !!rest.muted, hint: rest.hint || "" };
+    const it = C.item("lead_vocal");
+    o.items = (it.items || []).map((x) => x.label).join("|");
+    C.pick("lead_vocal", 4, 6); await wait(50);
+    const undoWas = HeresyMixer.state().undo;
+    if (it.items && it.items[0]) it.items[0].action();
+    await wait(300);
+    o.edits = JSON.stringify((HeresyMixer.value().strips.lead_vocal || {}).edits || []);
+    o.peaked = peakPaths.includes(CLEAN);
+    o.said = (document.getElementById("mxState") || {}).textContent || "";
+    chunkPaths.length = 0;
+    HeresyMixer.play(3); await wait(1500);
+    o.chunks = chunkPaths.slice(); HeresyMixer.stop(); await wait(50);
+    document.getElementById("mxMix").click();
+    for (let i = 0; i < 30 && !asked.length; i++) await wait(100);
+    o.sent = asked[0] ? JSON.stringify(((asked[0].mix.strips || {}).lead_vocal || {}).edits || []) : "none";
+    o.undoGrew = HeresyMixer.state().undo > undoWas;
+    HeresyMixer.undo(); await wait(100);
+    o.undone = !((HeresyMixer.value().strips.lead_vocal || {}).edits || []).length;
+  } catch (e) { o.err = String(e && e.stack || e); }
+  finally {
+    window.fetch = real;
+    try { localStorage.removeItem("yue2.mixer:" + T + ":derived/stems-eight"); } catch (e) {}
+    try { HeresyMixer.stop(); HeresyMixer.setTake(null); } catch (e) {}
+    if (stepWas && stepWas.stepPanel) document.querySelector('#postSteps [data-step-panel="' + stepWas.stepPanel + '"]').click();
+    document.querySelector('.topbar [data-tab="' + tabWas + '"]').click(); await wait(300);
+  }
+  return o; })()`);
+check("the selection 0:04–0:06 of the voice taken from «Clean voice» (its only other version): laid at its place with its path, that version's wave asked, said",
+  !cp48.err && cp48.items === "Clean voice · 21:10" && cp48.edits === JSON.stringify([{ op: "copy", a: 4, b: 6, to: 4, path: "derived/plugin-x-vocal-1/vocal.flac" }]) && cp48.peaked &&
+  /0:04–0:06/.test(cp48.said) && /Clean voice/.test(cp48.said), JSON.stringify(cp48));
+check("  heard from that version (its stretch's chunks asked by its path, the lane's own for the rest) and sent to Mix with its path; undone as any edit",
+  !!cp48.chunks && cp48.chunks.includes("lead_vocal|derived/plugin-x-vocal-1/vocal.flac") && cp48.chunks.includes("lead_vocal|derived/stems-eight/lead_vocal.flac") &&
+  cp48.sent === cp48.edits && cp48.undoGrew && cp48.undone, JSON.stringify({ chunks: cp48.chunks, sent: cp48.sent, undoGrew: cp48.undoGrew, undone: cp48.undone }));
+check("  a stem of one version and the rest: the item greyed and saying why, no submenu",
+  cp48.one && cp48.one.muted && !cp48.one.items && /one version/.test(cp48.one.hint) && cp48.rest && cp48.rest.muted && /no versions/.test(cp48.rest.hint), JSON.stringify({ one: cp48.one, rest: cp48.rest }));
+
+// HERESY 2949 (the agent's item E19 after 2.1.0-rc1; Viktor 05.11.2026: «две стороны одной медали в двух разных комнатах»): the Refiner's Compare node,
+// two inputs A and B (any version of the take the Compare window lists, MIDI none), Compare hands them to the Compare window itself; a place of the
+// list under This Take, a node of the canvas whose wires set A (from the take) and B (from a step)
+section("The Refiner's Compare node (2949): A the original and B the newest file at first, the same file refused, Compare opens the two in the Compare window; a place of the list and a node of the canvas, its wires setting A and B");
+const cn49 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), $ = (id) => document.getElementById(id), real = window.fetch, o = {}, T = "x-2949-take";
+  const json = (b, st) => Promise.resolve(new Response(JSON.stringify(b), { status: st || 200, headers: { "Content-Type": "application/json" } }));
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const DB = "derived/debuzz-80-1/debuzz.flac", MA = "derived/remaster-1/master.flac";
+  const derived = [
+    { id: "debuzz-80-1", kind: "debuzz", created: "2026-11-22 10:00:00", files: [{ name: "debuzz", title: "Debuzzed", file: "debuzz.flac", path: DB, seconds: 40 }] },
+    { id: "remaster-1", kind: "remaster", created: "2026-11-22 11:00:00", source: DB, files: [{ name: "master", title: "Master", file: "master.flac", path: MA, seconds: 40 },
+      { name: "report", file: "report.json", path: "derived/remaster-1/report.json", kind: "text" }] }];
+  window.fetch = (u, opt) => { u = String(u); if (u.startsWith("/lab/derived?name=" + T)) return json({ name: T, derived, running: [], trash: [], marks: {} }); return real(u, opt); };
+  const tabWas = document.body.dataset.tab, canvasWas = window.HeresyPost.canvas.on(), stepWas = localStorage.getItem("yue2.postStep");
+  const blindWas = localStorage.getItem("yue2.cmpBlind"); localStorage.removeItem("yue2.cmpBlind");   // the window's names as given
+  try {
+    document.querySelector('.topbar [data-tab="post"]').click(); await wait(300);
+    if (canvasWas) { window.HeresyPost.canvas.set(false); await wait(200); }
+    window.HeresyDerived.setTake({ name: T, label: "Take 2949", seconds: 40 });
+    await until(() => $("cmpA") && $("cmpA").options.length >= 3, 3000);
+    const place = document.querySelector('#postSteps [data-cmp-step]');
+    o.place = !!place;
+    if (place) place.click();
+    await wait(200);
+    o.shown = !$("comparePanel").classList.contains("is-step-off") && $("spectrumPanel").classList.contains("is-step-off") && !!place && place.classList.contains("is-active");
+    o.opts = [...$("cmpA").options].map((x) => x.value + "=" + x.textContent).join("|");
+    o.a = $("cmpA").value; o.b = $("cmpB").value; o.go = !$("cmpGo").disabled;
+    $("cmpB").value = ""; $("cmpB").dispatchEvent(new Event("change", { bubbles: true })); await wait(50);
+    o.same = { off: $("cmpGo").disabled, say: $("cmpSay").textContent };
+    $("cmpB").value = DB; $("cmpB").dispatchEvent(new Event("change", { bubbles: true })); await wait(50);
+    $("cmpGo").click();
+    const box = await until(() => document.querySelector(".cmp-back .cmp-box"), 3000);
+    o.rows = box ? [...box.querySelectorAll(".cmp-row")].map((r) => (r.querySelector(".cmp-label, .cmp-name") || r).textContent.trim()).join("|") : "";
+    o.title = box ? box.querySelector(".cmp-title").textContent : "";
+    if (box) box.querySelector('[data-cmp="close"]').click();
+    await wait(200);
+    // the canvas: the node with two inputs and no output; a wire from the take sets A, from a step B; its window the same panel
+    window.HeresyPost.canvas.set(true); await wait(400);
+    const nd = document.querySelector('.pcv-node[data-node="comparePanel"]');
+    o.node = nd ? { ins: nd.querySelectorAll(".pcv-port.is-in").length, outs: nd.querySelectorAll(".pcv-port.is-out").length } : null;
+    $("cmpA").value = DB; $("cmpA").dispatchEvent(new Event("change", { bubbles: true }));
+    o.linkA = window.HeresyPost.canvas.link("take", "comparePanel", true) && $("cmpA").value === "";
+    o.linkB = window.HeresyPost.canvas.link("remasterPanel", "comparePanel", true) && $("cmpB").value === MA;
+    const w = window.HeresyPost.canvas.wires();
+    o.wires = w.filter((x) => /comparePanel/.test(x)).sort().join(",");
+    o.opened = window.HeresyPost.canvas.open("comparePanel") && window.HeresyPost.canvas.opened() === "comparePanel" && !!$("ndBox").querySelector("#comparePanel #cmpGo");
+    window.HeresyPost.canvas.close(); await wait(150);
+    o.back = $("comparePanel").parentNode && $("comparePanel").parentNode.id === "view-post";
+  } catch (e) { o.err = String(e && e.stack || e); }
+  finally {
+    window.fetch = real;
+    if (blindWas !== null) localStorage.setItem("yue2.cmpBlind", blindWas);
+    try { window.HeresyPost.canvas.set(canvasWas); } catch (e) {}
+    try { if (stepWas) window.HeresyPost.select(stepWas); else localStorage.removeItem("yue2.postStep"); } catch (e) {}
+    try { window.HeresyDerived.setTake(null); } catch (e) {}
+    document.querySelector('.topbar [data-tab="' + (tabWas || "create") + '"]').click(); await wait(300);
+  }
+  return o; })()`);
+check("the list's This Take has Compare: its panel alone in sight; A the original, B the newest file (the Remaster's master), the report left out; Compare on",
+  !cn49.err && cn49.place && cn49.shown && cn49.opts === "=The original|derived/debuzz-80-1/debuzz.flac=Debuzz · 10:00 · Debuzzed|derived/remaster-1/master.flac=Remaster · 11:00 · Master" &&
+  cn49.a === "" && cn49.b === "derived/remaster-1/master.flac" && cn49.go, JSON.stringify(cn49));
+check("  the same file twice: Compare off and why said; the original and the debuzzed one: the Compare window with the two, the original first and as named, B marked",
+  !!cn49.same && cn49.same.off && /same file/.test(cn49.same.say) && /The original/.test(cn49.rows.split("|")[0] || "") && /^B · Debuzzed|B · Debuzzed/.test(cn49.rows.split("|")[1] || "") &&
+  cn49.rows.split("|").length === 2 && /Take 2949/.test(cn49.title), JSON.stringify({ same: cn49.same, rows: cn49.rows, title: cn49.title }));
+check("  the canvas: the node with two inputs and no output; a wire from the take sets A, from the Remaster B (its master), both drawn as Sources set; its window holds the same panel, put back on closing",
+  !!cn49.node && cn49.node.ins === 2 && cn49.node.outs === 0 && cn49.linkA && cn49.linkB && /remasterPanel>comparePanel\*/.test(cn49.wires) && /take>comparePanel\*/.test(cn49.wires) &&
+  cn49.opened && cn49.back, JSON.stringify({ node: cn49.node, linkA: cn49.linkA, linkB: cn49.linkB, wires: cn49.wires, opened: cn49.opened, back: cn49.back }));
+
+// HERESY 2950 (Viktor 15.11.2026: colour icons an option in the Engine, ours in one colour by default; it must hold in every theme): two-tone icons
+section("Two-tone icons (2950): one colour by default; Engine › Appearance › Icons two-tone fills the drawings' closed shapes from the theme's own colours (red for what takes away, the accent for what makes), never an open stroke; kept with the look, back to one colour");
+const ic50 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), $ = (id) => document.getElementById(id), o = {}, root = document.documentElement;
+  const lookWas = localStorage.getItem("yue2.look");
+  const host = document.createElement("div");
+  host.style.cssText = "position:fixed;left:-500px;top:0";
+  host.innerHTML = window.HeresyIcons.ui("star") + window.HeresyIcons.ui("check") + window.HeresyIcons.ui("folder") + '<button type="button" aria-pressed="true">' + window.HeresyIcons.ui("like") + "</button>";
+  document.body.appendChild(host);
+  const fills = () => {
+    const star = host.querySelector(".ui-star path.c"), check = host.querySelector(".ui-check path"), folder = host.querySelector(".ui-folder path.c"), liked = host.querySelector("[aria-pressed] .ui-like path.c");
+    return { star: star ? getComputedStyle(star).fill : "none?", check: check ? getComputedStyle(check).fill : "?", folder: folder ? getComputedStyle(folder).fill : "none?",
+             liked: liked ? getComputedStyle(liked).fill : "?", likedOp: liked ? getComputedStyle(liked).fillOpacity : "?" };
+  };
+  try {
+    o.marked = { star: !!host.querySelector(".ui-star path.c"), check: !host.querySelector(".ui-check path.c"), folder: !!host.querySelector(".ui-folder path.c") };
+    o.def = { attr: root.dataset.icons || "", f: fills(), sel: $("lookIcons") ? $("lookIcons").value : "missing" };
+    $("lookIcons").value = "duo"; $("lookIcons").dispatchEvent(new Event("change", { bubbles: true })); await wait(50);
+    o.duo = { attr: root.dataset.icons || "", f: fills(), kept: (JSON.parse(localStorage.getItem("yue2.look") || "{}") || {}).icons || "" };
+    const css = getComputedStyle(root), amber = css.getPropertyValue("--amber").trim(), bad = css.getPropertyValue("--bad").trim();
+    o.tokens = { amber: amber, bad: bad };
+    $("lookIcons").value = ""; $("lookIcons").dispatchEvent(new Event("change", { bubbles: true })); await wait(50);
+    o.back = { attr: root.dataset.icons || "", f: fills(), kept: "icons" in (JSON.parse(localStorage.getItem("yue2.look") || "{}") || {}) };
+  } catch (e) { o.err = String(e && e.stack || e); }
+  finally {
+    host.remove();
+    if (lookWas === null) localStorage.removeItem("yue2.look"); else localStorage.setItem("yue2.look", lookWas);
+    document.documentElement.removeAttribute("data-icons");
+  }
+  return o; })()`);
+check("one colour by default: no attribute, the select on One colour, no shape filled; the closed paths marked (the star's, the folder's), an open one not (the check)",
+  !ic50.err && ic50.marked.star && ic50.marked.folder && ic50.marked.check && ic50.def.attr === "" && ic50.def.sel === "" && ic50.def.f.star === "none" && ic50.def.f.folder === "none", JSON.stringify(ic50));
+check("  two-tone: kept with the look, the star filled (a colour, not none), the folder too, the check mark never; a pressed like keeps its own fill (the text's colour at its own opacity)",
+  !!ic50.duo && ic50.duo.attr === "duo" && ic50.duo.kept === "duo" && ic50.duo.f.star !== "none" && ic50.duo.f.folder !== "none" && ic50.duo.f.check === "none" && ic50.duo.f.likedOp === "0.25",
+  JSON.stringify(ic50.duo));
+check("  back to one colour: the attribute gone, nothing filled, the choice out of the look",
+  !!ic50.back && ic50.back.attr === "" && ic50.back.f.star === "none" && !ic50.back.kept, JSON.stringify(ic50.back));
+
+// HERESY 2955 (a tester's Windows report of 23.11.2026: in Cover or Remix, From a Recording's file picker did nothing and its line said «start it with --transcriber»;
+// then Engine → Models said «0 fetched, 0 failed» in green for a run the lab had refused): a control turned off for a model that is not here looks off and says which
+// model in plain words, with a button to Engine → Models at that model's row; a refused run is said as refused, with its reason
+section("A model that is not here (2955): the cover's and the backing's controls off and looking off, their lines in plain words with a button to Engine → Models at the model's row; a refused fetch said so; Whisper's controls the same");
+await fetch(BASE + "mock/flags", { method: "POST", body: JSON.stringify({ transcriber: false }) });
+check("the page reloads against a server without the transcriber", !!(await navigate(1)));
+const p55 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), $ = (id) => document.getElementById(id), o = {};
+  $("coverDrawer").open = true; await wait(150);
+  const f = $("coverFile"), cs = getComputedStyle(f), bs = getComputedStyle(f, "::file-selector-button");
+  o.file = { off: f.disabled, cursor: cs.cursor, op: Number(cs.opacity), btnCursor: bs.cursor, btnBorder: bs.borderTopStyle };
+  o.on = ["coverFile", "coverTask", "coverFromAudio", "coverMatch", "transcriberModes", "backFile", "backSplit", "backRead", "backSing"].filter((id) => $(id) && !$(id).disabled);
+  const st = $("coverAudioStatus"), bk = $("backStatus"), pick = $("backTake").nextElementSibling && $("backTake").nextElementSibling.querySelector(".hc-pick");
+  o.cover = { say: (st.querySelector(".pack-say") || {}).textContent || "", btn: !!st.querySelector('button[data-pack="transcriber"]') };
+  o.back = { say: (bk.querySelector(".pack-say") || {}).textContent || "", btn: !!bk.querySelector('button[data-pack="transcriber"]') };
+  o.pick = pick ? { off: pick.disabled, cursor: getComputedStyle(pick).cursor } : null;
+  o.server = [...$("serverCard").querySelectorAll("div")].map((d) => d.textContent).filter((t) => /^(Transcriber|Library)/.test(t));
+  o.flags = /start it with|--transcriber|--outputs|fetch-heresy\\.sh/.test(document.body.innerText);
+  return o; })()`);
+check("no transcriber: every control of From a Recording and of a backing is off (the file pickers, the task, Transcribe, Match sections, the backing's Read and Sing)",
+  p55.file.off && !p55.on.length && !!p55.pick && p55.pick.off, JSON.stringify({ on: p55.on, pick: p55.pick }));
+check("  and looks off: the file picker dimmed with no hand over it, its button dashed; the Studio's picker of the backing too",
+  p55.file.cursor === "not-allowed" && p55.file.op < 1 && p55.file.btnCursor === "not-allowed" && p55.file.btnBorder === "dashed" && p55.pick.cursor === "not-allowed", JSON.stringify(p55.file));
+check("  the lines say in plain words which model is missing, each with its button to Engine → Models; no command line anywhere on the page",
+  /^Covering a recording needs the transcriber \(SheetSage2 with MERT-v2-FullSong\)/.test(p55.cover.say) && p55.cover.btn &&
+  /^Reading a backing needs the transcriber/.test(p55.back.say) && p55.back.btn && !p55.flags && p55.server.join("|") === "Transcribernot in this Studio yet|Librarysaved on disk", JSON.stringify({ c: p55.cover, b: p55.back, s: p55.server, flags: p55.flags }));
+const w55 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), $ = (id) => document.getElementById(id), o = {}, real = window.fetch, tabWas = localStorage.getItem("yue2.engineTab");
+  const json = (b) => Promise.resolve(new Response(JSON.stringify(b), { status: 200, headers: { "Content-Type": "application/json" } }));
+  const now = Math.round(Date.now() / 1000), asked = [];
+  let job = null;
+  const listing = () => ({ script: true, last: null, extras: [], parts: { transcriber: "1.0 GB", whisper: "3.1 GB" }, tiers: [], free: 9e11, spare: 2e9, job, now });
+  window.fetch = (u, opt) => { u = String(u && u.url || u);
+    if (u.startsWith("/lab/weights/fetch")) { asked.push(opt.body); job = { kind: "fetch", what: "the transcriber", status: "running", started: now, ended: null, rc: null, counts: null, lines: [] }; return json(listing()); }
+    if (u.startsWith("/lab/weights")) return json(listing());
+    return real(u, opt); };
+  try {
+    $("coverAudioStatus").querySelector('button[data-pack="transcriber"]').click();
+    for (let i = 0; i < 40 && !document.querySelector('#wtParts .wt-part[data-part="transcriber"]'); i++) await wait(50);
+    const row = document.querySelector('#wtParts .wt-part[data-part="transcriber"]');
+    o.open = { engine: !$("view-engine").classList.contains("is-hidden"), tab: $("view-engine").dataset.etab, row: !!row, asked: !!row && row.classList.contains("is-asked"),
+      sum: row ? row.querySelector(".wt-sum").textContent : "", size: row ? row.querySelector(".wt-size").textContent : "",
+      focus: !!document.activeElement && document.activeElement.dataset.wtPart === "transcriber" };
+    row.querySelector('[data-wt-part="transcriber"]').click();
+    for (let i = 0; i < 40 && !document.querySelector(".hd-back.is-on:not(.is-leaving) .hd-yes"); i++) await wait(50);
+    o.question = (document.querySelector(".hd-back.is-on .hd-title") || {}).textContent || "";
+    document.querySelector(".hd-back.is-on .hd-yes").click();
+    for (let i = 0; i < 40 && !asked.length; i++) await wait(50);
+    o.asked = asked.slice();
+    job = Object.assign({}, job, { status: "failed", rc: 1, ended: now + 1, counts: null, lines: ["On Windows the Weights panel downloads through the bash of Git for Windows, and none is installed here.",
+      "Install Git for Windows (https://git-scm.com/download/win), then press again. The models a song needs come without it too:", "    .venv\\\\Scripts\\\\python launcher\\\\fetch_models.py"] });
+    await window.HeresyWeights.load();
+    const t = [...document.querySelectorAll("#toasts .toast")].pop();
+    o.toast = t ? { text: t.textContent, bad: t.classList.contains("bad") } : null;
+    o.line = { text: $("wtLine").textContent, bad: $("wtLine").classList.contains("is-bad") };
+  } catch (e) { o.err = String(e && e.stack || e); }
+  finally {
+    window.fetch = real;
+    document.querySelectorAll(".hd-back.is-on .hd-no").forEach((b) => b.click());
+    if (!$("view-engine").classList.contains("is-hidden")) $("engineToggle").click();
+    await wait(200);
+    if (tabWas === null) localStorage.removeItem("yue2.engineTab"); else localStorage.setItem("yue2.engineTab", tabWas);
+  }
+  return o; })()`);
+check("  its button opens Engine › Models and LoRAs at the transcriber's row, marked, its Fetch in focus; with no check run yet the row is there by the lab's list of parts (1.0 GB)",
+  !w55.err && w55.open.engine && w55.open.tab === "models" && w55.open.row && w55.open.asked && w55.open.focus && w55.open.size === "1.0 GB" && /not in the last check here/.test(w55.open.sum), JSON.stringify(w55.open || w55.err));
+check("  its Fetch asks first and fetches the part «transcriber»",
+  /^Fetch The transcriber/.test(w55.question) && w55.asked.length === 1 && JSON.parse(w55.asked[0]).part === "transcriber", JSON.stringify({ q: w55.question, a: w55.asked }));
+check("  a run the lab refused (no Git for Windows, nothing counted failed) is said as refused, red, with the lab's own reason, never «0 fetched, 0 failed»",
+  !!w55.toast && w55.toast.bad && /^The transcriber: not fetched\. On Windows the Weights panel downloads through the bash of Git for Windows/.test(w55.toast.text) && !/0 fetched/.test(w55.toast.text) &&
+  !/fetch_models\.py/.test(w55.toast.text) && w55.line.bad && /not fetched\. On Windows/.test(w55.line.text) && !/0 fetched/.test(w55.line.text), JSON.stringify({ t: w55.toast, l: w55.line }));
+await fetch(BASE + "mock/flags", { method: "POST", body: JSON.stringify({ transcriber: true, whisper: false }) });
+check("the page reloads against a lab without Whisper", !!(await navigate(1)));
+await waitFor(`window.HeresyWeights && window.HeresyWeights.has("whisper") === false`, 5000, 50);
+const x55 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), $ = (id) => document.getElementById(id), o = {};
+  const st = $("coverAudioStatus"), gs = $("glossState");
+  o.cover = { file: $("coverFile").disabled, go: $("coverFromAudio").disabled, match: $("coverMatch").disabled, say: (st.querySelector(".pack-say") || {}).textContent || "", btn: !!st.querySelector('button[data-pack="whisper"]') };
+  o.gloss = { run: $("glossRun").disabled, kt: $("ktRun").disabled, say: (gs.querySelector(".pack-say") || {}).textContent || "", btn: !!gs.querySelector('button[data-pack="whisper"]') };
+  const tab = document.querySelector('.topbar [data-tab="read"]');
+  if (tab) {
+    tab.click();
+    for (let i = 0; i < 40 && !$("rdTrFile"); i++) await wait(100);
+    const m = $("rdTrMiss");
+    o.reader = { file: !!$("rdTrFile") && $("rdTrFile").disabled, go: !!$("rdTrGo") && $("rdTrGo").disabled, say: m ? ((m.querySelector(".pack-say") || {}).textContent || "") : "", btn: !!m && !!m.querySelector('button[data-pack="whisper"]') };
+    document.querySelector('.topbar [data-tab="create"]').click(); await wait(300);
+  }
+  return o; })()`);
+check("no Whisper: the recording's cover still transcribes, Match sections is off and the line says it needs Whisper, with its button",
+  !x55.cover.file && !x55.cover.go && x55.cover.match && /^Ready to transcribe\. Match sections needs Whisper large-v3/.test(x55.cover.say) && x55.cover.btn, JSON.stringify(x55.cover));
+check("  the lyrics check and karaoke timing off, their line saying so with its button",
+  x55.gloss.run && x55.gloss.kt && /^The lyrics check and karaoke timing need Whisper large-v3/.test(x55.gloss.say) && x55.gloss.btn, JSON.stringify(x55.gloss));
+if (x55.reader) check("  the Narrator's transcription: its file picker and its button off, its line saying so with its button",
+  x55.reader.file && x55.reader.go && /^Transcribing a recording needs Whisper large-v3/.test(x55.reader.say) && x55.reader.btn, JSON.stringify(x55.reader));
+else skip("  the Narrator's transcription", "the Narrator's room is not in this tree");
+await fetch(BASE + "mock/flags", { method: "POST", body: JSON.stringify({ transcriber: true, whisper: true }) });
+check("the page reloads against the whole server", !!(await navigate(1)));
+const y55 = await ev(`(async () => {
+  const $ = (id) => document.getElementById(id);
+  await new Promise((r) => setTimeout(r, 300));
+  return { on: ["coverFile", "coverTask", "coverFromAudio", "coverMatch", "backFile", "backRead", "backSing", "glossRun"].filter((id) => $(id) && $(id).disabled),
+    ready: $("coverAudioStatus").textContent, packs: [...document.querySelectorAll(".pack-say")].filter((e) => !e.closest("#transcriberMiss")).length,
+    refined: ($("transcriberMiss").querySelector(".pack-say") || {}).textContent || "", refinedBtn: !!$("transcriberMiss").querySelector('button[data-pack="refined"]') }; })()`);
+check("  with both back, every control on again, the cover's line «Ready», no word of a missing model left but Refined's (the mock has no Refined): its own line under the modes, with its button",
+  !y55.on.length && /^Ready\. Runs on the server/.test(y55.ready) && y55.packs === 0 && /^Refined needs SheetSage2-Refined/.test(y55.refined) && y55.refinedBtn, JSON.stringify(y55));
+
+// HERESY 2956 (Viktor 23.11.2026 ~12:10, a screenshot of «The workspace in hand»: «В выборе пространства не применена ересь с системными эмоджи Студии. Всё нужно
+// перепроверить.»): every chooser of workspaces is the Librarian's own tree, on a catalog of the section's own (the lab stood in)
+section("Every chooser of workspaces is the Librarian's tree (2956): the workspace in hand, the bar's Add, a workspace moved, a take's workspaces, the Videographer's find, the Trainer's stereo picker: the column's order, one even emoji column (a faint stack for none, a faint leaf for a section), the Studio's marks, the closed muted with why, the archived under Archived");
+const wp56 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), o = {}, real = window.fetch, HC = window.HeresyCollection, $ = (id) => document.getElementById(id);
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b) => Promise.resolve(new Response(JSON.stringify(b), { status: 200, headers: { "Content-Type": "application/json" } }));
+  const kept = {}, tabWas = document.body.dataset.tab || "create";
+  for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (/^yue2[.](coll|workspace|wsTree|libRealm|trPane|vdFindWs)/.test(k)) kept[k] = localStorage.getItem(k); }
+  const names = [...document.querySelectorAll("#libList .take[data-name]:not(.is-fav):not([data-run])")].map((c) => c.dataset.name);
+  if (names.length < 2) return { err: "fewer than two takes in the Musician's column: " + names.length };
+  const A = names[0], B = names[1];
+  const row = (n, ws, extra) => Object.assign({ name: n, title: "ws56 " + n.slice(-6), created: Math.floor(Date.now() / 1000) - 600, seconds: 60, favorite: false, kind: "generated", cot: "off", derived: [],
+    hidden: false, workspaces: ws, rating: 0, note: "", seeds: null, fresh: false, regen_of: "", frozen: false, protected: false, realm: "creator" }, extra || {});
+  const rows = [row(A, ["Alpha", "Гитара / Бой", "🧪 Beta"]), row(B, ["Гитара"])];
+  const WS = ["Alpha", "Ice", "Old", "Zed", "Гитара", "Гитара / Бой", "Книга", "🧪 Beta", "💎 Demo Set"];
+  const cat = () => ({ takes: rows, workspaces: WS.slice().sort(), ws_emoji: { "Гитара": "🎸", "Книга": "📖" }, ws_realm: { "Книга": "reader" },
+    frozen: ["Ice"], archived: ["Old"], blind: [], trash_days: 0, locks: { Zed: { workspace: true } }, pins: {} });
+  window.fetch = (u, opt) => { u = String(u);
+    if (u.startsWith("/lab/catalog")) return json(cat());
+    if (u.startsWith("/lab/stereo/guard")) return json({ status: "none" });
+    return real(u, opt); };
+  const side = () => $("collSide");
+  const mainTree = () => { const out = []; let on = false; for (const el of side().children) { if (el.classList && el.classList.contains("coll-cap-ws")) { on = true; continue; } if (on && el.classList.contains("coll-cap")) break; if (on && el.dataset && el.dataset.place) out.push(el.dataset.place); } return out; };
+  const emOf = (e) => !e ? null : e.querySelector("ellipse") ? "stack" : e.querySelector(".wse-sprig") ? "leaf" : e.textContent;
+  // a chooser's rows: its label, its emoji cell (what it draws and where), muted and why, the caption rows between
+  const readDlg = () => { const L = document.querySelector(".hd-back.is-on:not(.is-leaving) .hd-list"); if (!L) return null;
+    return [...L.children].map((x) => x.classList.contains("hd-head") ? { head: x.textContent } : (() => { const b = x.classList.contains("hd-row") ? x.querySelector(".hd-item") : x, e = b.querySelector(".hd-item-em");
+      return { label: b.querySelector(".hd-item-label").textContent, em: emOf(e), faint: !!e && e.classList.contains("is-faint"), ex: e && b.offsetParent !== null ? Math.round(e.getBoundingClientRect().left) : null,
+        muted: b.getAttribute("aria-disabled") === "true", tip: b.dataset.tip || "", marks: (b.querySelector(".hd-item-marks") || {}).textContent || "" }; })()); };
+  // every dialog closed, a queued one that opens after the one closed included (three tries left one open under load: 23.11's fourth run)
+  const shutDlg = async () => { for (let i = 0; i < 25; i++) { const n = document.querySelector(".hd-back.is-on:not(.is-leaving) .hd-no"); if (n) { n.click(); await wait(200); continue; }
+    await wait(250); if (!document.querySelector(".hd-back.is-on:not(.is-leaving)")) break; } };
+  try {
+    document.querySelector('.topbar [data-tab="collection"]').click();
+    await until(() => !$("view-collection").classList.contains("is-hidden"), 3000);
+    localStorage.setItem("yue2.libRealm", "creator"); localStorage.removeItem("yue2.wsTree");
+    await HC.reload(); await wait(300);
+    o.tree = mainTree(); o.treeLabels = o.tree.map((w) => window.ruachWsEm(w).name);
+    o.fullTree = HC.wsTree().main.concat(HC.wsTree().archived); o.bothTree = HC.wsTree({ realm: "both" }).main.concat(HC.wsTree({ realm: "both" }).archived);
+    // ① the workspace in hand
+    $("wsCurrent").click();
+    await until(() => document.querySelector(".hd-back.is-on .hd-choose .hd-item"), 3000);
+    o.hand = readDlg();
+    const gRow = [...document.querySelectorAll(".hd-back.is-on .hd-list .hd-row.has-petal")].find((r) => r.querySelector(".hd-item-label").textContent === "Гитара");
+    if (gRow) {
+      const box = document.querySelector(".hd-back.is-on .hd-box").getBoundingClientRect();
+      gRow.querySelector(".hd-petal-btn").click(); await until(() => document.querySelector(".hd-petal .hd-item"), 2000);
+      const pet = document.querySelector(".hd-petal"), pr = pet.getBoundingClientRect();
+      o.petal = { rows: [...pet.querySelectorAll(".hd-item")].map((b) => (b.querySelector(".hd-item-label") || b).textContent.trim()), right: pr.left >= box.right - 2 || pr.right <= box.left + 2, inWin: pr.right <= innerWidth && pr.bottom <= innerHeight,
+        em: !!pet.querySelector(".hd-item-em"), focus: !!document.activeElement && !!document.activeElement.closest(".hd-petal") };
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true }));   // read at once: a pointer resting where the petal was may open another one 140 ms later
+      o.petal.closed = !document.querySelector(".hd-petal") && !!document.querySelector(".hd-back.is-on .hd-choose");
+      gRow.querySelector(".hd-petal-btn").click(); await until(() => document.querySelector(".hd-petal .hd-item"), 2000);
+      const boj = [...document.querySelectorAll(".hd-petal .hd-item")].find((b) => /Бой/.test(b.textContent));
+      if (boj) { boj.click(); await wait(300); }
+      o.petal.chose = HC.current();
+    }
+    await shutDlg();
+    // ② a take's workspaces (its card's button)
+    const cb = document.querySelector('#collGrid .coll-card[data-name="' + A + '"] [data-cws]');
+    if (cb) { cb.click(); await until(() => document.querySelector(".hd-back.is-on .hd-choose .hd-item"), 3000); o.take = readDlg(); await shutDlg(); }
+    // ③ the bar's Add, a take checked
+    const box = document.querySelector('#collGrid .coll-card[data-name="' + A + '"] .coll-check, #collGrid .coll-card[data-name="' + A + '"] input[type=checkbox]');
+    if (box) { box.click(); await wait(150); }
+    if ($("collWsAddBtn") && !$("collWsAddBtn").disabled) { $("collWsAddBtn").click(); await until(() => document.querySelector(".hd-back.is-on .hd-choose .hd-item"), 3000); o.add = readDlg(); await shutDlg(); }
+    const none = $("collSelNone"); if (none) none.click();
+    // ④ a workspace moved into another (its ⋯, Move into…)
+    const more = document.querySelector('#collSide [data-ws-menu="Alpha"]');
+    if (more) { more.click(); await wait(200);
+      const mi = [...document.querySelectorAll(".hm-menu .hm-item")].find((x) => /^Move into/.test(x.textContent.trim()) || /Move into/.test(x.textContent));
+      if (mi) { mi.click(); await until(() => document.querySelector(".hd-back.is-on .hd-choose .hd-item"), 3000); o.move = readDlg(); await shutDlg(); }
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })); await wait(100); }
+    // ⑤ the Videographer's find window
+    if (window.HeresyVideo && window.HeresyVideo.findOpen && $("vdFindWs")) {
+      document.querySelector('.topbar [data-tab="video"]').click(); await wait(300);
+      window.HeresyVideo.findOpen(); await wait(300);
+      o.video = [...$("vdFindWs").querySelectorAll(".vd-ws[data-vdws]")].filter((b) => b.dataset.vdws).map((b) => { const e = b.querySelector(".vd-ws-em"); return { w: b.dataset.vdws, label: (b.querySelector(".vd-ws-name") || b).textContent, em: emOf(e), ex: e ? Math.round(e.getBoundingClientRect().left) : null }; });
+      window.HeresyVideo.findClose();
+    }
+    // ⑥ the Trainer's stereo guard: its workspace as the Studio's picker, the list with the emoji column
+    const pill = document.querySelector('#trPills [data-pane="stereo"]');
+    if (pill) {
+      document.querySelector('.topbar [data-tab="train"]').click(); await wait(300);
+      pill.click(); await until(() => $("trSgWs") && $("trSgWs").options.length, 4000);
+      const pk = $("trSgWs") && $("trSgWs").nextElementSibling && $("trSgWs").nextElementSibling.querySelector(".hc-pick");
+      if (pk) { pk.click(); await wait(250);
+        o.train = [...document.querySelectorAll(".hc-pop .hc-row")].map((r) => { const e = r.querySelector(".hc-em"); return { w: $("trSgWs").options[+r.dataset.i].value, label: r.textContent.replace(e ? e.textContent : "", "").trim(), em: emOf(e), ex: e ? Math.round(e.getBoundingClientRect().left) : null }; });
+        document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })); await wait(100); }
+    }
+  } catch (e) { o.err = String(e && e.stack || e); }
+  finally {
+    await shutDlg();
+    window.fetch = real;
+    for (let i = localStorage.length - 1; i >= 0; i--) { const k = localStorage.key(i); if (/^yue2[.](coll|workspace|wsTree|libRealm|trPane|vdFindWs)/.test(k) && !(k in kept)) localStorage.removeItem(k); }
+    Object.keys(kept).forEach((k) => localStorage.setItem(k, kept[k]));
+    await HC.reload(); await wait(150);
+    const allb = document.querySelector('#collSide [data-place=""]'); if (allb) allb.click();
+    const t = document.querySelector('.topbar [data-tab="' + tabWas + '"]'); if (t) t.click(); await wait(200);
+  }
+  return o; })()`);
+const lab56 = (rs) => (rs || []).filter((r) => !r.head).map((r) => r.label);
+const even56 = (rs) => { const xs = (rs || []).filter((r) => !r.head && r.ex !== null && r.ex !== undefined).map((r) => r.ex); return xs.length > 2 && xs.every((x) => x === xs[0]); };
+const find56 = (rs, l) => (rs || []).find((r) => r.label === l) || {};
+const upTo56 = (rs, head) => { const out = []; for (const r of rs || []) { if (r.head) { if (r.head === head) break; continue; } out.push(r); } return out; };
+const h56 = wp56.hand || [];
+check("the workspace in hand: the column's own tree in its order, each name its level's, its emoji in one even column (🎸 its own, 🧪 and 💎 off the name, a faint stack for none, a faint leaf for a section)",
+  !wp56.err && JSON.stringify(lab56(upTo56(h56, "Archived"))) === JSON.stringify(wp56.treeLabels) && even56(h56) && find56(h56, "Гитара").em === "🎸" && find56(h56, "Beta").em === "🧪" &&
+  find56(h56, "Demo Set").em === "💎" && find56(h56, "Alpha").em === "stack" && find56(h56, "Alpha").faint && find56(h56, "Бой").em === "leaf" && find56(h56, "Бой").faint,
+  JSON.stringify({ err: wp56.err, tree: wp56.treeLabels, hand: h56 }));
+check("  what takes no new take is there, muted, saying why (frozen with its ❄, a 💎 set; the archived under Archived); the lock's 🔒 after its name",
+  find56(h56, "Ice").muted && /^Frozen: nothing new lands in it/.test(find56(h56, "Ice").tip) && /❄/.test(find56(h56, "Ice").marks) && find56(h56, "Demo Set").muted &&
+  h56.some((r) => r.head === "Archived") && find56(h56, "Old").muted && /^Archived/.test(find56(h56, "Old").tip) && /🔒/.test(find56(h56, "Zed").marks) && !find56(h56, "Alpha").muted,
+  JSON.stringify(h56.filter((r) => r.head || r.muted || r.marks)));
+check("  a workspace's sections in a petal to the right of its row, in the same overlay (its emoji column, its focus, ← closes it), «+ New section of …» in it; a section chosen there is the one in hand",
+  !!wp56.petal && JSON.stringify(wp56.petal.rows) === JSON.stringify(["Бой", "+ New section of “Гитара”…"]) && wp56.petal.right && wp56.petal.inWin && wp56.petal.em && wp56.petal.focus && wp56.petal.closed &&
+  wp56.petal.chose === "Гитара / Бой", JSON.stringify(wp56.petal));
+const t56 = wp56.take || [];
+check("  a take's own workspaces: in the tree's order, each with its emoji in the column, a section with its parents' path",
+  JSON.stringify(t56.map((r) => r.label)) === JSON.stringify(["Alpha", "Гитара / Бой", "Beta"]) && even56(t56) && t56[2].em === "🧪" && t56[1].em === "leaf", JSON.stringify(t56));
+const a56 = wp56.add || [];
+check("  the bar's Add: the tree with its emoji column, then the Narrator's under its caption as links (🔗), the same column",
+  even56(a56) && JSON.stringify(lab56(upTo56(a56, "Link into the Narrator's")).filter((l) => l !== "Old")) === JSON.stringify(wp56.treeLabels.filter((l) => l !== "Old")) &&
+  a56.some((r) => r.head === "Link into the Narrator's") && find56(a56, "🔗 Книга").em === "📖", JSON.stringify(a56));
+const m56 = wp56.move || [];
+check("  a workspace moved into another: the tree without it, the same column, what takes nothing in muted with why",
+  m56.length > 3 && !find56(m56, "Alpha").label && even56(m56) && find56(m56, "Ice").muted && find56(m56, "Гитара").em === "🎸", JSON.stringify(m56));
+const v56 = wp56.video || [];
+check("  the Videographer's find window: the Library's tree in its order, each name its level's, its emoji in one even column",
+  JSON.stringify(v56.map((r) => r.w).filter((w) => wp56.fullTree.indexOf(w) >= 0)) === JSON.stringify(wp56.fullTree) && even56(v56) && (v56.find((r) => r.w === "Гитара") || {}).em === "🎸" && (v56.find((r) => r.w === "Гитара / Бой") || {}).em === "leaf",
+  JSON.stringify(v56));
+const r56 = wp56.train || [];
+check("  the Trainer's stereo guard: the Studio's own picker, the tree's order, its list with the emoji column",
+  r56.length > 3 && JSON.stringify(r56.map((r) => r.w)) === JSON.stringify(wp56.bothTree.filter((w) => r56.some((x) => x.w === w))) && even56(r56) && (r56.find((r) => r.w === "Книга") || {}).em === "📖",
+  JSON.stringify(r56));
+
+// HERESY 2957 (a tester's DevTools «Issues» panel of 23.11.2026, 2.1.0-rc1 on Windows): «Interactive element inside of a <summary> element» (5), «A form field
+// element should have an id or name attribute» (99+): no focusable element inside a summary, a summary reached by the keyboard showing its mark's tip; every field named
+section("The browser's own audit (2957): no focusable element inside a <summary>; every field of every room named (its id, or a name of its own); a summary reached by the keyboard shows its info mark's tip");
+const f57 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), o = {}, tabWas = document.body.dataset.tab || "create";
+  for (const t of ["create", "write", "post", "artist", "video", "train", "collection", "read"]) { const b = document.querySelector('.topbar [data-tab="' + t + '"]'); if (b) { b.click(); await wait(300); } }
+  await wait(300);
+  o.inSummary = [...document.querySelectorAll("summary")].flatMap((s) => [...s.querySelectorAll("a[href], button, input, select, textarea, [tabindex]")]).map((e) => e.id || e.className || e.tagName);
+  const fields = [...document.querySelectorAll("input, select, textarea")].filter((e) => e.type !== "hidden");
+  o.fields = fields.length;
+  o.unnamed = fields.filter((e) => !e.id && !e.getAttribute("name")).map((e) => ((e.closest("[id]") || {}).id || "?") + ":" + (e.type || e.tagName));
+  o.ours = fields.filter((e) => /^f-/.test(e.getAttribute("name") || "")).length;
+  o.kept = (document.querySelector('[data-def="yue2.seekBtn"]') || {}).name || "";
+  // a row drawn later takes its name as it comes
+  const host = document.createElement("div"); host.id = "f57Probe"; host.innerHTML = '<input type="text"><select><option>a</option></select>'; document.body.appendChild(host); await wait(50);
+  o.late = [...host.querySelectorAll("input, select")].map((e) => e.getAttribute("name") || ""); host.remove();
+  const t = document.querySelector('.topbar [data-tab="' + tabWas + '"]'); if (t) t.click(); await wait(300);
+  return o; })()`);
+check("no button, field, link or tabindex inside any <summary> of the page (the Artist's five info marks were)", !f57.inSummary.length, JSON.stringify(f57.inSummary));
+check("  every field of every room has an id or a name (" + f57.fields + " fields; " + f57.ours + " named by the page as it draws them): a setting's by its key, a row drawn later as it comes",
+  f57.fields > 300 && !f57.unnamed.length && f57.kept === "f-yue2-seekbtn" && f57.late.every((n) => /^f-f57probe-/.test(n)), JSON.stringify({ unnamed: f57.unnamed.slice(0, 12), n: f57.unnamed.length, kept: f57.kept, late: f57.late }));
+// the keyboard on the Artist's Regions summary: its mark's tip (the page given focus as a window in front has it: focus events fire)
+await send("Emulation.setFocusEmulationEnabled", { enabled: true });
+const t57 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), o = {}, tabWas = document.body.dataset.tab || "create";
+  document.querySelector('.topbar [data-tab="artist"]').click(); await wait(400);
+  const sum = [...document.querySelectorAll("#view-artist details > summary")].find((s) => s.querySelector(".info[data-tip]:not([hidden])"));
+  if (sum) { const want = sum.querySelector(".info[data-tip]").dataset.tip; sum.scrollIntoView({ block: "center" }); await wait(300); sum.focus(); await wait(500);
+    const tip = document.querySelector(".tip"); o.focused = document.activeElement === sum; o.shown = !!tip && tip.classList.contains("is-on");
+    o.same = !!tip && tip.textContent.replace(/\\s+/g, " ").indexOf(want.slice(0, 40).replace(/\\s+/g, " ")) >= 0; sum.blur(); await wait(100); }
+  const t = document.querySelector('.topbar [data-tab="' + tabWas + '"]'); if (t) t.click(); await wait(300);
+  return o; })()`);
+await send("Emulation.setFocusEmulationEnabled", { enabled: false });
+check("  a summary reached by the keyboard shows its info mark's tip", t57.focused && t57.shown && t57.same, JSON.stringify(t57));
+
+// HERESY 2958 (a tester's DevTools of 23.11.2026, the manifest: «Richer PWA install UI won't be available on desktop / on mobile»; «The maximum number of shortcuts is platform dependent»)
+section("The install window shows the Studio (2958): the manifest's two screenshots (wide and narrow, their files there at their sizes, keyed by the build) and four shortcuts");
+{
+  const PWA58 = resolve(ROOT, "build/tools/console/pwa");
+  let man58 = null, built58 = null;
+  try { man58 = JSON.parse(readFileSync(PWA58 + "/manifest.webmanifest", "utf8")); built58 = JSON.parse(readFileSync(resolve(ROOT, "build/tools/public/manifest.webmanifest"), "utf8")); } catch (e) { /* said below */ }
+  const size58 = (f) => { try { const b = readFileSync(PWA58 + "/" + f); return b.readUInt32BE(16) + "x" + b.readUInt32BE(20); } catch (e) { return "missing"; } };
+  const shots58 = man58 && man58.screenshots ? man58.screenshots.map((s) => s.form_factor + ":" + s.sizes + ":" + size58(s.src.replace(/^\/pwa\//, "")) + ":" + s.type) : [];
+  check("two screenshots, wide 1920×1080 and narrow 860×1864, PNG, their files at those sizes; in the built manifest keyed (?v=)",
+    shots58.join("|") === "wide:1920x1080:1920x1080:image/png|narrow:860x1864:860x1864:image/png" && !!built58 && built58.screenshots.every((s) => /\?v=[0-9a-f]{10}$/.test(s.src)), JSON.stringify({ shots58, built: built58 && built58.screenshots }));
+  check("  four shortcuts, the ones every platform shows: New song, Musician, Narrator, Librarian", !!man58 && man58.shortcuts.map((s) => s.name).join("|") === "New song|Musician|Narrator|Librarian", JSON.stringify(man58 && man58.shortcuts.map((s) => s.name)));
+}
+
+// HERESY 2959 (Viktor 22.11.2026: «Будешь ставить сторожа аккордов в Студию? В продакшн»; the plan's item M): the chord guard on the page
+section("The chord guard (2959): the tonic and its semitone neighbour swinging bar by bar and double sharps or flats said with «Rewrite the score», a block (a modulation, a lift) said not at all; a song the engine stopped for a chord that swallowed its notes planned again once with a new seed, a fixed seed left alone");
+const cg59 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), $ = (id) => document.getElementById(id), G = window.ruachChordGuard, o = {};
+  const head = "X:1\\nL:1/8\\nM:4/4\\nK:Bm\\nV: Vocal\\n";
+  const flip = head + Array.from({ length: 12 }, (_, i) => (i % 2 ? '"Cm"c4c4|' : '"Bm"B4B4|')).join("") + "\\n";
+  const block = head + Array.from({ length: 12 }, (_, i) => (i < 6 ? '"Bm"B4B4|' : '"Cm"c4c4|')).join("") + "\\n";
+  const dbl = "X:1\\nL:1/8\\nM:4/4\\nK:C\\nV: Vocal\\n" + '"C"c8|"C##m"d8|"G/F##"g8|"Am"a8|' + "\\n";
+  o.flip = G(flip); o.block = G(block); o.dbl = G(dbl);
+  // the form: the line under the score and its button
+  const wasAbc = $("abc").value, wasCot = (document.querySelector('input[name="cot"]:checked') || {}).value;
+  document.querySelector('input[name="cot"][value="full"]').click();
+  $("abc").value = flip; $("abc").dispatchEvent(new Event("input", { bubbles: true })); await wait(50);
+  const g = $("chordGuard"); o.line = { shown: !g.hidden, text: g.textContent, btn: !!g.querySelector(".cg-again") };
+  $("abc").value = block; $("abc").dispatchEvent(new Event("input", { bubbles: true })); await wait(50);
+  o.blockHidden = g.hidden;
+  $("abc").value = wasAbc; $("abc").dispatchEvent(new Event("input", { bubbles: true }));
+  if (wasCot) document.querySelector('input[name="cot"][value="' + wasCot + '"]').click();
+  // the first level: a random seed planned again once, a fixed one not
+  const before = (await (await fetch("/mock/requests")).json()).filter((r) => r.path === "/synth").length;
+  const req = { title: "zz 2959 swallow", style: "folk", lyrics: "[Verse]\\nla", cot: "full", abc: "", lm_seed: "", lm_batch_size: 1 };
+  o.again = window.ruachChordAgain({ kind: "song", request: req }, "Broken score: a chord symbol swallowed notes (\\"Ea4g2f2e8-|\\")");
+  o.toast = [...document.querySelectorAll(".toast")].map((t) => t.textContent).filter((t) => /swallowed its notes/.test(t)).length;   // said at once (a long wait lets it fade)
+  o.twice = window.ruachChordAgain({ kind: "song", request: req }, "Broken score: a chord symbol swallowed notes (\\"Ea4g2f2e8-|\\")");
+  o.fixed = window.ruachChordAgain({ kind: "song", request: Object.assign({}, req, { title: "zz 2959 fixed", lm_seed: "123" }) }, "Broken score: a chord symbol swallowed notes (\\"x|\\")");
+  o.other = window.ruachChordAgain({ kind: "song", request: Object.assign({}, req, { title: "zz 2959 other" }) }, "Broken score: colons in a run of 5");
+  o.queued = window.ruachChordAgain.last || null;   // what the first level queued (sending it is the queue's own, checked elsewhere)
+  return o; })()`);
+check("a plan whose tonic chord and its semitone neighbour swing bar by bar (Bm–Cm, 11 switches) is a flip; one that moves once (a block) is none; double sharps named (C##m, G/F##)",
+  !!cg59.flip.flip && cg59.flip.flip.a === "Bm" && cg59.flip.flip.b === "Cm" && cg59.flip.flip.switches === 11 && !cg59.block.flip && !cg59.block.doubles.length &&
+  JSON.stringify(cg59.dbl.doubles) === JSON.stringify(["C##m", "G/F##"]) && !cg59.flip.doubles.length, JSON.stringify({ f: cg59.flip, b: cg59.block, d: cg59.dbl }));
+check("  under the form's score: the chords named, «Rewrite the score» beside them; a block says nothing",
+  cg59.line.shown && /swing between Bm and Cm bar by bar \(11 times\)/.test(cg59.line.text) && cg59.line.btn && cg59.blockHidden, JSON.stringify(cg59.line));
+check("  a chord that swallowed its notes: the song planned again once with a new music seed (said), never twice, never with a seed the user fixed, never for another fault",
+  cg59.again === true && cg59.twice === false && cg59.fixed === false && cg59.other === false && !!cg59.queued && cg59.queued.title === "zz 2959 swallow" &&
+  cg59.queued.seed === undefined && cg59.queued.batch === undefined && cg59.queued.versions === 1 && cg59.toast >= 1,
+  JSON.stringify({ again: cg59.again, twice: cg59.twice, fixed: cg59.fixed, other: cg59.other, queued: cg59.queued, toast: cg59.toast }));
+
+// HERESY 2960 (Viktor 23.11.2026, about 13:50, through the lead: with a run active, the Trainer's steps 1–3 said a set and knobs of a month-old run, the
+// wizard's set kept in the settings): a run chosen, steps 1–3 are that run's, each pane its page read only; the wizard is a new run's, fresh or from the
+// run. Two runs stubbed: the Studio's own (a voice adapter) and a plugin's (its own facts, its own knobs); a leftover set picked before them
+section("A run's own steps (2960): a run chosen, steps 1–3 are that run's (its material, its set, what it was given), each pane its page read only; the wizard a new run's, fresh or from the run");
+const tr60 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, $ = (id) => document.getElementById(id);
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b) => Promise.resolve(new Response(JSON.stringify(b), { headers: { "Content-Type": "application/json" } }));
+  const keys = ["yue2.trRun", "yue2.trPane", "yue2.trStacked", "yue2.trSet", "yue2.trEngine", "yue2.trCards"], was = keys.map((k) => localStorage.getItem(k));
+  const now = Date.now() / 1000;
+  const own = { name: "zz-own-2960", status: "done", dataset: "zz-set-own-2960", kind: "voice", steps: 1260, step: 1260, tracks: 42, started: now - 86400, checkpoints: [], gpus: [1],
+    options: { engine: "ruach", rank: 16, lr: 0.0001, save_epochs: 1, ar_loss_weight: 0.3, ar_kl_weight: 0.3, ar_lr_multiplier: 0.5, cot: "off", quant: "bf16", do_separation: false,
+      train_window_frames: 1500, lr_tail_epochs: 0, lr_tail_floor: 0, val_fraction: 0, vram_meter: false, ar_cap_tokens: 0, long_off_card0: false }, series: {} };
+  const plug = { name: "zz-plug-2960", status: "running", dataset: "zz-set-big-2960", kind: "3B · zz polish", plugin: "zzx", engine_label: "ZZ Trainer", steps: 3803, step: 1200, tracks: 9507,
+    started: now - 3600, checkpoints: [], gpus: [1, 2], options: { engine: "zzx", epochs: 0.4, lr: 0.0001, zz_knob: 7 }, series: {},
+    facts: [["learns", "every weight (zz)"], ["set", "zz-set-big-2960 · 107,336 tracks · 9,507 steps of 12"], ["epochs", "0.4 · 3,803 steps"], ["LR AR", "e0 5e-06 → e0.4 1e-06"], ["LR NAR", "e0 0 (frozen)"]] };
+  const data = { raw: [{ name: "zz-raw-2960", tracks: 44, bytes: 4e8, captions: 44, voice: null }],
+    prepared: [{ name: "zz-set-own-2960", tracks: 42, from: "zz-raw-2960", made: "2026-11-01 10:00", seconds: 2520, sheets_by: "sheetsage2-bf16" },
+      { name: "zz-set-big-2960", tracks: 107417, from: "zz-set-base-2960", made: "2026-11-22 23:37", seconds: 360000, sheets_by: "sheetsage2" },
+      { name: "zz-old-set-2960", tracks: 482, from: "zz-old-raw-2960", made: "2026-10-20 12:00", seconds: 30000 }],
+    runs: [own, plug], own: {}, aitk_ready: false, engines: [{ id: "zzx", label: "ZZ Trainer", fields: [{ key: "zz_knob", label: "ZZ knob", type: "number", default: 1 }] }],
+    gpus: [{ index: 1, name: "NVIDIA GeForce RTX 3090", total_mb: 24576, free_mb: 20000 }] };
+  window.fetch = (u, o) => { u = String(u);
+    if (u.startsWith("/lab/train/datasets")) return json(data);
+    if (u.startsWith("/lab/train/trash")) return json({ trash: [] });
+    return real(u, o); };
+  const o = {}, pills = () => ["trSayRaw", "trSaySet", "trSayTrain"].map((id) => $(id).textContent);
+  const shown = (sel) => { const e = document.querySelector(sel); return !!(e && e.getClientRects().length); };
+  const pane = (p) => document.querySelector('#view-train .tr-pane[data-pane="' + p + '"]');
+  const grid = (p) => [...pane(p).querySelectorAll(".tr-runof .tr-fgrid > span")].map((e) => e.textContent.replace(/\\s+/g, " ").trim());
+  const step = async (p) => { document.querySelector('#trPills [data-pane="' + p + '"]').click(); await wait(150); };
+  const choose = async (name) => { const row = await until(() => document.querySelector('#trRunList [data-open="' + name + '"]'), 5000); if (row) row.click();
+    await until(() => $("trSayRun").textContent.indexOf(name) === 0, 4000); await wait(150); };
+  try {
+    document.querySelector('.topbar [data-tab="train"]').click(); window.HeresyTrain.reload();
+    await until(() => document.querySelector('#trSets input[value="zz-old-set-2960"]'), 5000);
+    document.querySelector('#trSets input[value="zz-old-set-2960"]').click(); await wait(100);   // the wizard's leftover, as a month ago
+    o.left = localStorage.getItem("yue2.trSet");
+    await choose("zz-own-2960");
+    o.own = pills(); o.ownTip = $("trSaySet").getAttribute("data-tip");
+    await step("raw");
+    o.rawCard = pane("raw").classList.contains("is-runof") && shown('.tr-pane[data-pane="raw"] .tr-runof-head') && !shown("#trRaw") && !shown('.tr-pane[data-pane="raw"] .tr-phead');
+    o.rawHead = (pane("raw").querySelector(".tr-runof-head b") || {}).textContent || "";
+    o.rawGrid = grid("raw");
+    await step("set");
+    o.setGrid = grid("set"); o.setWizard = shown("#trMake");
+    await step("train");
+    o.trainGrid = grid("train"); o.trainWizard = shown("#trKnobs") || shown("#trRun"); o.like = !!pane("train").querySelector('[data-newrun="like"]');
+    o.done = [...document.querySelectorAll("#trPills .ps-step")].slice(0, 3).map((b) => b.classList.contains("is-done"));
+    await choose("zz-plug-2960");
+    o.plug = pills(); o.plugTip = $("trSayTrain").getAttribute("data-tip") || "";
+    await step("set");
+    o.plugSet = grid("set");
+    await step("train");
+    o.plugTrain = grid("train");
+    pane("train").querySelector('[data-newrun="like"]').click(); await wait(250);
+    o.plugLike = { engine: $("tr_engine").value, knob: (document.querySelector('#trExtKnobs [data-ext="zz_knob"]') || {}).value, set: (document.querySelector('#trSets input[name="trSet"]:checked') || {}).value,
+      name: $("trRunName").value, pills: pills(), bar: shown('.tr-pane[data-pane="train"] .tr-newbar'), wizard: shown("#trRun") && !pane("train").classList.contains("is-runof"), tele: $("trSayRun").textContent };
+    pane("train").querySelector("[data-runof-back]").click(); await wait(150);
+    o.back = pane("train").classList.contains("is-runof") && pills()[1].indexOf("zz-set-big-2960 · ") === 0;
+    await choose("zz-own-2960");
+    await step("raw");
+    pane("raw").querySelector('[data-newrun="fresh"]').click(); await wait(250);
+    o.fresh = { pills: pills(), set: localStorage.getItem("yue2.trSet"), checked: !!document.querySelector('#trSets input[name="trSet"]:checked'), raw: shown("#trRaw"), engine: $("tr_engine").value,
+      rank: $("tr_rank").value, name: $("trRunName").value, kind: (document.querySelector("#trKinds .is-on") || { dataset: {} }).dataset.kind };
+    pane("raw").querySelector("[data-runof-back]").click(); await wait(150);
+    await step("train");
+    pane("train").querySelector('[data-newrun="like"]').click(); await wait(250);
+    o.ownLike = { set: (document.querySelector('#trSets input[name="trSet"]:checked') || {}).value, rank: $("tr_rank").value, kind: (document.querySelector("#trKinds .is-on") || { dataset: {} }).dataset.kind,
+      epochs: $("tr_epochs").value, ar: $("tr_ar_loss_weight").value, name: $("trRunName").value, engine: $("tr_engine").value, pills: pills() };
+    await choose("zz-own-2960");
+    o.chosen = pills()[1];
+  } catch (e) { o.err = String(e && e.message || e); }
+  finally {
+    window.fetch = real;
+    keys.forEach((k, i) => { if (was[i] === null) localStorage.removeItem(k); else localStorage.setItem(k, was[i]); });
+    document.querySelector('.topbar [data-tab="create"]').click(); await wait(300);
+  }
+  return o; })()`);
+check("a run of the Studio's own chosen: steps 1–3 are its material, its set and what it was given, not the wizard's leftover set; each its whole line in its tip",
+  !tr60.err && tr60.left === "zz-old-set-2960" && tr60.own && tr60.own[0] === "zz-raw-2960" && tr60.own[1] === "zz-set-own-2960 · 42 tracks" &&
+  /^voice · rank 8 · 16 · lr 0\.0001 · 30 epochs · Ruach$/.test(tr60.own[2]) && tr60.ownTip === tr60.own[1] && String(tr60.done) === "true,true,true", JSON.stringify(tr60));
+check("  its steps' panes are its page, read only: the material (the set's folder, made on, length), the set (sheets by), what it was given; no wizard in sight",
+  tr60.rawCard && tr60.rawHead === "zz-own-2960" && (tr60.rawGrid || []).join("|") === "set zz-set-own-2960 · 42 tracks|folder datasets/raw/zz-raw-2960 · 44 tracks|made on 2026-11-01 10:00|length 42 min" &&
+  (tr60.setGrid || []).indexOf("sheets by sheetsage2-bf16") >= 0 && !tr60.setWizard && !tr60.trainWizard && tr60.like &&
+  ["kind voice", "trainer Ruach", "rank 8 · 16", "epochs 30", "rank 16 · lr 0.0001"].every((t) => (tr60.trainGrid || []).indexOf(t) >= 0), JSON.stringify({ raw: tr60.rawGrid, set: tr60.setGrid, train: tr60.trainGrid }));
+check("  a plugin's run chosen: its set's tracks as the set counts them, what it learns, its rates, its epochs, its trainer; the set as the run reads it on its page",
+  tr60.plug && tr60.plug[0] === "zz-set-base-2960" && tr60.plug[1] === "zz-set-big-2960 · 107,417 tracks" &&
+  tr60.plug[2] === "3B · zz polish · every weight (zz) · LR AR e0 5e-06 → e0.4 1e-06 · LR NAR e0 0 (frozen) · 0.4 epochs · ZZ Trainer · zzx" && tr60.plugTip === tr60.plug[2] &&
+  (tr60.plugSet || []).indexOf("in the run zz-set-big-2960 · 107,336 tracks · 9,507 steps of 12") >= 0 &&
+  ["kind 3B · zz polish", "trainer ZZ Trainer · zzx", "learns every weight (zz)"].every((t) => (tr60.plugTrain || []).indexOf(t) >= 0), JSON.stringify({ plug: tr60.plug, set: tr60.plugSet, train: tr60.plugTrain }));
+check("  «New run from this one» on the plugin's run: its trainer, its knob and its set in the form, the name left to give, the steps say a new run's; «Back to the run» shows the run again",
+  tr60.plugLike && tr60.plugLike.engine === "zzx" && tr60.plugLike.knob === "7" && tr60.plugLike.set === "zz-set-big-2960" && tr60.plugLike.name === "" && tr60.plugLike.bar && tr60.plugLike.wizard &&
+  tr60.plugLike.pills.every((t) => /^new run: /.test(t)) && tr60.plugLike.tele.indexOf("zz-plug-2960") === 0 && tr60.back, JSON.stringify({ like: tr60.plugLike, back: tr60.back }));
+check("  «New run» is fresh: no set (the leftover gone from the settings too), no folder, the Studio's trainer and the style preset, no name",
+  tr60.fresh && tr60.fresh.set === null && !tr60.fresh.checked && tr60.fresh.raw && tr60.fresh.engine === "ruach" && tr60.fresh.rank === "32" && tr60.fresh.kind === "style" && tr60.fresh.name === "" &&
+  tr60.fresh.pills[0] === "new run: a folder of datasets/raw/" && tr60.fresh.pills[1] === "new run: a caption for every track", JSON.stringify(tr60.fresh));
+check("  «New run from this one» on the Studio's own run: its set, kind, rank, epochs and AR weight in the form; a run chosen again, the steps are its own again",
+  tr60.ownLike && tr60.ownLike.set === "zz-set-own-2960" && tr60.ownLike.kind === "voice" && tr60.ownLike.rank === "16" && tr60.ownLike.epochs === "30" && tr60.ownLike.ar === "0.3" &&
+  tr60.ownLike.engine === "ruach" && tr60.ownLike.name === "" && tr60.ownLike.pills[1] === "new run: zz-set-own-2960 · 42 tracks" && tr60.chosen === "zz-set-own-2960 · 42 tracks", JSON.stringify({ like: tr60.ownLike, chosen: tr60.chosen }));
+
+// HERESY 2961 (the 13 questions of 22.11.2026, Q3 and Q4, left to their advice): the Trainer's side-by-side and stacked views draw the run's events as the
+// combined one does (no dots on their curves still: 2917); the combined view's held-out dots at most ~120 in view, a bucket's mean, its every value in its
+// tip. A run stubbed with 300 held-out measures and one event
+section("The Trainer's charts (2961): the run's events side by side and stacked too, no dots on their curves (2917); together, at most ~120 held-out dots in view, a bucket's every value in its tip");
+const ch61 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, $ = (id) => document.getElementById(id);
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b) => Promise.resolve(new Response(JSON.stringify(b), { headers: { "Content-Type": "application/json" } }));
+  const keys = ["yue2.trRun", "yue2.trPane", "yue2.trStacked"], was = keys.map((k) => localStorage.getItem(k));
+  const now = Date.now() / 1000, hist = [];
+  for (let i = 1; i <= 300; i++) hist.push({ step: i * 100, flow: 0.5 - i * 0.0005, ar_ce: 2 - i * 0.001, kl: 0.01 + i * 0.00001 });
+  const curve = (f) => { const c = []; for (let s = 50; s <= 30000; s += 50) c.push([s, f(s)]); return c; };
+  const ser = (f) => { const c = curve(f); return { curve: c, last: c[c.length - 1][1] }; };
+  const run = { name: "zz-run-2961", status: "done", dataset: "zz-set-2961", kind: "style", steps: 30000, step: 30000, tracks: 1000, started: now - 7200, checkpoints: [], gpus: [1],
+    options: { engine: "ruach", rank: 32, lr: 0.0001 }, val: { history: hist, held_out: [] }, events: [{ step: 12000, kind: "freeze", tower: "nar" }],
+    series: { loss: ser((s) => 1 - s / 60000), flow: ser((s) => 0.5 - s / 200000), ar_ce: ser((s) => 2 - s / 30000), ar_kl: ser((s) => 0.01 + s / 3e6) } };
+  window.fetch = (u, o) => { u = String(u);
+    if (u.startsWith("/lab/train/datasets")) return json({ raw: [], prepared: [], runs: [run], own: {}, aitk_ready: false, gpus: [] });
+    if (u.startsWith("/lab/train/trash")) return json({ trash: [] });
+    return real(u, o); };
+  const o = {}, P = () => $("trRunPane"), view = () => { const c = P().querySelector(".tr-charts"); return !c ? "" : c.classList.contains("is-stacked") ? "stacked" : c.classList.contains("is-combined") ? "combined" : "side"; };
+  const turn = async () => { P().querySelector("[data-stack]").click(); await wait(200); };
+  const read = (key) => { const f = P().querySelector('.tr-chart[data-key="' + key + '"]'); if (!f) return null; const d = [...f.querySelectorAll("path.hod")];
+    return { ev: f.querySelectorAll("line.ev").length, evTip: (f.querySelector("line.evh") || { dataset: {} }).dataset.tip || "", dots: d.length, tip: d.length ? d[0].dataset.tip : "" }; };
+  try {
+    document.querySelector('.topbar [data-tab="train"]').click(); window.HeresyTrain.reload();
+    const row = await until(() => document.querySelector('#trRunList [data-open="zz-run-2961"]'), 5000); if (row) row.click();
+    await until(() => P().querySelector('.tr-chart'), 4000); await wait(200);
+    for (let i = 0; i < 3 && view() !== "side"; i++) await turn();
+    o.side = { view: view(), flow: read("flow"), ar_ce: read("ar_ce"), kl: read("ar_kl") };
+    await turn();
+    o.stacked = { view: view(), flow: read("flow") };
+    await turn();
+    const cd = [...P().querySelectorAll('.tr-combined path.hod[data-k="flow"]')];
+    o.combined = { view: view(), dots: cd.length, tip: cd.length ? cd[0].dataset.tip : "", ev: P().querySelectorAll(".tr-combined line.ev").length };
+    await turn();
+    o.back = view();
+  } catch (e) { o.err = String(e && e.message || e); }
+  finally {
+    window.fetch = real;
+    keys.forEach((k, i) => { if (was[i] === null) localStorage.removeItem(k); else localStorage.setItem(k, was[i]); });
+    document.querySelector('.topbar [data-tab="create"]').click(); await wait(300);
+  }
+  return o; })()`);
+const S61 = ch61.side || {}, F61 = S61.flow || {}, C61 = ch61.combined || {};
+check("side by side: the run's event a thin line with its words over flow, ar_ce and KL; no dots on the curves (2917)",
+  !ch61.err && S61.view === "side" && F61.ev === 1 && /^Step 12,000: the NAR frozen/.test(F61.evTip) && (S61.ar_ce || {}).ev === 1 && (S61.kl || {}).ev === 1 &&
+  F61.dots === 0 && (S61.ar_ce || {}).dots === 0 && (S61.kl || {}).dots === 0, JSON.stringify(ch61.side));
+check("  stacked: the same event line, no dots", (ch61.stacked || {}).view === "stacked" && ((ch61.stacked || {}).flow || {}).ev === 1 && ((ch61.stacked || {}).flow || {}).dots === 0,
+  JSON.stringify(ch61.stacked));
+check("  together: 300 held-out measures drawn as 100 dots, a dot of three says the span, the mean and each step's value in its tip; the event as before",
+  C61.view === "combined" && C61.dots === 100 && C61.ev >= 1 && ch61.back === "side" &&
+  /^held out, 3 saves from step 100 to 300: flow 0\.\d+ on average\nstep 100: 0\.\d+\nstep 200: 0\.\d+\nstep 300: 0\.\d+$/.test(C61.tip || ""), JSON.stringify({ combined: C61, back: ch61.back }));
+
+// HERESY 2962 (2955's class closed whole): the Trainer's missing weights said in words with «Engine → Models», never a command line
+section("No command line for a missing model, the Trainer's too (2962): its base missing is said in words with «Engine → Models» at the trainer's base, its variant the weights asked");
+const tw62 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), real = window.fetch, $ = (id) => document.getElementById(id);
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const json = (b) => Promise.resolve(new Response(JSON.stringify(b), { headers: { "Content-Type": "application/json" } }));
+  window.fetch = (u, o) => { u = String(u);
+    if (u.startsWith("/lab/train/datasets")) return json({ raw: [], prepared: [], runs: [], own: {}, aitk_ready: false, gpus: [] });
+    if (u.startsWith("/lab/train/trash")) return json({ trash: [] });
+    return real(u, o); };
+  const o = {};
+  try {
+    document.querySelector('.topbar [data-tab="train"]').click(); window.HeresyTrain.reload();
+    await until(() => document.querySelector("#trWarn .tr-warn .pack-get"), 5000);
+    const w = $("trWarn"), b = w.querySelector(".pack-get");
+    o.text = w.textContent.replace(/\\s+/g, " ").trim(); o.code = !!w.querySelector("code");
+    o.pack = b ? b.dataset.pack + ":" + (b.dataset.packV || "") : "";
+  } catch (e) { o.err = String(e && e.message || e); }
+  finally { window.fetch = real; document.querySelector('.topbar [data-tab="create"]').click(); await wait(300); }
+  return o; })()`);
+check("the Trainer's base missing: what is missing in words, «Engine → Models» at the trainer's base (bf16), no command line",
+  !tw62.err && /^The Studio’s trainer is missing Comfy-Org's YuE2 bf16 weights, MERT-v2-FullSong, the realaudio tokenizer head: they come with its base in Engine → Models\. Engine → Models$/.test(tw62.text || "") &&
+  !tw62.code && !/fetch-heresy|download-checkpoints|\.sh\b/.test(tw62.text || "") && tw62.pack === "trainer:bf16", JSON.stringify(tw62));
+
+// HERESY 2963 (G27, question 11 of 22.11.2026 by consent: «A, −12 дБ, до первой строки, свой стиль, ссылкой»): the Narrator's voice over the clip,
+// the page's half: the row in Films, a Narrator take chosen by link (a Musician take not offered), its start and duck sent, taken off. The plan, the
+// takes and the lab's answers stubbed
+section("The Narrator's voice over the clip (2963): Films says none and offers the Narrator's takes alone; one chosen is laid on from the song's start, −12 dB; moved, ducked, taken off, each sent to the lab");
+const vo63 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), o = {}, real = window.fetch, $ = (id) => document.getElementById(id);
+  const until = async (fn, ms) => { for (let i = 0; i < (ms || 3000) / 50; i++) { const v = fn(); if (v) return v; await wait(50); } return null; };
+  const name = [...document.querySelectorAll("#libList .take[data-name]")].map((e) => e.dataset.name).find((n) => window.ruachFindTakeFull(n) && !window.ruachFindTakeFull(n).session);
+  const take = window.ruachFindTakeFull(name), Cn = window.HeresyCollection, rowWas = Cn.row, takesWas = window.ruachTakes;
+  const json = (b, st) => Promise.resolve(new Response(JSON.stringify(b), { status: st || 200, headers: { "Content-Type": "application/json" } }));
+  const plan = { name, title: "t", style: "s", seconds: 30, exists: true, look: { characters: "", setting: "", palette: "", notes: "" },
+    shots: [{ t0: 0, t1: 10, words: "", section: "intro", sung: false, scene: { shot: "x", camera: "", motion: "", light: "" } }, { t0: 10, t1: 30, words: "la", section: "verse", sung: true, scene: { shot: "", camera: "", motion: "", light: "" } }] };
+  const sent = [], txt = (b) => b ? [...b.children].map((e) => e.textContent.replace(/\\s+/g, " ").trim()).filter(Boolean).join(" ") : "";
+  window.ruachTakes = () => [{ name: "zz-read-2963", title: "Утро начиналось" }, { name: "zz-song-2963", title: "A song" }];
+  Cn.row = (n) => n === "zz-read-2963" ? { name: n, realm: "reader" } : n === "zz-song-2963" ? { name: n, realm: "creator" } : rowWas(n);
+  window.fetch = (u, opt) => { u = String(u);
+    if (u.indexOf("/lab/video/plan") >= 0) return json(plan);
+    if (u.indexOf("/lab/video/voice") >= 0 && opt && opt.method === "POST") {
+      const b = JSON.parse(opt.body); sent.push(b);
+      if (b.off) delete plan.voice; else plan.voice = { take: b.take, at: b.at, duck: b.duck };
+      return json(plan); }
+    return real(u, opt); };
+  try {
+    document.querySelector('.topbar [data-tab="video"]').click(); await wait(300);
+    window.HeresyVideo.take(null); await wait(200);   // the take an earlier section opened is let go, so its plan is read anew (the stub's)
+    window.HeresyVideo.take(take); await until(() => !$("vdBody").hidden && $("vdVoice") && !$("vdVoice").hidden, 4000); window.HeresyVideo.pane("films"); await wait(300);
+    const box = $("vdVoice");
+    o.shown = !!box && !box.hidden && box.getClientRects().length > 0; o.none = txt(box);
+    for (let i = 0; i < 25; i++) { const n = document.querySelector(".hd-back.is-on:not(.is-leaving) .hd-no"); if (n) { n.click(); await wait(200); continue; }   // none left by a section before
+      await wait(150); if (!document.querySelector(".hd-back.is-on:not(.is-leaving)")) break; }
+    box.querySelector('[data-vdvoice="pick"]').click();
+    const mine = () => [...document.querySelectorAll(".hd-back.is-on:not(.is-leaving)")].filter((b) => /Narrator's voice over the clip/.test(b.textContent)).pop();
+    await until(() => mine() && mine().querySelector(".hd-choose .hd-item"), 3000);
+    o.offered = mine() ? [...mine().querySelectorAll(".hd-item")].map((b) => b.textContent.replace(/\\s+/g, " ").trim()) : [];
+    const it = mine() && [...mine().querySelectorAll(".hd-item")].find((b) => /Утро начиналось/.test(b.textContent)); if (it) it.click();
+    await until(() => sent.length >= 1, 3000); await until(() => $("vdVoiceAt"), 3000);
+    o.first = sent[0]; o.row = txt(box); o.at = ($("vdVoiceAt") || {}).value; o.duck = ($("vdVoiceDuck") || {}).value;
+    $("vdVoiceAt").value = "4.5"; $("vdVoiceAt").dispatchEvent(new Event("change", { bubbles: true }));
+    await until(() => sent.length >= 2, 3000);
+    $("vdVoiceDuck").value = "-40"; $("vdVoiceDuck").dispatchEvent(new Event("change", { bubbles: true }));
+    await until(() => sent.length >= 3, 3000);
+    o.moved = sent[1]; o.ducked = sent[2];
+    box.querySelector('[data-vdvoice="off"]').click(); await until(() => sent.length >= 4, 3000);
+    await until(() => / none /.test(" " + txt(box) + " ") && /taken off/.test($("vdStatus").textContent), 3000);   // the lab's answer painted
+    o.off = sent[3]; o.after = txt(box); o.say = $("vdStatus").textContent;
+  } catch (e) { o.err = String(e && e.message || e); }
+  finally {
+    window.fetch = real; Cn.row = rowWas; window.ruachTakes = takesWas;
+    const bk = document.querySelector(".hd-back.is-on .hd-cancel, .hd-back.is-on [data-v='__cancel']"); if (bk) bk.click();
+    document.querySelector('.topbar [data-tab="create"]').click(); await wait(200);
+  }
+  return o; })()`);
+check("Films has the voice row: none yet, «Add the Narrator's voice…»; the chooser offers the Narrator's takes alone (a Musician take is not one)",
+  !vo63.err && vo63.shown && /^The Narrator's voice none Add the Narrator's voice…$/.test(vo63.none || "") && (vo63.offered || []).length === 1 && /Утро начиналось/.test(vo63.offered[0]), JSON.stringify(vo63));
+check("  chosen: laid on by link from the song's start, the song −12 dB under it; the row names it with its start and duck",
+  !!vo63.first && vo63.first.take === "zz-read-2963" && vo63.first.at === 0 && vo63.first.duck === -12 && /Утро начиналось/.test(vo63.row || "") && vo63.at === "0" && vo63.duck === "-12", JSON.stringify({ first: vo63.first, row: vo63.row, at: vo63.at, duck: vo63.duck }));
+check("  moved to 4.5 s, then ducked past −30 (held at −30), each sent; taken off, the row says none again and the status says it",
+  !!vo63.moved && vo63.moved.at === 4.5 && vo63.moved.duck === -12 && !!vo63.ducked && vo63.ducked.duck === -30 && vo63.ducked.at === 4.5 && !!vo63.off && vo63.off.off === true &&
+  /none/.test(vo63.after || "") && /taken off/.test(vo63.say || ""), JSON.stringify({ after: vo63.after, say: vo63.say, moved: vo63.moved && [vo63.moved.at, vo63.moved.duck], ducked: vo63.ducked && [vo63.ducked.at, vo63.ducked.duck], off: vo63.off && vo63.off.off }));
 
 // HERESY 2241: a room kept home until it is turnkey brings its checks beside it (tools/claude-suite-*.mjs, which make-release leaves home), each
 // a default export given the suite's own hands; a release carries none, so nothing runs here

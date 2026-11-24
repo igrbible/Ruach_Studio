@@ -692,7 +692,9 @@ def collection_post(config_dir, outputs, data):
         if op == "pin" and data.get("place") and not str(data["place"]).startswith("__"):
             data["place"] = ws_emoji.resolve(d, str(data["place"]))[0]
         # HERESY 2919: an emoji given with a name (create, rename) or alone: one, never the Studio's own mark, read before anything changes
-        emo = ws_emoji.check(data.get("emoji")) if op in ("ws-create", "ws-rename", "ws-emoji") and "emoji" in data else None
+        # HERESY 2941: and with an add or a move that makes the workspace (a take's «New workspace…» asks its emoji beside its name, as the column does)
+        emo = ws_emoji.check(data.get("emoji")) if op in ("ws-create", "ws-rename", "ws-emoji", "ws-add", "ws-move") and "emoji" in data else None
+        fresh_ws = op in ("ws-add", "ws-move") and bool(ws) and ws not in d["workspaces"]
         _frozen_guard(d, op, ws, names, data)      # HERESY 1166: nothing reaches a frozen workspace but its thaw
         # HERESY 2294: a top that an add, a move, a merge or a making brings into being from the Readers realm is the Readers (marked once it is there)
         made = (ws_name(data.get("to")) if op == "ws-merge" else ws if op in ("ws-create", "ws-add", "ws-move") else "") or ""
@@ -857,22 +859,27 @@ def collection_post(config_dir, outputs, data):
             fresh_parts(d, ws)
             born(d, ws)                                # HERESY 2129: one made by adding to it is born clean too
             d["workspaces"][ws] = sorted(set(d["workspaces"].get(ws, [])) | set(names))
+            if emo and fresh_ws:                       # HERESY 2941: its emoji, chosen beside the name of the one it makes (one there keeps its own)
+                _emoji_fits(ws, emo)
+                d["ws_emoji"][ws] = emo
         elif op == "ws-move":                      # HERESY 1050: into one workspace, out of the one it came from
             if not ws:
                 raise ValueError("which workspace?")
             src = ws_name(data.get("from")) if data.get("from") else ""
+            # HERESY 2294: a take stays in its realm; moved into the other realm's workspace only when it came from there (a link moved), else
+            # it is linked (Add to workspace), never moved
+            to_realm = "reader" if made and ws.split(SEP)[0] == made else realm_ws(d, ws)
             # HERESY 2129 (the audit of 06.11.2026): tree = out of the named one and its sections, as its view shows them (a take of a section
             # moved from its parent's view stayed where it was, and the toast said «out of» the parent); a frozen section keeps its own (1166)
-            froms = (view_tree(d, src) if data.get("tree") else [src]) if src else list(d["workspaces"])   # from nowhere named: out of every other
+            # HERESY 2941: from nowhere named, out of every other workspace of the realm it moves in: its links in the other realm stay (a song moved from the
+            # Musician's column left the Narrator's workspaces it was linked into, and with them the links a reading made with it, 2298's link_sources)
+            froms = (view_tree(d, src) if data.get("tree") else [src]) if src else [w for w in d["workspaces"] if realm_ws(d, w) == to_realm]
             # HERESY 2129: a named one under a lock lets nothing out, as ws-remove (1473); a move went round it. A move inside the lock's own tree (a
             # locked 💎 set's takes into its section) leaves them under every lock they were under, so it goes on as before
             for w in froms if src else []:
                 if w != ws and w in d["workspaces"] and not frozen_ws(d, w) and ws_locked(d, w) and not locks_on(d, w) <= locks_on(d, ws) and set(d["workspaces"][w]) & set(names):
                     raise ValueError(f"\u201c{w}\u201d is locked: unlock it first to take takes out of it (right-click on its name)")
             fresh_parts(d, ws)                         # HERESY 2284: as ws-add, for a name it makes
-            # HERESY 2294: a take stays in its realm; moved into the other realm's workspace only when it came from there (a link moved), else
-            # it is linked (Add to workspace), never moved
-            to_realm = "reader" if made and ws.split(SEP)[0] == made else realm_ws(d, ws)
             if not src or realm_ws(d, src) != to_realm:
                 away = [n for n, rl in take_realms(outputs, names).items() if rl != to_realm]
                 if away:
@@ -883,6 +890,9 @@ def collection_post(config_dir, outputs, data):
                 if w != ws and w in d["workspaces"] and not frozen_ws(d, w) and (src or not ws_locked(d, w)):   # a frozen one keeps its takes (1166); a locked one too, unless named (1473)
                     d["workspaces"][w] = sorted(set(d["workspaces"][w]) - set(names))
             d["workspaces"][ws] = sorted(set(d["workspaces"].get(ws, [])) | set(names))
+            if emo and fresh_ws:                       # HERESY 2941: as ws-add
+                _emoji_fits(ws, emo)
+                d["ws_emoji"][ws] = emo
         elif op == "ws-merge":                     # HERESY 1050: a workspace's takes into another, then it goes
             to = ws_name(data.get("to"))
             if not ws or ws not in d["workspaces"] or not to or to == ws:

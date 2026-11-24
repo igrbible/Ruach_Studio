@@ -4149,7 +4149,8 @@ int main(int argc, char ** argv) {
     // HERESY 2139: the manifest as build.sh wrote it beside the page (its icons' URLs keyed), else the source's; a request whose ?v= is the very
     // file's key (the page's link, the manifest's icons) is kept a year, any other is no-cache; each with its ETag, a 304 when the browser has
     // it. The worker never: a browser asks for it past its own cache anyway, and a worker kept would keep an old Studio
-    svr.Get(R"(/(manifest\.webmanifest|sw\.js|pwa/icon-(192|512)\.png))", [](const httplib::Request & req, httplib::Response & res) {
+    // HERESY 2958: and the install window's two pictures of the Studio (the manifest's screenshots), as the icons
+    svr.Get(R"(/(manifest\.webmanifest|sw\.js|pwa/icon-(192|512)\.png|pwa/shot-(wide|narrow)\.png))", [](const httplib::Request & req, httplib::Response & res) {
         std::string           name  = req.matches[1];
         std::string           file  = name.rfind("pwa/", 0) == 0 ? name.substr(4) : name;
         std::filesystem::path built = std::filesystem::path(page_path).parent_path() / file;

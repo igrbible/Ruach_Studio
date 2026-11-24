@@ -5,6 +5,8 @@ BF16 tensor cores: BF16 runs there, slower than Q8_0), its VRAM limit (Engine �
 which adds the painter that fits (GET /machine)."""
 import subprocess
 
+import winx   # HERESY 2934
+
 
 def _smi(fields):
     q = subprocess.run(["nvidia-smi", "--query-gpu=" + fields, "--format=csv,noheader,nounits"], capture_output=True, text=True, timeout=20)
@@ -18,8 +20,10 @@ def cards():
     compute_cap: asked apart, so its absence costs only that). RuntimeError when nvidia-smi cannot be run at all."""
     try:
         rows = _smi("index,name,memory.total")
+    except FileNotFoundError:                          # HERESY 2934: said, not «[WinError 2] The system cannot find the file specified»
+        raise RuntimeError(winx.NO_NVSMI)
     except (OSError, subprocess.SubprocessError) as e:
-        raise RuntimeError(f"nvidia-smi did not answer: {e}")
+        raise RuntimeError(f"nvidia-smi did not answer: {winx.said(e)}")
     out = [{"index": int(i), "name": n, "total_mb": int(t), "compute": None} for i, n, t in rows]
     try:
         cap = {int(i): c for i, c in _smi("index,compute_cap")}

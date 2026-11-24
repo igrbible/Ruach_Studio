@@ -28,7 +28,7 @@
   if (window.ruachLease) return;                       // HERESY 2100: one guard, one set of listeners
   var OPEN = { "/lab/lease": 1, "/lab/lora/bases": 1, "/lab/pianoteq/preview": 1, "/lab/audio/monitor/tone": 1, "/lab/audio/monitor/play": 1,
     "/lab/audio/monitor/stop": 1, "/lab/audio/probe": 1, "/lab/audio/loop": 1, "/lab/handoff": 1, "/tokenize": 1,
-    "/lab/debug/bundle": 1, "/lab/debug/send": 1, "/lab/debug/clear": 1, "/lab/daw/play": 1, "/lab/daw/play/stop": 1, "/lab/history": 1 };   // HERESY 2912: a play heard in a read-only window is still a play   // HERESY 2865: the DAW's Forge way listens   // lab/lease.py's OPEN, and the engine's count of tokens (2102: the journal too)
+    "/lab/debug/bundle": 1, "/lab/debug/send": 1, "/lab/debug/clear": 1, "/lab/daw/play": 1, "/lab/daw/play/stop": 1, "/lab/history": 1, "/lab/song/room": 1 };   // HERESY 2942: the window's count for the song at hand, a read sent as a POST   // HERESY 2912: a play heard in a read-only window is still a play   // HERESY 2865: the DAW's Forge way listens   // lab/lease.py's OPEN, and the engine's count of tokens (2102: the journal too)
   var TAKE_FLAG = "ruach.lease.take", BEAT = 10000, PAUSE = [10000, 20000, 40000, 60000];
   var W = { beat: 8000, claim: 15000 };                // HERESY 2100: how long a beat and a claim wait (the checks shorten them: config())
   var SCOPE = (function () { try { return new URLSearchParams(location.search).get("scope") || ""; } catch (e) { return ""; } })();

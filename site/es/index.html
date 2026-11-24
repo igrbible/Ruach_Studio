@@ -719,7 +719,7 @@
     <p class="lead">Todo un Estudio alrededor de <b>YuE2</b>, el modelo abierto de canciones. Escribe el estilo y la letra, y el Estudio compone, canta y renderiza la canción en <b>tu propia GPU</b>. Tus canciones, palabras y ajustes nunca salen de ella.</p>
     <div class="ctas"><a target="_blank" rel="noopener" class="btn main" href="https://github.com/igrbible/Ruach_Studio">Consíguelo en GitHub</a> <a target="_blank" rel="noopener" class="btn" href="https://github.com/igrbible/Ruach_Studio/blob/main/docs/GUIDE.es.md">Lee la guía</a> <a target="_blank" rel="noopener" class="btn" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Modelos en Hugging Face</a> <a target="_blank" rel="noopener" class="btn coffee" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ café 24/7 para Viktor y Claude</a></div>
     <p class="star">⭐ Si el Estudio te gusta, dale una estrella <a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">al repositorio de YuE2 Studio en GitHub</a>.</p>
-    <span class="rc"><b>2.1.0-rc1</b> · una versión preliminar: el editor por secciones, el Lector en tres columnas, emoji para los espacios, exportar MIDI en una sola ventana · noviembre de 2026</span>
+    <span class="rc"><b>2.1.0-rc2</b> · una versión preliminar: todo YuE2 en la instalación, también el transcriptor; la guía en hebreo; cada selector de espacios como el árbol de la Biblioteca; la voz del Lector sobre un clip · noviembre de 2026</span>
   </div>
   </section>
   <div class="wrap hero-after">
@@ -856,7 +856,7 @@
             <tr><td>el código</td><td>abierto (AGPL), cada cambio numerado y documentado</td><td>cerrado</td></tr>
             <tr><td>la interfaz</td><td>ocho salas en una página, en doce idiomas; una pista en cada control y una guía en cada sala; el reproductor y las tomas en cada sala; teclas para lo que haces a menudo; se instala como aplicación</td><td>una aplicación web y aplicaciones móviles</td></tr>
             <tr class="honest"><td>pulido de fábrica</td><td><b>menos</b>: una mezcla puede zumbar (el antizumbido ayuda), la letra puede desviarse (la revisión de la letra encuentra dónde), algunos instrumentos YuE2 los toca débiles o no los toca (una LoRA se los enseña)</td><td><b>más</b></td></tr>
-            <tr class="honest"><td>qué necesitas</td><td>una GPU NVIDIA (24 GB para todo a plena precisión; 12–16 GB y 8 GB con copias más pequeñas), Linux, 22,5–25,9 GB de disco</td><td>un navegador</td></tr>
+            <tr class="honest"><td>qué necesitas</td><td>una GPU NVIDIA (24 GB para todo a plena precisión; 12–16 GB y 8 GB con copias más pequeñas), Linux, 29,3–36,0 GB de disco</td><td>un navegador</td></tr>
           </tbody>
         </table>
       </div>
@@ -1054,7 +1054,7 @@
         <div class="card"><h3>La máquina</h3><ul>
           <li><b>Una GPU NVIDIA</b>: 24 GB para todo a plena precisión; con 12–16 GB y 8 GB funciona con copias más pequeñas (el Videógrafo pide 24 GB)</li>
           <li><b>Linux</b> (hecho en Ubuntu 24.04, CUDA 12.8); desde 2.0.9, <b>Windows 11</b> y un <b>Mac con Apple Silicon</b> en beta</li>
-          <li><b>Unos 23–26 GB</b> de disco, medidos en instalaciones nuevas: el programa y su Python (17 GB), los modelos (de 5,1 a 8,5 GB según la tarjeta, descargados, fijados y comprobados por <code>fetch-models.sh</code>); los modelos del Artista 39–43 GB más, los conjuntos 💎 5,6 GB, cada uno solo cuando lo pidas</li></ul></div>
+          <li><b>Unos 29–36 GB</b> de disco, medidos en instalaciones nuevas: el programa y su Python (17 GB), los modelos, todo YuE2 (de 11,9 a 18,6 GB según la tarjeta, descargados, fijados y comprobados por <code>fetch-models.sh</code>); los modelos del Artista 39–43 GB más, los conjuntos 💎 5,6 GB, cada uno solo cuando lo pidas</li></ul></div>
         <div class="need-side">
         <div class="card"><h3>La pantalla</h3><ul>
           <li>Hecho para una ventana de navegador de <b>1920×1080 al 100 %</b></li>
@@ -1066,17 +1066,18 @@
           <li>Más GPU: el entrenamiento y los trabajos del laboratorio junto a las canciones</li></ul></div>
         </div>   <!-- HERESY 2026 (Viktor: «Третьей в ту строку перемести карточку `По желанию`») -->
         <!-- HERESY 1807 (Viktor 28.10.2026: «на всех наших карточках чёрным по белому… предупреди… Слишком массивная она у нас») -->
-        <p class="warn-free"><b>No en GPU gratuitas en la nube.</b> Ruach Studio no funciona en Google Colab, Kaggle ni en ninguna GPU gratuita de cuadernos, así que no pierdas una tarde ahí: es un Estudio entero, no un cuaderno. Compila su motor de C++/CUDA en la máquina donde vive, mantiene a su lado un servidor y un laboratorio de servicios en Python, y ocupa unos 23–26 GB de disco (62–69 GB con el Artista). La tarjeta, la memoria, el disco que se borra y el límite de horas de una sesión gratuita no lo sostienen. Pide tu propio ordenador con Linux, o un servidor que alquiles y conserves, con una tarjeta NVIDIA: 24 GB para todo, 16 GB con las copias menores del modelo.</p>
+        <p class="warn-free"><b>No en GPU gratuitas en la nube.</b> Ruach Studio no funciona en Google Colab, Kaggle ni en ninguna GPU gratuita de cuadernos, así que no pierdas una tarde ahí: es un Estudio entero, no un cuaderno. Compila su motor de C++/CUDA en la máquina donde vive, mantiene a su lado un servidor y un laboratorio de servicios en Python, y ocupa unos 29–36 GB de disco (69–79 GB con el Artista). La tarjeta, la memoria, el disco que se borra y el límite de horas de una sesión gratuita no lo sostienen. Pide tu propio ordenador con Linux, o un servidor que alquiles y conserves, con una tarjeta NVIDIA: 24 GB para todo, 16 GB con las copias menores del modelo.</p>
       </div>
     </div>
   </section>
 
   <!-- 12.11.2026, engine-fixes lane (Viktor: «5 по размерам выравнивай повсюду»): since 2.0.7 the install is the least a song needs (fetch-models.sh); the models by the pinned lists anew, the program and its Pythons as measured on 01.11.2026 -->
   <!-- HERESY 1984 (Viktor 01.11.2026: «честную таблицу по объёмам данных, скачиваемых на машину пользователя… на сайт визиту ближе к концу») -->
+  <!-- 23.11.2026, 2.1.0-rc2 (HERESY 2952): the install brings the whole of YuE2, m-a-p's own YuE2-3B and the transcriber with its Refined mode beside our fine-tune and the two decoders; the sizes as README's «What It Downloads» (the install 36.0 / 29.3 / 29.3 GB, every room 248.8 / 132.3 / 127.6 GB) -->
   <section id="downloads">
     <div class="wrap">
       <h2>Lo que descarga</h2>
-      <p class="sub">Medido archivo por archivo con las listas fijadas de los repositorios del Estudio y en el disco de una instalación nueva (1 GB = 10⁹ bytes). La instalación trae solo lo que necesita una canción: el Músico y el Bibliotecario, el ajuste fino propio de Ruach Studio y dos decodificadores. Las demás partes del Músico llegan desde Motor → Modelos y LoRA, cualquier otra sala desde Motor → Modelos y LoRA → Por sala, que primero mide el espacio libre y no descarga lo que no cabría; cada cosa solo cuando la pides.</p>
+      <p class="sub">Medido archivo por archivo con las listas fijadas de los repositorios del Estudio y en el disco de una instalación nueva (1 GB = 10⁹ bytes). La instalación trae el Músico y el Bibliotecario con todo YuE2: el ajuste fino propio de Ruach Studio y el YuE2-3B original de m-a-p en el cuantizado de la tarjeta, dos decodificadores y el transcriptor con su modo Refined, así que las versiones y las remezclas funcionan desde el primer arranque. Las demás partes del Músico llegan desde Motor → Modelos y LoRA, cualquier otra sala desde Motor → Modelos y LoRA → Por sala, que primero mide el espacio libre y no descarga lo que no cabría; cada cosa solo cuando la pides.</p>
       <div class="table dl-table">
         <table>
           <thead><tr><th></th><th>tarjeta de 24 GB</th><th>tarjeta de 12–16 GB</th><th>tarjeta de 8 GB</th></tr></thead>
@@ -1084,16 +1085,18 @@
             <tr><td>el programa y su motor, compilado aquí (se descargan 0,2 GB)</td><td>0,9 GB</td><td>0,9 GB</td><td>0,9 GB</td></tr>
             <tr><td>sus dos Python, con PyTorch para CUDA 12.8 en cada uno (se descargan 8,7 GB)</td><td>16,5 GB</td><td>16,5 GB</td><td>16,5 GB</td></tr>
             <tr><td>el ajuste fino propio de YuE2 de Ruach Studio, en el cuantizado de la tarjeta</td><td>7,2 GB</td><td>3,8 GB</td><td>3,8 GB</td></tr>
+            <tr><td>el YuE2-3B original de m-a-p a su lado, en el mismo cuantizado</td><td>7,2 GB</td><td>3,8 GB</td><td>3,8 GB</td></tr>
             <tr><td>dos decodificadores: el Standard de m-a-p, que también codifica, y el nuestro</td><td>1,3 GB</td><td>1,3 GB</td><td>1,3 GB</td></tr>
-            <tr class="sum"><td>la instalación</td><td>25,9 GB</td><td>22,5 GB</td><td>22,5 GB</td></tr>
-            <tr><td>+ las partes del Músico: nuestro segundo decodificador, el transcriptor, Whisper, los modelos de stems, UniverSR y Apollo-vocal, los LoRA</td><td>8,8 GB</td><td>8,8 GB</td><td>8,8 GB</td></tr>
+            <tr><td>el transcriptor para versiones y su modo Refined</td><td>2,9 GB</td><td>2,9 GB</td><td>2,9 GB</td></tr>
+            <tr class="sum"><td>la instalación</td><td>36,0 GB</td><td>29,3 GB</td><td>29,3 GB</td></tr>
+            <tr><td>+ las partes del Músico: nuestro segundo decodificador, Whisper, los modelos de stems, UniverSR y Apollo-vocal, los LoRA</td><td>7,8 GB</td><td>7,8 GB</td><td>7,8 GB</td></tr>
             <tr><td>+ Escritor: su modelo de lenguaje con llama.cpp</td><td>7,4 GB</td><td>7,4 GB</td><td>6,2 GB</td></tr>
             <tr><td>+ Pulidor: MuScriptor y FlashSR</td><td>6,1 GB</td><td>6,1 GB</td><td>6,1 GB</td></tr>
             <tr><td>+ Lector: Fish Audio Drama 3 (Q8_0 con 24 GB, Q4_K por debajo), los acentos y audio.cpp</td><td>42,1 GB</td><td>26,0 GB</td><td>26,0 GB</td></tr>
             <tr><td>+ Artista: sus ayudantes y Qwen-Image 2512 (Q6 con 24 GB, Q4 por debajo)</td><td>42,9 GB</td><td>39,3 GB</td><td>39,3 GB</td></tr>
             <tr><td>+ Videógrafo: MiniMax H3 y SeedVR2</td><td>86,3 GB</td><td>necesita 24 GB</td><td>necesita 24 GB</td></tr>
             <tr><td>+ Entrenador LoRA: su base y el oyente de estilo</td><td>20,2 GB</td><td>16,3 GB</td><td>12,9 GB</td></tr>
-            <tr class="sum"><td>todas las salas</td><td>239,7 GB</td><td>126,5 GB</td><td>121,8 GB</td></tr>
+            <tr class="sum"><td>todas las salas</td><td>248,8 GB</td><td>132,3 GB</td><td>127,6 GB</td></tr>
           </tbody>
         </table>
       </div>
@@ -1104,7 +1107,7 @@
   <section id="next">
     <div class="wrap">
       <h2>Qué viene</h2>
-      <p class="sub">2.1.0-rc1 es el Estudio en el que hacemos cada día nuestras propias canciones y lecturas. Estas son las piezas más grandes en camino, para 2.1.0 y después.</p>
+      <p class="sub">2.1.0-rc2 es el Estudio en el que hacemos cada día nuestras propias canciones y lecturas. Estas son las piezas más grandes en camino, para 2.1.0 y después.</p>
       <ul class="feats">
         <li><b>El Lector, más allá.</b> Un libro descargado como un solo archivo con sus capítulos, una parte editada y el libro entero enviado al Pulidor, y el hebreo leído con sus vocales según el contexto.</li>
         <li><b>El DAW, más allá.</b> Un piano roll que escribe en la partitura lo que tocas en tu teclado MIDI, y las pruebas de choque que los proyectos para DAW aún necesitan en REAPER, Waveform y Bitwig.</li>
@@ -1441,7 +1444,7 @@
     </div>
   </div>
   <div class="wrap">
-    <div class="foot-by">Ruaj Estudio · 2.1.0-rc1 · una obra de <a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a></div> <div class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Awesome-YUE2" title="Nuestra lista seleccionada de todo lo que ha hecho la comunidad de YuE2">Awesome YUE2</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">Cambios</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ café 24/7</a></div>
+    <div class="foot-by">Ruaj Estudio · 2.1.0-rc2 · una obra de <a target="_blank" rel="noopener" href="https://igr.bible">igr.bible</a></div> <div class="links"><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio">GitHub</a><a target="_blank" rel="noopener" href="https://huggingface.co/goldhub/Ruach_Studio_Models_v2">Hugging Face</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Awesome-YUE2" title="Nuestra lista seleccionada de todo lo que ha hecho la comunidad de YuE2">Awesome YUE2</a><a target="_blank" rel="noopener" href="https://github.com/igrbible/Ruach_Studio/blob/main/CHANGELOG.md">Cambios</a><a target="_blank" rel="noopener" href="https://buy.stripe.com/cNi4gz39t2R77bT6ey67S02">☕ café 24/7</a></div>
   </div>
 </footer>
 

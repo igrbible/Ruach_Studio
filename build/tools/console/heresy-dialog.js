@@ -226,11 +226,31 @@
     if (!it.tip) return "";
     return ' data-tip="' + esc(it.tip) + '"' + (opts.tipSide ? ' data-tip-side="' + esc(opts.tipSide) + '"' : "") + (opts.tipWidth ? ' data-tip-width="' + esc(opts.tipWidth) + '"' : "");
   }
+  // HERESY 2956: a row's petal button (its sections to the right)
+  function petalBtn(i) { return '<button type="button" class="hd-petal-btn" data-p="' + i + '" aria-haspopup="listbox" aria-expanded="false" aria-label="Its sections" data-tip="Its sections">\u203a</button>'; }
   function showChoose(text, items, opts) {
     opts = opts || {};
     var parts = String(text || "").split(/\n\s*\n/), title = parts.shift(), body = parts.join("\n\n");
     return new Promise(function (resolve) {
       var back = document.createElement("div"), before = document.activeElement, long = items.length > 8;
+      // HERESY 2956: a list of workspaces brings each row's emoji (em) in a column of its own, as the Librarian's column and the menus hold it (em "":
+      // the column's faint icon, a leaf for a section: emSec); muted: shown, saying why (its tip), never chosen; marks: the Studio's signs after the name;
+      // head: a caption row (Archived), never chosen
+      var HE = window.HeresyWsEmoji, emCol = items.some(function (x) { return x && x.em !== undefined; });
+      // HERESY 2956 (Viktor 23.11.2026: «подкатегории открывающимися лепестком справа, все в едином оверлее»): opts.petals: a row deeper than the one
+      // before it at its top is in a petal (shown in the list only while a filter's words find it, with its path); kidsOf(i): the rows one level under i
+      var petals = !!opts.petals, more = opts.petalMore || function () { return []; };
+      var kidsOf = function (i) {
+        var d = items[i].depth || 0, out = [];
+        for (var j = i + 1; j < items.length && !items[j].head && (items[j].depth || 0) > d; j++) if ((items[j].depth || 0) === d + 1) out.push(j);
+        return out;
+      };
+      var hasPetal = function (i) { return petals && !items[i].head && (kidsOf(i).length > 0 || more(items[i]).length > 0); };
+      var emCell = function (it) {
+        if (!emCol) return "";
+        if (it.em === undefined) return '<span class="hd-item-em" aria-hidden="true"></span>';
+        return '<span class="hd-item-em' + (it.em ? "" : " is-faint") + (it.emSec ? " is-sec" : "") + '" aria-hidden="true">' + (it.em ? esc(it.em) : HE && HE.faint ? HE.faint(!!it.emSec) : "") + "</span>";
+      };
       back.className = "hd-back";
       back.innerHTML = '<div class="hd-box hd-choose" role="dialog" aria-modal="true" aria-label="' + esc(title) + '">' +
         // HERESY 2872 (opts.closeTop: Viktor 19.11.2026, about 23:20): the close ✕ in the title row, right, and no footer when nothing else is in it
@@ -238,21 +258,84 @@
           : '<div class="hd-title">' + esc(title) + "</div>") + (body ? '<div class="hd-body">' + esc(body) + "</div>" : "") +
         waveHtml(opts) + (long ? '<input type="search" class="hd-input hd-filter" placeholder="' + esc(opts.filter || "Filter") + '" />' : "") +
         '<div class="hd-list" role="listbox">' + items.map(function (it, i) {
-          return '<button type="button" role="option" class="hd-item' + (it.current ? " is-current" : "") + '" data-i="' + i +
-            '" data-q="' + esc((String(it.label || "") + " " + (it.note == null ? "" : String(it.note))).toLowerCase()) +
-            '" style="--depth:' + (it.depth || 0) + '"' + tipAttrs(it, opts) + (it.current ? ' aria-selected="true"' : "") + '>' + (it.path ? '<span class="hd-item-path" translate="no">' + esc(it.path) + " \u203a </span>" : "") + '<span class="hd-item-label"' + (it.words ? "" : ' translate="no"') + '>' +   // HERESY 1853: the parents before the name   // HERESY 1379b: words: true, a word to translate, not a name
-            esc(it.label) + "</span>" + (it.note != null && it.note !== "" ? '<span class="hd-item-note">' + esc(it.note) + "</span>" : "") +
+          if (it.head) return '<div class="hd-head" role="presentation">' + esc(it.head) + "</div>";   // HERESY 2956
+          return '<button type="button" role="option" class="hd-item' + (it.current ? " is-current" : "") + (petals && (it.depth || 0) > 0 ? " is-kid" : "") + (it.muted ? " is-muted" : "") + (emCol ? " has-em" : "") + '" data-i="' + i +
+            '" data-q="' + esc((String(it.label || "") + " " + (it.note == null ? "" : String(it.note)) + " " + (it.em || "")).toLowerCase()) +   // HERESY 2956: its emoji found too (2919b)
+            '" style="--depth:' + (it.depth || 0) + '"' + tipAttrs(it, opts) + (it.current ? ' aria-selected="true"' : "") + (it.muted ? ' aria-disabled="true"' : "") + '>' + emCell(it) + (it.path ? '<span class="hd-item-path" translate="no">' + esc(it.path) + " \u203a </span>" : "") + '<span class="hd-item-label"' + (it.words ? "" : ' translate="no"') + '>' +   // HERESY 1853: the parents before the name   // HERESY 1379b: words: true, a word to translate, not a name
+            esc(it.label) + "</span>" + (it.marks ? '<span class="hd-item-marks" aria-hidden="true">' + esc(it.marks) + "</span>" : "") + (it.note != null && it.note !== "" ? '<span class="hd-item-note">' + esc(it.note) + "</span>" : "") +
             (it.current ? '<span class="hd-item-tick" aria-hidden="true">\u2713</span>' : "") + "</button>" +
             // HERESY 2872: an item's own second action, a small button at its row's end ({value, label, tip}): the answer is its value
             (it.act ? '<button type="button" class="btn ghost small hd-item-act" data-a="' + i + '" aria-label="' + esc(it.act.tip || it.act.label) + '"' +
               (it.act.tip ? ' data-tip="' + esc(it.act.tip) + '"' : "") + ">" + esc(it.act.label) + "</button></div>" : "");
-        }).map(function (h, i) { return items[i].act ? '<div class="hd-row">' + h : h; }).join("") + "</div>" +
+        }).map(function (h, i) {
+          if (hasPetal(i)) return '<div class="hd-row has-petal' + ((items[i].depth || 0) > 0 ? " is-kid" : "") + '" data-pi="' + i + '">' + h + petalBtn(i) + "</div>";   // HERESY 2956
+          return items[i].act ? '<div class="hd-row">' + h : h;
+        }).join("") + "</div>" +
         (opts.closeTop && !(opts.more || []).length ? "" : '<div class="hd-acts">' + (opts.more || []).map(function (m, i) {
           return '<button type="button" class="btn ghost small hd-more" data-m="' + i + '">' + esc(m.label) + "</button>";
         }).join("") + '<span class="hd-spacer"></span>' + (opts.closeTop ? "" : '<button type="button" class="btn ghost small hd-no">' + esc(opts.cancel || "Cancel") + "</button>") + "</div>") + "</div>";
       document.body.appendChild(back);
-      var filter = back.querySelector(".hd-filter"), rows = Array.prototype.slice.call(back.querySelectorAll(".hd-item"));
-      function shown() { return rows.filter(function (r) { return !r.hidden; }); }
+      var filter = back.querySelector(".hd-filter"), rows = Array.prototype.slice.call(back.querySelectorAll(".hd-list .hd-item"));
+      function shown() { return rows.filter(function (r) { return !r.hidden && r.offsetParent !== null; }); }   // HERESY 2956: a petal's row is not in the list's walk
+      // HERESY 2956: the petals, each a list of its own beside its row, in the same overlay; open[L] the petal at level L (0: beside the list's row)
+      var open = [];
+      function petalRow(j) {
+        var it = items[j], h = '<button type="button" role="option" class="hd-item' + (it.current ? " is-current" : "") + (it.muted ? " is-muted" : "") + (emCol ? " has-em" : "") + '" data-i="' + j + '"' +
+          tipAttrs(it, opts) + (it.muted ? ' aria-disabled="true"' : "") + ">" + emCell(it) + '<span class="hd-item-label"' + (it.words ? "" : ' translate="no"') + ">" + esc(it.label) + "</span>" +
+          (it.marks ? '<span class="hd-item-marks" aria-hidden="true">' + esc(it.marks) + "</span>" : "") + (it.note != null && it.note !== "" ? '<span class="hd-item-note">' + esc(it.note) + "</span>" : "") +
+          (it.current ? '<span class="hd-item-tick" aria-hidden="true">\u2713</span>' : "") + "</button>";
+        return hasPetal(j) ? '<div class="hd-row has-petal" data-pi="' + j + '">' + h + petalBtn(j) + "</div>" : h;
+      }
+      function closePetals(from) {
+        while (open.length > from) {
+          var p = open.pop();
+          p.el.remove();
+          if (p.row) { p.row.classList.remove("is-open"); var b = p.row.querySelector(".hd-petal-btn"); if (b) b.setAttribute("aria-expanded", "false"); }
+        }
+      }
+      function openPetal(i, row, level, focus) {
+        if (open[level] && open[level].i === i) { if (focus) { var f0 = open[level].el.querySelector(".hd-item"); if (f0) f0.focus(); } return; }
+        closePetals(level);
+        var el = document.createElement("div");
+        el.className = "hd-petal";
+        el.setAttribute("role", "listbox");
+        el.dataset.level = String(level);
+        el.innerHTML = kidsOf(i).map(petalRow).join("") + more(items[i]).map(function (m, k) {
+          return '<button type="button" class="hd-item hd-petal-more" data-m="' + k + '">' + esc(m.label) + "</button>";
+        }).join("");
+        back.appendChild(el);
+        var r = row.getBoundingClientRect(), host = level ? open[level - 1].el.getBoundingClientRect() : back.querySelector(".hd-box").getBoundingClientRect();
+        var w = el.offsetWidth, h = el.offsetHeight, left = host.right + 4;   // beside its host, its top at its row
+        if (left + w > window.innerWidth - 8) left = Math.max(8, host.left - w - 4);   // no room on the right: the petal opens to the left
+        el.style.left = Math.round(left) + "px";
+        el.style.top = Math.round(Math.max(8, Math.min(r.top - 5, window.innerHeight - 8 - h))) + "px";
+        row.classList.add("is-open");
+        var pb = row.querySelector(".hd-petal-btn"); if (pb) pb.setAttribute("aria-expanded", "true");
+        open[level] = { i: i, el: el, row: row };
+        Array.prototype.forEach.call(el.querySelectorAll(".hd-item[data-i]"), function (b) {
+          b.addEventListener("click", function () { if (!items[+b.dataset.i].muted) done(items[+b.dataset.i].value); });
+        });
+        Array.prototype.forEach.call(el.querySelectorAll(".hd-petal-more"), function (b) { b.addEventListener("click", function () { done(more(items[i])[+b.dataset.m].value); }); });
+        wirePetals(el, level + 1);
+        if (focus) { var f = el.querySelector(".hd-item"); if (f) f.focus(); }
+      }
+      // a row with a petal opens it on the pointer's rest and on its ›; a row without one closes the petals beyond its own
+      function wirePetals(box, level) {
+        var t = 0;
+        Array.prototype.forEach.call(box.querySelectorAll(":scope > .hd-row.has-petal, :scope > .hd-item, :scope > .hd-list > .hd-row.has-petal, :scope > .hd-list > .hd-item"), function (r) {
+          r.addEventListener("mouseenter", function () {
+            clearTimeout(t);
+            if (r.classList.contains("has-petal")) t = setTimeout(function () { if (r.isConnected) openPetal(+r.dataset.pi, r, level, false); }, 140);
+            else t = setTimeout(function () { closePetals(level); }, 140);
+          });
+        });
+        Array.prototype.forEach.call(box.querySelectorAll(".hd-petal-btn"), function (b) {
+          if (b.closest(".hd-petal, .hd-list") !== box && !(box.classList.contains("hd-box") && b.closest(".hd-list"))) return;
+          b.addEventListener("click", function (e) { e.stopPropagation(); var r = b.closest(".hd-row"); if (open[level] && open[level].i === +b.dataset.p) closePetals(level); else openPetal(+b.dataset.p, r, level, true); });
+        });
+      }
+      if (petals) wirePetals(back.querySelector(".hd-box"), 0);
+      function levelOf(el) { var p = el && el.closest ? el.closest(".hd-petal") : null; return p ? +p.dataset.level + 1 : 0; }
       function done(v) {
         document.removeEventListener("keydown", key, true);
         back.classList.add("is-leaving");
@@ -261,6 +344,25 @@
         resolve(v);
       }
       function key(e) {
+        var a = document.activeElement, inPetal = !!(a && a.closest && a.closest(".hd-petal"));
+        // HERESY 2956: in a petal Esc and ← close it, back to its row; → on a row with a petal opens it
+        if (open.length && (e.key === "Escape" || (e.key === "ArrowLeft" && inPetal))) {
+          e.preventDefault(); e.stopPropagation();
+          var L = inPetal ? levelOf(a) - 1 : open.length - 1, row = open[L] ? open[L].row : null;
+          closePetals(L);
+          if (row) { var rb = row.querySelector(".hd-item"); if (rb) rb.focus(); }
+          return;
+        }
+        if (e.key === "ArrowRight" && a && a.closest && a.closest(".hd-row.has-petal") && a.classList.contains("hd-item")) {
+          e.preventDefault(); var pr = a.closest(".hd-row"); openPetal(+pr.dataset.pi, pr, levelOf(a), true); return;
+        }
+        if (inPetal && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
+          e.preventDefault();
+          var pl = Array.prototype.slice.call(a.closest(".hd-petal").querySelectorAll(".hd-item")), pi = pl.indexOf(a);
+          var pn = pl[Math.max(0, Math.min(pl.length - 1, pi + (e.key === "ArrowDown" ? 1 : -1)))];
+          if (pn) pn.focus();
+          return;
+        }
         if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); done(null); return; }
         if (e.key === "ArrowDown" || e.key === "ArrowUp") {
           e.preventDefault();
@@ -269,13 +371,13 @@
           if (next) next.focus();
         } else if (e.key === "Enter" && document.activeElement === filter) {
           e.preventDefault();
-          var first = shown()[0];
+          var first = shown().filter(function (r) { return !items[+r.dataset.i].muted; })[0];   // HERESY 2956: a muted row is never taken
           if (first) done(items[+first.dataset.i].value);
         }
       }
       document.addEventListener("keydown", key, true);
       back.addEventListener("mousedown", function (e) { if (e.target === back) done(null); });
-      rows.forEach(function (r) { r.addEventListener("click", function () { done(items[+r.dataset.i].value); }); });
+      rows.forEach(function (r) { r.addEventListener("click", function () { if (!items[+r.dataset.i].muted) done(items[+r.dataset.i].value); }); });   // HERESY 2956: a muted row says why in its tip
       Array.prototype.forEach.call(back.querySelectorAll(".hd-item-act"), function (b) { b.addEventListener("click", function () { done(items[+b.dataset.a].act.value); }); });   // HERESY 2872
       if (opts.wave && opts.wave.forItem) rows.forEach(function (r) {   // HERESY 1729: the row under the pointer (or in focus) marks its own
         var mark = function () { waveDraw(back, opts, opts.wave.forItem(items[+r.dataset.i].value)); };
@@ -286,7 +388,9 @@
       if (filter) filter.addEventListener("input", function () {
         var q = filter.value.trim().toLowerCase();
         rows.forEach(function (r) { r.hidden = !!q && r.dataset.q.indexOf(q) < 0; if (r.parentNode.classList.contains("hd-row")) r.parentNode.hidden = r.hidden; });   // HERESY 1853: its own name and note, not its parents'
+        Array.prototype.forEach.call(back.querySelectorAll(".hd-head"), function (h) { h.hidden = !!q; });   // HERESY 2956: a caption steps aside while words find rows
         back.querySelector(".hd-list").classList.toggle("is-filtering", !!q);          // HERESY 1853: a section found says where it stands
+        if (q) closePetals(0);                         // HERESY 2956: the words find the sections in the list itself
       });
       requestAnimationFrame(function () {
         back.classList.add("is-on");

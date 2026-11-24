@@ -23,6 +23,7 @@
   var GROUPS = { look: "Hear and look", mend: "Mend", finish: "Finish", setup: "Setup" };   // 1512: the machine's own
   var KEY = "yue2.postStep";
   var TREE = "treePanel", treeFrom = "";            // HERESY 1540: the tree as a place of the column, not a step of the chain
+  var CMP = "comparePanel";                          // HERESY 2949: the Compare node, a place of the column as the tree is (two inputs, no step of a way)
   var state = { take: null, done: {}, current: "" };
   function $(id) { return document.getElementById(id); }
   function recall() { try { return localStorage.getItem(KEY); } catch (e) { return null; } }
@@ -50,24 +51,27 @@
     b.setAttribute("aria-selected", state.current === TREE ? "true" : "false");
     b.classList.toggle("is-running", live);
     b.querySelector(".ps-mark").textContent = String(n);
+    var cb = document.querySelector('#postSteps [data-cmp-step]');   // HERESY 2949
+    if (cb) { cb.classList.toggle("is-active", state.current === CMP); cb.setAttribute("aria-selected", state.current === CMP ? "true" : "false"); }
   }
 
   function select(id) {
-    var tree = id === TREE;                           // HERESY 1540
-    if (!tree && !STEPS.some(function (s) { return s.id === id; })) id = STEPS[0].id;
-    if (tree && state.current && state.current !== TREE) treeFrom = state.current;
+    var tree = id === TREE, cmp = id === CMP && !!$(CMP);   // HERESY 1540; 2949: the Compare node's place
+    if (!tree && !cmp && !STEPS.some(function (s) { return s.id === id; })) id = STEPS[0].id;
+    if ((tree || cmp) && state.current && state.current !== TREE && state.current !== CMP) treeFrom = state.current;
     state.current = id;
     store(id);
     STEPS.forEach(function (s) {
       var p = $(s.id);
       if (!p) return;
-      p.classList.toggle("is-step-off", tree || s.id !== id);
+      p.classList.toggle("is-step-off", tree || cmp || s.id !== id);
       if (s.id === id && !p.open) p.open = true;           // its own toggle draws it
     });
     var box = treeBox();
     if (box) box.classList.toggle("is-step-off", !tree);
+    if ($(CMP)) { $(CMP).classList.toggle("is-step-off", !cmp); if (cmp) { $(CMP).open = true; if (window.HeresyDerived && window.HeresyDerived.cmpPaint) window.HeresyDerived.cmpPaint(); } }
     paint();
-    window.dispatchEvent(new CustomEvent("heresy-post-step", { detail: { panel: tree ? (treeFrom || id) : id } }));   // HERESY 1129: the tree lights its branches (1540: the step one came from)
+    window.dispatchEvent(new CustomEvent("heresy-post-step", { detail: { panel: tree || cmp ? (treeFrom || id) : id } }));   // HERESY 1129: the tree lights its branches (1540: the step one came from)
     window.dispatchEvent(new Event("resize"));             // a picture shown measures its new width
   }
 
@@ -610,6 +614,7 @@
       var b = e.target.closest("[data-step-panel]");
       if (b) select(b.dataset.stepPanel);
       else if (e.target.closest("[data-tree-step]")) select(TREE);   // HERESY 1540
+      else if (e.target.closest("[data-cmp-step]")) select(CMP);     // HERESY 2949
     });
     auPanel();                                       // HERESY 1512: the Audio I/O's panel, made here (the lab answers it)
     STEPS.forEach(function (s) { var p = $(s.id); if (p) p.classList.add("is-step"); });
@@ -652,7 +657,10 @@
         '</span><span class="ps-text"' + own + '><span class="ps-name">' + esc(s.label) + (s.id === "dawPanel" ? betaBadge() : "") + '</span><span class="ps-say">' + esc(s.say) + "</span></span></button>";
     }).join("") +
       // HERESY 1540: what is made from the take, its own place at the column's end
-      '<span class="ps-group">This Take</span><button type="button" role="tab" class="ps-step ps-tree" data-tree-step="1"><span class="ps-mark">0</span>' +
+      '<span class="ps-group">This Take</span>' +
+      ($(CMP) ? '<button type="button" role="tab" class="ps-step ps-tree ps-cmp" data-cmp-step="1"><span class="ps-mark" aria-hidden="true">\u21c4</span>' +   // HERESY 2949: before the tree, which ends the column (1540)
+        '<span class="ps-text"><span class="ps-name">Compare</span><span class="ps-say">A and B side by side</span></span></button>' : "") +
+      '<button type="button" role="tab" class="ps-step ps-tree" data-tree-step="1"><span class="ps-mark">0</span>' +
       '<span class="ps-text"><span class="ps-name">Made from This Take</span><span class="ps-say">the branches of every step</span></span></button>' +
       (plug && plug.failed ? '<p class="row-hint ps-plug-failed" role="status">' + esc(plugWord()) + "</p>" : "");   // HERESY 2339
     cvPaint();                                       // HERESY 1506: a plugin's steps are nodes too
@@ -693,7 +701,7 @@
   function cvColOf(nd) {
     if (nd.id === "take" || nd.id === "chain") return 0;
     if (nd.id === "importPanel" || nd.id === "audioPanel") return -1;
-    if (nd.id === "madePanel") return 6;               // HERESY 1581; 1951 («в последнюю дополнительную колонку вверх»): a column of its own, the last
+    if (nd.id === "madePanel" || nd.id === CMP) return 6;   // HERESY 1581; 1951; 2949: the Compare node under it («в последнюю дополнительную колонку вверх»): a column of its own, the last
     // HERESY 1993 (Viktor 01.11.2026: «Статистические и финальные ноды без выходных проводов в авто организации канваса раздели на две колонки и выстрой
     // выходные последней, а статистические предпоследней колонками»): what ends a way, no wire going out of it and a file made (MIDI), under the made node
     if (nd.id === "midiPanel" || (nd.step && nd.step.spec && nd.step.spec.final)) return 6;   // HERESY 1997: a plugin's step that says it ends a way
@@ -1013,6 +1021,7 @@
       out.push({ id: st.id, name: st.label, say: st.say, n: String(i + 1), col: at[0], row: at[1], step: st, own: !!st.plugin && !st.builtin });
     });
     out.push({ id: "madePanel", name: "Made from This Take", say: "every file made from it", col: 6, row: 0 });   // HERESY 1581; 1951: the top of a column of its own
+    if ($(CMP)) out.push({ id: CMP, name: "Compare", say: "A and B side by side", col: 6, row: 1 });   // HERESY 2949
     CV.num = flowNumbers(out);                        // HERESY 1581: numbered as the work flows
     out.forEach(function (nd) { nd.n = CV.num[nd.id] ? String(CV.num[nd.id]) : ""; });
     CV.clones.forEach(function (c) {                  // HERESY 1516: a clone beside its own, its own choice said
@@ -1034,7 +1043,8 @@
                 gatePanel: [[["file", "file"]], [["file", "file"]]],
                 remasterPanel: [[["file", "file"], ["set", "stems"], ["stem", "versions"]], [["file", "master"]]],
                 spectrumPanel: [[["file", "file"]], []], inspectPanel: [[["file", "file"]], []], glossPanel: [[["file", "file"]], []],
-                midiPanel: [[["file", "file"]], []] };   // HERESY 1834: its MIDI feeds no other step
+                midiPanel: [[["file", "file"]], []],   // HERESY 1834: its MIDI feeds no other step
+                comparePanel: [[["file", "A"], ["file", "B"]], []] };   // HERESY 2949: two files in, nothing out: it is listened to
   function portsOf(nd) {
     var id = nd.clone || nd.id;
     if (PORTS[id]) return PORTS[id];
@@ -1074,7 +1084,7 @@
       .forEach(function (n) { num[n.id] = ++k; });
     return num;
   }
-  var NODE_TIP = { "midiPanel": "MuScriptor: the file into multi-instrument MIDI, 34 named instrument groups and the drums; each run a set of the tree", "take": "The take in hand: what every step starts from. A click opens the Takes, to pick another", "importPanel": "A track from anywhere (WAV, FLAC, MP3…) into the library as a take, marked imported; a way wired from here runs on each one imported next", "madePanel": "Every file made from this take, each under the one it came from: play, compare, rate, delete", "spectrumPanel": "The spectrum of the take or of a file made from it: how loud each band is, over time", "inspectPanel": "Faults measured in a file: clicks, clipping, the frame buzz, a hum", "glossPanel": "The lyrics held against what is sung (Whisper): which lines came and which did not", "debuzzPanel": "The frame buzz of YuE2's sound out of the take: needed for every YuE2 take, off for a track from elsewhere", "upscalePanel": "UniverSR redraws the top of the spectrum above a cutoff, the original kept below it", "derivedPanel": "The file split into stems: four, six, eight, or the voice and the rest", "dawPanel": "The stems on lanes: levels, versions, buses and automation, then a mix", "gatePanel": "The Digital Gateway: tape, console and tube in numbers, on a file or a mix", "remasterPanel": "The Debunker: a file or a set of stems balanced, compressed, toned and brought to a loudness", "audioPanel": "This machine's interfaces: the gateway's out and in, the monitor" };
+  var NODE_TIP = { "comparePanel": "Two versions of the take side by side, A and B: the original, a step's file, a mix; Compare opens them in the Compare window, switched in the same second. A wire from the take goes to A, from a step to B", "midiPanel": "MuScriptor: the file into multi-instrument MIDI, 34 named instrument groups and the drums; each run a set of the tree", "take": "The take in hand: what every step starts from. A click opens the Takes, to pick another", "importPanel": "A track from anywhere (WAV, FLAC, MP3…) into the library as a take, marked imported; a way wired from here runs on each one imported next", "madePanel": "Every file made from this take, each under the one it came from: play, compare, rate, delete", "spectrumPanel": "The spectrum of the take or of a file made from it: how loud each band is, over time", "inspectPanel": "Faults measured in a file: clicks, clipping, the frame buzz, a hum", "glossPanel": "The lyrics held against what is sung (Whisper): which lines came and which did not", "debuzzPanel": "The frame buzz of YuE2's sound out of the take: needed for every YuE2 take, off for a track from elsewhere", "upscalePanel": "UniverSR redraws the top of the spectrum above a cutoff, the original kept below it", "derivedPanel": "The file split into stems: four, six, eight, or the voice and the rest", "dawPanel": "The stems on lanes: levels, versions, buses and automation, then a mix", "gatePanel": "The Digital Gateway: tape, console and tube in numbers, on a file or a mix", "remasterPanel": "The Debunker: a file or a set of stems balanced, compressed, toned and brought to a loudness", "audioPanel": "This machine's interfaces: the gateway's out and in, the monitor" };
   function nodeTip(nd) {                             // HERESY 2012: a node renamed says its own name first
     var t = nodeTipOwn(nd);
     if (!nd.ownName) return t;
@@ -1110,11 +1120,12 @@
     var d = /^derived\/([^/]+)/.exec(String(v || ""));
     return d && by[d[1]] ? cvNodeOf(by[d[1]]) : "";
   }
-  var SRC_SEL = { midiPanel: "mdSource", gatePanel: "gtSource", debuzzPanel: "dbSource", upscalePanel: "upSource", derivedPanel: "stSource", remasterPanel: "rmSource", inspectPanel: "inSource", glossPanel: "glossSource" };
+  var SRC_SEL = { comparePanel: "cmpA", midiPanel: "mdSource", gatePanel: "gtSource", debuzzPanel: "dbSource", upscalePanel: "upSource", derivedPanel: "stSource", remasterPanel: "rmSource", inspectPanel: "inSource", glossPanel: "glossSource" };
   function srcSelect(id) { return SRC_SEL[id] ? $(SRC_SEL[id]) : /^pl-/.test(id) ? document.querySelector("#" + id + " .pl-source") : null; }
   var OUT_NODES = { take: 1, debuzzPanel: 1, upscalePanel: 1, derivedPanel: 1, remasterPanel: 1, dawPanel: 1, gatePanel: 1 };   // 1547
   function cvLink(from, to, quiet) {                    // the newest branch of «from» as «to»'s source, as a pick in its Source would make it
-    var sel = srcSelect(to), by = cvById(), best = null, say = !quiet && chain.hooks && chain.hooks.toast;   // 1570: quiet when the way took the wire
+    // HERESY 2949: onto the Compare node the take goes to A, anything else to B (the usual pair: the take against what a step made of it)
+    var sel = to === CMP ? $(from === "take" ? "cmpA" : "cmpB") : srcSelect(to), by = cvById(), best = null, say = !quiet && chain.hooks && chain.hooks.toast;   // 1570: quiet when the way took the wire
     if (!sel || from === to) { if (say) say(tr("{0} takes no source").replace("{0}", tr(cvTitle(to).replace(/^\d+ \u00b7 /, ""))), "bad"); return false; }
     Array.prototype.forEach.call(sel.options, function (o) {
       if (o.disabled || cvNodeOfValue(o.value, by) !== from) return;
@@ -1167,6 +1178,8 @@
       var k = from + ">" + id;
       if (have[k]) have[k][4] = true; else { have[k] = [from, id, 0, false, true]; w.push(have[k]); }
     });
+    var cb = $("cmpB"), fb = cb ? cvNodeOfValue(cb.value, by) : "";   // HERESY 2949: the Compare node's second input, wired as its first
+    if (fb && fb !== CMP) { var kb = fb + ">" + CMP; if (have[kb]) have[kb][4] = true; else { have[kb] = [fb, CMP, 0, false, true]; w.push(have[kb]); } }
     return w;
   }
   // ---- HERESY 1570 (Viktor 19.10.2026: «В wiring не возможно разорвать цепь для построения собственного воркфлоу»): the chain's wires
@@ -1550,7 +1563,7 @@
   // pointer, or the one whose window is open): a muted node does not run, from its window or on the way (the way stops before it, what follows it
   // takes its output); Ctrl+B bypasses them on the way, as their right-click does. Kept in this browser
   function mutable(id) {
-    if (!id || id === "take" || id === "importPanel" || id === "madePanel" || id === "audioPanel") return false;
+    if (!id || id === "take" || id === "importPanel" || id === "madePanel" || id === CMP || id === "audioPanel") return false;
     var st = STEPS.filter(function (x) { return x.id === id; })[0];
     return !!(st || cloneOf(id));
   }
@@ -1609,7 +1622,7 @@
   // its name, in the head's own colour: the Studio's own nodes by name, its built-in steps by id, a plugin's by its group
   var NODE_ICO = { take: "disc", chain: "layers", importPanel: "import", audioPanel: "vol-hi", debuzzPanel: "waveform", upscalePanel: "chevrons-up",
                    derivedPanel: "rows-2", dawPanel: "sliders", gatePanel: "activity", remasterPanel: "gauge", spectrumPanel: "spectrum", inspectPanel: "scope",
-                   glossPanel: "spell-check", midiPanel: "music", madePanel: "folder", treePanel: "folder" };
+                   glossPanel: "spell-check", midiPanel: "music", madePanel: "folder", treePanel: "folder", comparePanel: "git-compare" };   // 2949
   var STEP_ICO = { lead: "ear", tamer: "shield", shape: "activity", duck: "vol-lo", ambient: "sparkles", pianoteq: "music", organteq: "music", airteq: "music", vupscale: "chevrons-up",
                    report: "cols-2", match: "swap", lift: "text-larger", mono: "scaling", glue: "layers", ceiling: "gauge" };
   var GROUP_ICO = { mend: "eraser", finish: "sparkles", look: "eye", setup: "cog" };
@@ -1982,10 +1995,12 @@
     var num = CV.num || {}, ids = STEPS.map(function (st) { return st.id; }).sort(function (a, b) { return (num[a] || 99) - (num[b] || 99); });
     ids.forEach(function (id) { out.push(id); CV.clones.forEach(function (c) { if (c.of === id) out.push(c.id); }); });
     out.push("madePanel");
+    if ($(CMP)) out.push(CMP);                        // HERESY 2949
     return out;
   }
   function cvTitle(id) {
     if (id === "take" || id === "madePanel") return tr("Made from This Take");
+    if (id === CMP) return tr("Compare");             // HERESY 2949
     if (id === "chain") return tr("Chain");
     var cl = cloneOf(id);                             // HERESY 1516
     if (cl) return cvTitle(cl.of) + " " + clMark(cl.n);
@@ -2055,7 +2070,7 @@
   // HERESY 1953 (Viktor 30.10.2026: «На 2K мониторе всё растянуто, куча воды в модалке… адаптивные высоты и ширины модалок нод, чтобы не было
   // слишком тесно, и не разбухало окно на всю ширину экрана»): a node's window as wide as what it holds: a few settings a narrow column, a step
   // of many a middle one, a tree of waves, a spectrum or the lyrics a large one; never past 96 % of the screen
-  var ND_SIZE = { madePanel: "l", spectrumPanel: "l", glossPanel: "l", remasterPanel: "m", audioPanel: "m", derivedPanel: "m", gatePanel: "m", inspectPanel: "m",
+  var ND_SIZE = { comparePanel: "s", madePanel: "l", spectrumPanel: "l", glossPanel: "l", remasterPanel: "m", audioPanel: "m", derivedPanel: "m", gatePanel: "m", inspectPanel: "m",
                   midiPanel: "m", debuzzPanel: "s", upscalePanel: "s", importPanel: "s" };
   function ndSize(pid, el) {
     if (ND_WIDE[pid]) return "";
@@ -2080,7 +2095,7 @@
     if (!el && CV.open === id) el = CV.el;
     if (!el) return false;
     cvClose(true);
-    if (STEPS.some(function (st) { return st.id === pid; })) select(pid);   // the step's own: its events, its place in the list
+    if (STEPS.some(function (st) { return st.id === pid; }) || pid === CMP) select(pid);   // the step's own: its events, its place in the list (2949: the Compare node's too)
     if (cl) { CV.swap = { id: id, keep: fieldsOf(el) }; fieldsSet(cl.fields); }   // 1516: the clone's settings in, the step's own kept aside
     var m = cvModal();
     CV.faceOnly = faced;
@@ -2941,6 +2956,7 @@
               step: cvStep, paint: cvPaint, until: runUntil, bypass: toggleBypass, bypassed: bypassed, link: cvLink,
               setup: setupNow, apply: setupApply, profiles: function () { return PF.list.slice(); }, loadProfiles: pfLoad,
               clone: cvClone, unclone: cvUnclone, clones: function () { return JSON.parse(JSON.stringify(CV.clones)); },
+              wires: function () { return cvWireList(cvFlows()).map(function (x) { return x[0] + ">" + x[1] + (x[4] ? "*" : ""); }); },   // HERESY 2949: for the checks (* a Source as set)
               openAs: openAs,   // HERESY 1523
               way: { fresh: wayNew, init: wayInit, bar: function () { var c = $("postChain"); return !!(c && c.classList.contains("is-head")); },   // HERESY 1598
                      now: wayNow, pairs: wayPairs, cut: ownCut, link: ownLink, off: ownOff, undo: ownUndo, check: wayCheck, test: wayTest,   // HERESY 1570, 1571

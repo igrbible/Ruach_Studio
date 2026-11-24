@@ -5735,6 +5735,11 @@ RuachI18n.add("el", {
 "On a public Wi-Fi (a café, a hotel, a train) or on a laptop without a firewall, everyone on that network counts as a private network too: choose This computer only, or list your own networks.": "Σε δημόσιο Wi-Fi (καφέ, ξενοδοχείο, τρένο) ή σε λάπτοπ χωρίς τείχος προστασίας, όλοι σε εκείνο το δίκτυο μετρούν κι αυτοί ως ιδιωτικό δίκτυο: διάλεξε «Μόνο αυτός ο υπολογιστής» ή απαρίθμησε τα δικά σου δίκτυα.",
 "Engine → Security changes it any time. The internet at large is never let in, unless the Studio is started with RUACH_ALLOW_PUBLIC=1.": "Η Μηχανή → Ασφάλεια το αλλάζει όποτε θες. Το ίντερνετ γενικά δεν μπαίνει ποτέ, εκτός αν το Στούντιο ξεκινήσει με RUACH_ALLOW_PUBLIC=1.",
 "My decision is a conscious one": "Η απόφασή μου είναι συνειδητή",
+"The Studio listens on this computer alone now (port {0}): no other computer or phone can open it, and {1} has nothing to ask of its firewall. Opened to a network, whoever opens its page there can do everything you can: make and delete songs, read your lyrics, run your graphics cards, fetch models with your keys.": "Το Στούντιο ακούει τώρα μόνο αυτόν τον υπολογιστή (θύρα {0}): κανένας άλλος υπολογιστής ή τηλέφωνο δεν μπορεί να το ανοίξει, και τα {1} δεν έχουν τίποτα να ρωτήσουν για το τείχος προστασίας τους. Ανοιχτό σε ένα δίκτυο, όποιος ανοίγει τη σελίδα του εκεί μπορεί να κάνει ό,τι κι εσείς: να φτιάχνει και να διαγράφει τραγούδια, να διαβάζει τους στίχους σας, να απασχολεί τις κάρτες γραφικών σας, να κατεβάζει μοντέλα με τα κλειδιά σας.",
+"{0} asks once whether to let the Studio through its firewall, when it starts again": "τα {0} ρωτούν μία φορά αν θα αφήσουν το Στούντιο να περάσει το τείχος προστασίας, όταν ξεκινήσει ξανά",
+"The Studio still listens on this computer alone: restart it ({0}) to open it to your network, and {1} asks once about its firewall.": "Το Στούντιο ακούει ακόμη μόνο αυτόν τον υπολογιστή: επανεκκινήστε το ({0}) για να το ανοίξετε στο δίκτυό σας, και τα {1} ρωτούν μία φορά για το τείχος προστασίας.",
+"its icon beside the clock → Restart the Studio": "το εικονίδιό του δίπλα στο ρολόι → Restart the Studio",
+"close it and start it again": "κλείστε το και ξεκινήστε το ξανά",
 "Batch": "Παρτίδα",
 "How many pictures in one go: each the next seed (the seed, the seed + 1, …), in every shape picked": "Πόσες εικόνες μαζί: η καθεμία ο επόμενος σπόρος (ο σπόρος, ο σπόρος + 1, …), σε κάθε σχήμα που διαλέχτηκε",
 "Delete the saved style picked": "Διαγραφή του αποθηκευμένου ύφους που διαλέχτηκε",
@@ -5800,6 +5805,7 @@ RuachI18n.add("el", {
 "Music half: {0} layers, attention {1} %, MLP {2} %": "Μουσικό μισό: {0} στρώματα, προσοχή {1} %, MLP {2} %",
 "Sound half: {0} layers, attention {1} %, MLP {2} %": "Ηχητικό μισό: {0} στρώματα, προσοχή {1} %, MLP {2} %",
 "moves a layer by up to {0} % at 1.0": "μετακινεί ένα στρώμα έως {0} % στο 1.0",
+"How far it moves a layer is not measured: {0}": "Πόσο μετακινεί ένα στρώμα δεν έχει μετρηθεί: {0}",
 "Where it pushes:": "Πού πιέζει:",
 "{0} and {1} share their layers ({2}) and pull the same way: together they push harder than their strengths say, keep them lower.": "Οι {0} και {1} μοιράζονται τα στρώματά τους ({2}) και τραβούν προς την ίδια μεριά: μαζί πιέζουν πιο δυνατά απ' όσο λένε οι δυνάμεις τους, κράτησέ τους χαμηλότερα.",
 "{0} and {1} share their layers ({2}) and pull against each other: some of each cancels the other.": "Οι {0} και {1} μοιράζονται τα στρώματά τους ({2}) και τραβούν ο ένας ενάντια στον άλλον: κάτι από τον καθένα σβήνει τον άλλον.",
@@ -6030,6 +6036,7 @@ RuachI18n.add("el", {
 "The input's floor, RMS / peak dBFS: {0}": "Το κατώφλι της εισόδου, RMS / κορυφή dBFS: {0}",
 "Not measured: {0}": "Δεν μετρήθηκε: {0}",
 "no sound card is seen here (/proc/asound has none)": "δεν φαίνεται κάρτα ήχου εδώ (το /proc/asound είναι άδειο)",
+"the audio interfaces are read through ALSA, Linux's sound system: on Windows and macOS none are listed yet, and the analog gateway and the monitor run on Linux for now": "οι διεπαφές ήχου διαβάζονται μέσω ALSA, του συστήματος ήχου του Linux: σε Windows και macOS δεν εμφανίζεται ακόμη καμία, και η αναλογική πύλη και η οθόνη ακρόασης τρέχουν προς το παρόν μόνο σε Linux",
 "aplay is not here: ALSA's software devices are not listed": "δεν υπάρχει aplay εδώ: οι εικονικές συσκευές του ALSA δεν απαριθμούνται",
 "arecord is not here: ALSA's software devices are not listed": "δεν υπάρχει arecord εδώ: οι εικονικές συσκευές του ALSA δεν απαριθμούνται",
 "PipeWire / Pulse do not run here (no pactl answer)": "Το PipeWire / Pulse δεν τρέχει εδώ (καμία απάντηση από pactl)",
@@ -10197,4 +10204,177 @@ RuachI18n.add("el", {
 // HERESY 2919c: the workspaces' emoji upgrade, said once
 RuachI18n.add("el", {
 "{0} workspaces now show their emoji in its own column": "{0} χώροι δείχνουν πλέον το emoji τους στη δική του στήλη"
+});
+// HERESY 2940 · 2941: the take's menu of workspaces, the realms in a move and an add
+RuachI18n.add("el", {
+"A move never takes a take out of its realm: these are the Musician's, and “{0}” is the Narrator's.": "Η μετακίνηση δεν βγάζει ποτέ μια λήψη από τον κόσμο της: αυτές είναι του Μουσικού, και το «{0}» είναι του Αναγνώστη.",
+"A move never takes a take out of its realm: these are the Narrator's, and “{0}” is the Musician's.": "Η μετακίνηση δεν βγάζει ποτέ μια λήψη από τον κόσμο της: αυτές είναι του Αναγνώστη, και το «{0}» είναι του Μουσικού.",
+"A move never takes a take out of its realm: these belong to both realms.": "Η μετακίνηση δεν βγάζει ποτέ μια λήψη από τον κόσμο της: αυτές ανήκουν και στους δύο κόσμους.",
+"Link them into “{0}” instead? They stay where they are as well.": "Να συνδεθούν στο «{0}» αντί γι' αυτό; Μένουν και εκεί όπου βρίσκονται.",
+"Link them": "Σύνδεσέ τες",
+"Linked into “{0}”: {1}": "Συνδέθηκαν στο «{0}»: {1}",
+"The checked belong to both realms ({0} of the Musician, {1} of the Narrator): a move keeps each take in its realm, so check the takes of one realm": "Οι επιλεγμένες ανήκουν και στους δύο κόσμους ({0} του Μουσικού, {1} του Αναγνώστη): η μετακίνηση κρατά κάθε λήψη στον κόσμο της, επίλεξε λήψεις ενός κόσμου",
+"They leave every other workspace of their realm they are in (a locked one keeps its own; their links in the other realm stay).": "Φεύγουν από κάθε άλλον χώρο του κόσμου τους όπου βρίσκονται (ένας κλειδωμένος κρατά τα δικά του· οι σύνδεσμοί τους στον άλλο κόσμο μένουν).",
+"Frozen: unfreeze it first (⋯ beside its name)": "Παγωμένο: ξεπάγωσέ το πρώτα (⋯ δίπλα στο όνομά του)",
+"Link into the Narrator's": "Σύνδεση στους χώρους του Αναγνώστη",
+"Link into the Musician's": "Σύνδεση στους χώρους του Μουσικού"
+});
+// HERESY 2942: the music model's honest limits (the window of the song at hand, the floor under its ceiling, Extend's cap)
+RuachI18n.add("el", {
+"Max length {0} is past what the window holds for this song: about {1} of music whole, after its style and lyrics ({2} tokens) and its score ({3}). The song stops where the window ends. Longer: Long songs · Pieces (experimental).": "Η Μέγιστη διάρκεια {0} ξεπερνά ό,τι χωρά το παράθυρο γι' αυτό το τραγούδι: περίπου {1} μουσικής ολόκληρης, μετά το ύφος και τους στίχους του ({2} tokens) και την παρτιτούρα του ({3}). Το τραγούδι σταματά εκεί που τελειώνει το παράθυρο. Για μεγαλύτερο: Μεγάλα τραγούδια · Σε κομμάτια (πειραματικό).",
+"Max length {0} is past what the window holds for this song: about {1} of music whole ({4}–{5} by the score the model writes), after its style and lyrics ({2} tokens). The song stops where the window ends. Longer: Long songs · Pieces (experimental).": "Η Μέγιστη διάρκεια {0} ξεπερνά ό,τι χωρά το παράθυρο γι' αυτό το τραγούδι: περίπου {1} μουσικής ολόκληρης ({4}–{5} ανάλογα με την παρτιτούρα που θα γράψει το μοντέλο), μετά το ύφος και τους στίχους του ({2} tokens). Το τραγούδι σταματά εκεί που τελειώνει το παράθυρο. Για μεγαλύτερο: Μεγάλα τραγούδια · Σε κομμάτια (πειραματικό).",
+"The window holds about {0} of this song's music whole: its style and lyrics take {1} tokens, its score {2}, of the {3}.": "Το παράθυρο χωρά περίπου {0} από τη μουσική αυτού του τραγουδιού ολόκληρη: το ύφος και οι στίχοι του παίρνουν {1} tokens, η παρτιτούρα του {2}, από τα {3}.",
+"The window holds about {0} of this song's music whole ({4}–{5} by the score the model writes): its style and lyrics take {1} tokens of the {3}.": "Το παράθυρο χωρά περίπου {0} από τη μουσική αυτού του τραγουδιού ολόκληρη ({4}–{5} ανάλογα με την παρτιτούρα που θα γράψει το μοντέλο): το ύφος και οι στίχοι του παίρνουν {1} tokens από τα {3}.",
+"Max length goes past it: the song stops where the window ends.": "Η Μέγιστη διάρκεια το ξεπερνά: το τραγούδι σταματά εκεί που τελειώνει το παράθυρο.",
+"The music's Min length {0} stood above its Max length {1}: sent with the floor at {1}": "Η Ελάχιστη διάρκεια της μουσικής {0} ήταν πάνω από τη Μέγιστη διάρκειά της {1}: στάλθηκε με το κατώφλι στο {1}",
+"The score's Min tokens {0} stood above its Max tokens {1}: sent with the floor at {1}": "Τα Ελάχιστα tokens της παρτιτούρας {0} ήταν πάνω από τα Μέγιστα tokens της {1}: στάλθηκε με το κατώφλι στο {1}",
+"{0} long: Extend goes to {1} at most": "Διάρκεια {0}: η Επέκταση φτάνει ως {1} το πολύ",
+"Music up to 10:00 (8:00 by default): past it a song loses its way (one ran on to 9:30, and that was too much). The window of 24,576 tokens may hold less: the style, the lyrics and the score take their part first.": "Μουσική ως 10:00 (8:00 εξ ορισμού): πιο πέρα το τραγούδι χάνει τον δρόμο του (ένα έφτασε τις 9:30, και ήταν πολύ). Το παράθυρο των 24.576 tokens μπορεί να χωρά λιγότερα: το ύφος, οι στίχοι και η παρτιτούρα παίρνουν πρώτα το μερίδιό τους.",
+"Text profiles make a pasted text ready to read, with a speech profile of your own (Direct, past 8:00); readings live in the Narrator": "Τα προφίλ κειμένου ετοιμάζουν ένα επικολλημένο κείμενο για ανάγνωση, με δικό σου προφίλ ομιλίας (Direct, πάνω από 8:00)· οι αναγνώσεις ζουν στον Αναγνώστη"
+});
+// HERESY 2943: the Trainer's curves together: the run's events, the held-out dots, a scale's span
+RuachI18n.add("el", {
+"Step {0}": "Βήμα {0}",
+"the {0} frozen: its loss leaves the sum": "το {0} πάγωσε: η απώλειά του φεύγει από το άθροισμα",
+"went on from its save": "συνέχισε από την αποθήκευσή του",
+"the {0}'s learning-rate curve {1} → {2}": "η καμπύλη ρυθμού μάθησης του {0}: {1} → {2}",
+"The running average begins anew here.": "Ο κυλιόμενος μέσος ξεκινά εδώ από την αρχή.",
+"held out at step {0}: {1} {2}": "εκτός εκπαίδευσης στο βήμα {0}: {1} {2}",
+"span {0}": "εύρος {0}",
+"Smoothing": "Εξομάλυνση",
+"The curves' smoothing, as TensorBoard's: 0 draws the logged points as they are, 0.99 the smoothest (0.92 by default); the faint line under each is the points themselves. The learning rate, the memory and the held-out dots are never smoothed, nor across the run's events. Kept in this browser.": "Η εξομάλυνση των καμπυλών, όπως στο TensorBoard: το 0 σχεδιάζει τα καταγεγραμμένα σημεία όπως είναι, το 0.99 την πιο ομαλή (0.92 εξ ορισμού)· η αχνή γραμμή κάτω από την καθεμία είναι τα ίδια τα σημεία. Ο ρυθμός μάθησης, η μνήμη και οι κουκκίδες εκτός εκπαίδευσης δεν εξομαλύνονται ποτέ, ούτε πέρα από τα γεγονότα του run. Φυλάσσεται σε αυτόν τον browser."
+});
+// HERESY 2945: the Writer's versions: the Section editor's sub-version and the version it came from
+RuachI18n.add("el", {
+"the Section editor": "ο επεξεργαστής ενοτήτων",
+"from #{0}": "από #{0}"
+});
+// HERESY 2942b: the Section editor's Extend within the music model's 10:00
+RuachI18n.add("el", {
+"Only past the take's end, 10:00 at most in all": "Μόνο μετά το τέλος της λήψης, ως 10:00 συνολικά",
+"Extend sings on to 10:00 at most": "Η Επέκταση τραγουδά ως τις 10:00 το πολύ"
+});
+// HERESY 2948: comping in the DAW: the selection taken from another version of its stem
+RuachI18n.add("el", {
+"Take it from another version": "Πάρ' το από άλλη έκδοση",
+"The rest has no versions": "Το υπόλοιπο δεν έχει εκδόσεις",
+"This stem has one version: a file made from it (a cleaned voice…) is another": "Αυτό το stem έχει μία έκδοση: ένα αρχείο φτιαγμένο από αυτό (μια καθαρισμένη φωνή…) είναι άλλη",
+"The selection from another version of this stem, laid over the lane with 10 ms crossfades; the lane's own version everywhere else": "Η επιλογή από άλλη έκδοση αυτού του stem, στρωμένη πάνω στη λωρίδα με διασταυρώσεις 10 ms· παντού αλλού η δική της έκδοση",
+"{0}–{1} now from «{2}»": "{0}–{1} τώρα από «{2}»",
+"a version gone": "μια έκδοση που δεν υπάρχει πια"
+});
+// HERESY 2949: the Refiner's Compare node: two versions of the take, A and B, into the Compare window
+RuachI18n.add("el", {
+"A and B side by side": "A και B δίπλα δίπλα",
+"Two versions of the take side by side, A and B: the original, a step's file, a mix; Compare opens them in the Compare window, switched in the same second. A wire from the take goes to A, from a step to B": "Δύο εκδόσεις της λήψης δίπλα δίπλα, A και B: το πρωτότυπο, ένα αρχείο βήματος, μια μίξη· η Σύγκριση τις ανοίγει στο παράθυρο σύγκρισης, με εναλλαγή στο ίδιο δευτερόλεπτο. Ένα καλώδιο από τη λήψη πάει στο A, από ένα βήμα στο B",
+"Two versions of this take side by side, A and B, in the Compare window: switched in the same second, blind if you like.": "Δύο εκδόσεις αυτής της λήψης δίπλα δίπλα, A και B, στο παράθυρο σύγκρισης: εναλλάσσονται στο ίδιο δευτερόλεπτο, και τυφλά αν θέλεις.",
+"The first: the original or any file a step made of this take": "Η πρώτη: το πρωτότυπο ή οποιοδήποτε αρχείο έφτιαξε ένα βήμα από αυτή τη λήψη",
+"The second, heard against A: a step's file, a mix, the original": "Η δεύτερη, ακούγεται απέναντι στην A: αρχείο βήματος, μίξη, το πρωτότυπο",
+"A and B in the Compare window, A first: one plays, the other takes over in the same second": "A και B στο παράθυρο σύγκρισης, πρώτα η A: η μία παίζει, η άλλη συνεχίζει στο ίδιο δευτερόλεπτο",
+"Compare A and B": "Σύγκρινε A και B",
+"Pick a take: its versions come here": "Διάλεξε μια λήψη: οι εκδόσεις της έρχονται εδώ",
+"Only the original so far: make a file from it in a step, then compare the two": "Μόνο το πρωτότυπο ως τώρα: φτιάξε ένα αρχείο από αυτό σε ένα βήμα και μετά σύγκρινε τα δύο",
+"A and B are the same file: pick another for one of them": "Τα A και B είναι το ίδιο αρχείο: διάλεξε άλλο για το ένα"
+});
+// HERESY 2950: two-tone icons in Engine › Appearance
+RuachI18n.add("el", {
+"Icons": "Εικονίδια",
+"One colour": "Ένα χρώμα",
+"Two-tone, the theme's colours": "Δίχρωμα, τα χρώματα του θέματος",
+"The Studio's line icons: ours in one colour, the text's (the default); or two-tone, the outline as always and their shapes filled faintly in the theme's own colours (the accent for what makes, red for what takes away, green for what keeps), so each theme paints them its way": "Τα γραμμικά εικονίδια του Studio: τα δικά μας σε ένα χρώμα, του κειμένου (προεπιλογή)· ή δίχρωμα, το περίγραμμα όπως πάντα και τα σχήματά τους γεμάτα αχνά με τα χρώματα του ίδιου του θέματος (το χρώμα έμφασης για ό,τι φτιάχνει, κόκκινο για ό,τι αφαιρεί, πράσινο για ό,τι κρατά), ώστε κάθε θέμα να τα βάφει με τον τρόπο του"
+});
+// HERESY 2955: what a control turned off for a model that is not here says, and its way to Engine → Models
+RuachI18n.add("el", {
+"The transcriber: covers from a recording, a backing read (SheetSage2 with MERT-v2-FullSong)": "Ο μεταγραφέας: διασκευές από ηχογράφηση, ανάγνωση ορχηστρικού (SheetSage2 με MERT-v2-FullSong)",
+"Whisper large-v3: the lyrics check, karaoke timing, sections by ear, a recording's words": "Whisper large-v3: έλεγχος στίχων, χρονισμός καραόκε, ενότητες με το αυτί, τα λόγια μιας ηχογράφησης",
+"not in the last check here: Fetch brings it": "δεν είναι στον τελευταίο έλεγχο εδώ: η «Λήψη» το φέρνει",
+"Its files are here: the engine takes it in at its next start.": "Τα αρχεία του είναι εδώ: η μηχανή το παίρνει στην επόμενη εκκίνησή της.",
+"Opens Engine → Models and LoRAs at its row: Fetch there brings it": "Ανοίγει το «Μηχανή → Μοντέλα και LoRA» στη γραμμή του: η «Λήψη» εκεί το φέρνει",
+"Engine → Models": "Μηχανή → Μοντέλα",
+"not in this Studio yet": "δεν υπάρχει ακόμη σε αυτό το Στούντιο",
+"off: this server keeps none": "ανενεργή: αυτός ο διακομιστής δεν κρατά καμία",
+"Covering a recording needs the transcriber (SheetSage2 with MERT-v2-FullSong), which this Studio does not have yet.": "Μια διασκευή από ηχογράφηση χρειάζεται τον μεταγραφέα (SheetSage2 με MERT-v2-FullSong), που αυτό το Στούντιο δεν έχει ακόμη.",
+"Reading a backing needs the transcriber (SheetSage2 with MERT-v2-FullSong), which this Studio does not have yet.": "Η ανάγνωση ενός ορχηστρικού χρειάζεται τον μεταγραφέα (SheetSage2 με MERT-v2-FullSong), που αυτό το Στούντιο δεν έχει ακόμη.",
+"Writing a score from the sound needs the transcriber (SheetSage2 with MERT-v2-FullSong), which this Studio does not have yet.": "Η γραφή παρτιτούρας από τον ήχο χρειάζεται τον μεταγραφέα (SheetSage2 με MERT-v2-FullSong), που αυτό το Στούντιο δεν έχει ακόμη.",
+"Ready to transcribe. Match sections needs Whisper large-v3, which this Studio does not have yet.": "Έτοιμο για μεταγραφή. Το «Ταίριασμα τμημάτων» χρειάζεται το Whisper large-v3, που αυτό το Στούντιο δεν έχει ακόμη.",
+"Refined needs SheetSage2-Refined, which this Studio does not have yet.": "Το Refined χρειάζεται το SheetSage2-Refined, που αυτό το Στούντιο δεν έχει ακόμη.",
+"BF16 (7.2 GB) is not in this Studio yet: Engine → Models and LoRAs fetches it under Backbone, and the Studio offers it after its next start.": "Το BF16 (7.2 GB) δεν υπάρχει ακόμη σε αυτό το Στούντιο: το φέρνει το «Μηχανή → Μοντέλα και LoRA» στη γραμμή «Βασικό μοντέλο», και το Στούντιο το προσφέρει μετά την επόμενη εκκίνησή του.",
+"The server keeps no library: songs made in this tab stay until it reloads.": "Ο διακομιστής δεν κρατά βιβλιοθήκη: τα τραγούδια που φτιάχτηκαν σε αυτή την καρτέλα μένουν ώσπου να ξαναφορτωθεί.",
+"This engine keeps no settings file, so it answers this computer and private networks; started the Studio's way (its icon, Pinokio or start.sh), it lets you choose.": "Αυτή η μηχανή δεν κρατά αρχείο ρυθμίσεων, οπότε απαντά σε αυτόν τον υπολογιστή και σε ιδιωτικά δίκτυα· αν ξεκινήσει όπως ξεκινά το Στούντιο (από το εικονίδιό του, το Pinokio ή το start.sh), σε αφήνει να διαλέξεις.",
+"it needs Whisper large-v3, which this Studio does not have yet: Engine → Models": "χρειάζεται το Whisper large-v3, που αυτό το Στούντιο δεν έχει ακόμη: «Μηχανή → Μοντέλα»",
+"The lyrics check and karaoke timing need Whisper large-v3, which this Studio does not have yet.": "Ο έλεγχος στίχων και ο χρονισμός καραόκε χρειάζονται το Whisper large-v3, που αυτό το Στούντιο δεν έχει ακόμη.",
+"Whisper large-v3 is not in this Studio yet: Engine → Models and LoRAs fetches it (3.1 GB)": "Το Whisper large-v3 δεν υπάρχει ακόμη σε αυτό το Στούντιο: το φέρνει το «Μηχανή → Μοντέλα και LoRA» (3.1 GB)",
+"{0}: not fetched.": "{0}: δεν ήρθε.",
+"The check did not run.": "Ο έλεγχος δεν έτρεξε.",
+"On Windows the Weights panel downloads through the bash of Git for Windows, and none is installed here.": "Στα Windows το «Μοντέλα και LoRA» κατεβάζει μέσω του bash του Git for Windows, και εδώ δεν είναι εγκατεστημένο.",
+"Install Git for Windows (https://git-scm.com/download/win), then press again. The models a song needs come without it too.": "Εγκατάστησε το Git for Windows (https://git-scm.com/download/win) και πάτα ξανά. Τα μοντέλα που χρειάζεται ένα τραγούδι έρχονται και χωρίς αυτό."
+});
+// HERESY 2956: why a chooser's workspace takes nothing new
+RuachI18n.add("el", {
+"A 💎 set: nothing new lands in it": "Ένα σύνολο 💎: τίποτα νέο δεν μπαίνει σε αυτό",
+"Frozen: nothing new lands in it": "Παγωμένο: τίποτα νέο δεν μπαίνει σε αυτό",
+"Archived: nothing new lands in it": "Στο αρχείο: τίποτα νέο δεν μπαίνει σε αυτό",
+"The regeneration's own section: nothing new lands in it": "Η δική ενότητα της αναγέννησης: τίποτα νέο δεν μπαίνει σε αυτή",
+"They are here already": "Είναι ήδη εδώ"
+});
+// HERESY 2956: why a chooser's workspace takes nothing new
+RuachI18n.add("el", {
+"Its sections": "Οι ενότητές του"
+});
+// HERESY 2959: the chord guard's words
+RuachI18n.add("el", {
+"The chords swing between {0} and {1} bar by bar ({#2} times): the plan may have split its key.": "Οι συγχορδίες ταλαντεύονται μεταξύ {0} και {1} μέτρο προς μέτρο ({#2} φορές): το σχέδιο ίσως έσπασε την τονικότητά του.",
+"Chords with a double sharp or flat: {0}.": "Συγχορδίες με διπλή δίεση ή διπλή ύφεση: {0}.",
+"Chromatic music does this on purpose too: hear it first, or rewrite the score.": "Και η χρωματική μουσική το κάνει σκόπιμα: άκουσέ το πρώτα ή ξαναγράψε την παρτιτούρα.",
+"Rewrite the score": "Ξαναγράψε την παρτιτούρα",
+"A chord in the plan swallowed its notes: the model plans it again with a new music seed": "Μια συγχορδία στο σχέδιο κατάπιε τις νότες της: το μοντέλο το σχεδιάζει ξανά με νέο σπόρο μουσικής"
+});
+// HERESY 2960: a run's own steps 1-3 and a new run's form
+RuachI18n.add("el", {
+"read only": "μόνο ανάγνωση",
+"Telemetry ›": "Τηλεμετρία ›",
+"New run from this one": "Νέα εκτέλεση με βάση αυτή",
+"New run": "Νέα εκτέλεση",
+"The form for a new run with this run's set, kind and knobs; its name is yours to give": "Η φόρμα μιας νέας εκτέλεσης με το σύνολο, το είδος και τα κουμπιά αυτής· το όνομα το δίνεις εσύ",
+"The form for a new run, fresh: nothing an earlier form left": "Η φόρμα μιας νέας εκτέλεσης από την αρχή: τίποτα απ' όσα άφησε μια παλιότερη φόρμα",
+"The material this run's set was made from, as the set remembers it.": "Το υλικό από το οποίο φτιάχτηκε το σύνολο αυτής της εκτέλεσης, όπως το θυμάται το σύνολο.",
+"The set this run trains on.": "Το σύνολο πάνω στο οποίο εκπαιδεύεται αυτή η εκτέλεση.",
+"What this run was given: its kind, its trainer and its knobs.": "Τι δόθηκε σε αυτή την εκτέλεση: το είδος της, ο εκπαιδευτής της και τα κουμπιά της.",
+"The form for another run opens with “New run”.": "Η φόρμα άλλης εκτέλεσης ανοίγει με το «Νέα εκτέλεση».",
+"The form for a new run: {0} stays as it is.": "Η φόρμα μιας νέας εκτέλεσης: η {0} μένει όπως είναι.",
+"not recorded": "δεν καταγράφηκε",
+"The set {0} is no longer among the prepared sets.": "Το σύνολο {0} δεν είναι πια ανάμεσα στα έτοιμα σύνολα.",
+"folder": "φάκελος",
+"made from": "φτιάχτηκε από",
+"made on": "φτιάχτηκε",
+"sheets by": "παρτιτούρες από",
+"in the run": "στην εκτέλεση",
+"held out": "κρατημένα εκτός",
+"kind": "είδος",
+"trainer": "εκπαιδευτής"
+});
+// HERESY 2961: the held-out bucket's tip in the Trainer's charts
+RuachI18n.add("el", {
+"held out, {#0} saves from step {1} to {2}: {3} {4} on average": "εκτός εκπαίδευσης, {#0} αποθηκεύσεις από το βήμα {1} ως το {2}: {3} {4} κατά μέσο όρο",
+"step {0}: {1}": "βήμα {0}: {1}"
+});
+// HERESY 2962: the Trainer's missing weights in words
+RuachI18n.add("el", {
+"The Studio’s trainer is missing {0}: they come with its base in Engine → Models.": "Στον εκπαιδευτή του Studio λείπουν: {0}. Έρχονται με τη βάση του στο Μηχανή → Μοντέλα."
+});
+// HERESY 2963: the Videographer's voice row
+RuachI18n.add("el", {
+"The Narrator's voice": "Η φωνή του Αναγνώστη",
+"Starts at": "Ξεκινά στο",
+"The song under it": "Το τραγούδι από κάτω",
+"How far the song goes down under the voice: down in 0.3 s before it, back in 0.8 s after it": "Πόσο χαμηλώνει το τραγούδι κάτω από τη φωνή: κάτω σε 0,3 s πριν από αυτήν, πίσω σε 0,8 s μετά",
+"Change…": "Αλλαγή…",
+"This take is not in the library now: the clip cannot be cut with it": "Αυτή η λήψη δεν είναι τώρα στη βιβλιοθήκη: το κλιπ δεν μπορεί να μονταριστεί μαζί της",
+"A take of the Narrator over the clip, by link (it stays in the Narrator's world): from the song's start, before its first sung line, unless moved; the song goes down under it and back after it; its words as titles of their own, in italics below the sung lines": "Μια λήψη του Αναγνώστη πάνω από το κλιπ, με σύνδεσμο (μένει στον κόσμο του Αναγνώστη): από την αρχή του τραγουδιού, πριν από τον πρώτο τραγουδισμένο στίχο, αν δεν μετακινηθεί· το τραγούδι χαμηλώνει από κάτω και επιστρέφει μετά· τα λόγια της ως δικοί της τίτλοι, με πλάγια κάτω από τους τραγουδισμένους στίχους",
+"Add the Narrator's voice…": "Προσθήκη της φωνής του Αναγνώστη…",
+"The clip's voice is laid on: the next clip cut mixes it": "Η φωνή του κλιπ μπήκε: το επόμενο μοντάζ του κλιπ τη μιξάρει",
+"The clip's voice is taken off": "Η φωνή του κλιπ αφαιρέθηκε",
+"No take of the Narrator in the library yet: read one in the Narrator first": "Δεν υπάρχει ακόμα λήψη του Αναγνώστη στη βιβλιοθήκη: διάβασε πρώτα μία στον Αναγνώστη",
+"The Narrator's voice over the clip": "Η φωνή του Αναγνώστη πάνω από το κλιπ",
+"A take of the Narrator's world, by link: it stays home, the clip only names it.": "Μια λήψη από τον κόσμο του Αναγνώστη, με σύνδεσμο: μένει στο σπίτι της, το κλιπ μόνο την ονομάζει."
 });

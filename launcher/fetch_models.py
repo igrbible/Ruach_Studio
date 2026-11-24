@@ -2,10 +2,14 @@
 """HERESY 2649 (the native Windows port): fetch-models.sh's twin in Python, for Windows (and any machine without bash). The least a song needs,
 each file said with its size before anything comes, at the revisions pinned in heresy/hf-revisions.txt, through our triple guard
 (tools/hf_guard.py: the pin, the pinned size, our manifest's SHA-256), each file put into its room as lab/paths.py places it.
+A file Hugging Face does not give comes from the second channels (heresy/hf-channels.tsv), held to the same SHA-256, its line naming who gave it.
 
-    python launcher/fetch_models.py                  the Studio's default backbone at this card's quant, m-a-p's Standard decoder and ours (RS x3 v1)
+    python launcher/fetch_models.py                  the whole of YuE2 (HERESY 2952): the Studio's default backbone and m-a-p's own at this
+                                                     card's quant, m-a-p's Standard decoder and ours (RS x3 v1), the transcriber (SheetSage2
+                                                     with MERT, F32) and its Refined mode (anime-song's, CC BY-NC 4.0)
     python launcher/fetch_models.py --quant Q8_0     another quant: BF16, Q8_0, Q6_K, Q5_K_M (m-a-p's own: no fine-tune at it)
-    python launcher/fetch_models.py --transcriber    and the transcriber (SheetSage2 with MERT, F32) for covers from a recording
+    python launcher/fetch_models.py --transcriber-only   the transcriber and its Refined mode alone (Engine -> Models on Windows without
+                                                     Git for Windows); --transcriber is kept and changes nothing: the transcriber always comes
     python launcher/fetch_models.py --plan | --yes   the plan alone | no question
 Exit 0 when every planned file is here, 5 when not asked for, 1 when a download failed.
 """
@@ -21,6 +25,8 @@ from pathlib import Path
 ROOT = Path(os.path.abspath(__file__)).parent.parent
 sys.path.insert(0, str(ROOT / "lab"))
 import paths  # noqa: E402
+import winx  # noqa: E402
+winx.utf8_console()   # HERESY 2935: run by hand with its output in a file (cp1251), it ended on the first non-Latin letter
 
 V2, FT = "goldhub/Ruach_Studio_Models_v2", "goldhub/YuE2-RS-Finetunes"
 NT = os.name == "nt"
@@ -130,25 +136,36 @@ def ticker(part, size, stop, out=None, every=2.0, line_every=60.0):
 def main(argv):
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--quant", choices=("BF16", "Q8_0", "Q6_K", "Q5_K_M"))
-    ap.add_argument("--transcriber", action="store_true")
+    ap.add_argument("--transcriber", action="store_true")       # HERESY 2952: the transcriber always comes; kept so older lines still run
+    ap.add_argument("--transcriber-only", action="store_true")
     ap.add_argument("--plan", action="store_true")
     ap.add_argument("--yes", "-y", action="store_true")
     a = ap.parse_args(argv)
     quant = a.quant or (mac_quant() if sys.platform == "darwin" else card_quant())
     v2r, ftr = rev(V2), rev(FT)
     entries = []
-    if quant != "Q5_K_M":                              # the Studio's default, RS-TW 2.0x0.75, else RS-FW 2.4x0.75, at the quant
+    # HERESY 2952 (Viktor 23.11.2026, after a tester's «Cover or Remix» stayed dead on Windows: «и под Линь и под наши форки Винды и мака в базовые скачивания включи полный набор всех моделей бекбона YuE2»; asked what the whole set is, «Весь YuE2»):
+    # m-a-p's own backbone beside ours, the transcriber in F32 (HERESY 2625) and its Refined mode at its own pin with its LICENSE and NOTICE (2388);
+    # models_plan.py keeps the first line of a repo's path, so m-a-p's backbone written twice (Q5_K_M) counts once
+    refr = rev(V2 + "#refined")
+    rest = [(V2, v2r, "models/SheetSage2-F32.gguf", ".", "yue2"), (V2, v2r, "models/MERT-v2-FullSong-F32.gguf", ".", "yue2")]   # paths: repo
+    if refr != "main":
+        rest += [(V2, refr, p, ".", "yue2") for p in ("models/SheetSage2-Refined-F16.gguf", "models/SheetSage2-Refined/LICENSE",
+                                                     "models/SheetSage2-Refined/NOTICE.md")]   # paths: repo
+    if a.transcriber_only:
+        entries = rest
+    elif quant != "Q5_K_M":                            # the Studio's default, RS-TW 2.0x0.75, else RS-FW 2.4x0.75, at the quant
         for m in ("RS-TW-2.0x0.75", "RS-FW-2.4x0.75"):
             rows, _ = plan([(FT, ftr, f"YuE2-3B-{m}-{quant}.gguf", "models", "song")])
             if rows and rows[0][0] != "gone":
                 entries.append((FT, ftr, f"YuE2-3B-{m}-{quant}.gguf", "models", "song"))
                 break
-    if not entries:
-        entries.append((V2, v2r, f"models/YuE2-3B-{quant}.gguf", ".", "song"))   # paths: repo
-    entries += [(V2, v2r, "models/YuE2-Vae-F32.gguf", ".", "song"),             # paths: repo
-                (FT, ftr, "VAE-RS/YuE2-VAE-RS-x3_v1-F32.gguf", ".", "song")]
-    if a.transcriber:
-        entries += [(V2, v2r, "models/SheetSage2-F32.gguf", ".", "transcriber"), (V2, v2r, "models/MERT-v2-FullSong-F32.gguf", ".", "transcriber")]   # paths: repo
+    if not a.transcriber_only:
+        if not entries:
+            entries.append((V2, v2r, f"models/YuE2-3B-{quant}.gguf", ".", "song"))   # paths: repo
+        entries += [(V2, v2r, "models/YuE2-Vae-F32.gguf", ".", "song"),             # paths: repo
+                    (FT, ftr, "VAE-RS/YuE2-VAE-RS-x3_v1-F32.gguf", ".", "song")]
+        entries += [(V2, v2r, f"models/YuE2-3B-{quant}.gguf", ".", "yue2")] + rest   # paths: repo
     rows, (get_bytes, get_files, free) = plan(entries)
     print(f"Ruach Studio needs these files (the backbone at {quant}):")
     for st, size, repo, r, path, base, pack in rows:
@@ -203,6 +220,9 @@ def main(argv):
                 print("          not yet (" + ((g.stderr or g.stdout).strip().splitlines() or ["?"])[-1][:160] + "); once more in 30 s", flush=True)
                 import time
                 time.sleep(30)
+        for line in (g.stdout or "").splitlines():     # the second channel (tools/hf_channels.py): who delivered what Hugging Face did not
+            if ok and line.startswith("via "):
+                print("          " + line.strip(), flush=True)
         print(("done      " if ok else "failed    ") + (new or rel), flush=True)
         failed += 0 if ok else 1
     print(f"models: {'every file here' if not failed else f'{failed} failed: run this again, it goes on where it stopped'}")

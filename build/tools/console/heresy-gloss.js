@@ -27,6 +27,18 @@
     try { if (last.gloss && state.take) paint(last.gloss); if (last.timing && state.take) ktPaint(last.timing); } catch (e) { /* gone */ }
   });
 
+  // HERESY 2955: both are Whisper's, the lab's own; where the lab says it is not here, their buttons are off and the line says so with its way to
+  // Engine → Models (heresy-weights.js)
+  function whisperHere() { return !window.HeresyWeights || !window.HeresyWeights.has || window.HeresyWeights.has("whisper"); }
+  var NO_WHISPER = "The lyrics check and karaoke timing need Whisper large-v3, which this Studio does not have yet.";
+  function packs() {
+    if (!$("glossRun")) return;
+    var no = !whisperHere();
+    if (!state.running) $("glossRun").disabled = no;
+    if (!state.timing) $("ktRun").disabled = no;
+    if (window.HeresyWeights && window.HeresyWeights.packSay) window.HeresyWeights.packSay($("glossState"), no ? NO_WHISPER : "", "whisper");
+  }
+  window.addEventListener("ruach-packs", packs);
   function say(text, bad) {
     $("glossState").textContent = text || "";
     $("glossState").classList.toggle("is-bad", !!bad);
@@ -96,6 +108,7 @@
     if (!state.take) return;
     var token = ++state.token, started = Date.now(), take = state.take, first = true;
     $("glossRun").disabled = true;
+    state.running = true;
     var ticker = setInterval(function () { say("Whisper is listening on Forge\u2026 " + Math.round((Date.now() - started) / 1000) + "s"); }, 1000);
     say("asking heresy-lab\u2026");
     function ask() {
@@ -120,7 +133,7 @@
     }).catch(function (error) {
       if (token !== state.token) return;
       say("Could not check: " + (error && error.message || error), true);
-    }).then(function () { clearInterval(ticker); $("glossRun").disabled = false; });
+    }).then(function () { clearInterval(ticker); state.running = false; $("glossRun").disabled = !whisperHere(); });   // HERESY 2955
   }
 
   // ---- HERESY 1056: karaoke timing
@@ -155,15 +168,16 @@
     var name = state.take.name, t0 = Date.now();
     clearTimeout(kt.timer);
     $("ktRun").disabled = true;
+    state.timing = true;
     (function poll(first) {
       fetch("/lab/timing?name=" + encodeURIComponent(name) + (first && force ? "&force=1" : ""))
         .then(function (r) { return r.json().then(function (b) { if (!r.ok && r.status !== 202) throw new Error(b.error || r.status); return b; }); })
         .then(function (r) {
           if (!state.take || state.take.name !== name) return;
-          if (r.rows) { ktPaint(r); $("ktRun").disabled = false; return; }
+          if (r.rows) { ktPaint(r); state.timing = false; $("ktRun").disabled = !whisperHere(); return; }
           $("ktState").textContent = (r.status === "queued" ? "waiting for the GPU" : "Whisper listens") + " · " + Math.round((Date.now() - t0) / 1000) + " s";
           kt.timer = setTimeout(function () { poll(false); }, 2000);
-        }).catch(function (e) { $("ktState").textContent = "Could not: " + e.message; $("ktRun").disabled = false; });
+        }).catch(function (e) { $("ktState").textContent = "Could not: " + e.message; state.timing = false; $("ktRun").disabled = !whisperHere(); });
     })(true);
   }
 
@@ -188,6 +202,7 @@
     });
     // An already measured take shows at once when the drawer opens (the lab keeps a cache).
     $("glossPanel").addEventListener("toggle", function () { if ($("glossPanel").open && !$("glossResult").childNodes.length) { peek(); ktPeek(); } });
+    packs();                                         // HERESY 2955
   }
 
   function peek() {
@@ -220,6 +235,8 @@
     $("glossRun").textContent = "Listen with Whisper";
     say("");
     clearTimeout(kt.timer); $("ktRun").textContent = "Time the lines"; $("ktRun").disabled = false; $("ktState").textContent = ""; ktPaint(null);
+    state.timing = false;
+    packs();                                         // HERESY 2955: Whisper not here, said again for this take
     if ($("glossPanel").open) { peek(); ktPeek(); }
   }
 

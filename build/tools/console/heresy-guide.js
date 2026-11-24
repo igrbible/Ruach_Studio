@@ -51,7 +51,11 @@
   // numbers beside it; a Hebrew letter inside a Russian or Latin word (кעмо́рка, הaaaaaaa) is isolated alone and the word stays as written.
   // Only the text between tags: an alt or a link's address keeps its letters
   var HEB = /[\u0590-\u05FF\uFB1D-\uFB4F]+(?:[-\u05BE ][\u0590-\u05FF\uFB1D-\uFB4F]+)*/g;
+  // HERESY 2953: a Hebrew guide reads right to left whole; isolated runs turn neutral and reorder around Latin words (3909 words in 272 of its 706
+  // prose lines out of reading order with them, none without), so only a guide in another language wraps its Hebrew runs; an English document
+  // opened inside a Hebrew guide (one with no Hebrew version) wraps them again, as the English guide does
   function hebrew(html) {
+    if (state.mdLang === "he" && !state.ownEn) return html;
     return html.split(/(<[^>]*>)/).map(function (s, i) { return i % 2 ? s : s.replace(HEB, '<bdi dir="rtl" lang="he">$&</bdi>'); }).join("");
   }
   function render(md) {
@@ -226,10 +230,14 @@
     var on = el.querySelector(".hg-tabs [aria-selected=true]"), from = on ? on.dataset.hgTab : null, top = body.scrollTop;
     var ml = state.mdLang || "en", base = file.replace(/\.md$/, "");
     var get = function (f) { return fetch(src(f), { cache: "no-cache" }).then(function (r) { if (!r.ok) throw new Error(f + ": " + r.status); return r.text(); }); };
-    (ml === "en" ? get(file) : get(base + "." + ml + ".md").catch(function () { return get(file); })).then(function (md) {
+    var fell = false;                               // HERESY 2953: no version in the guide's language: the English one, left to right inside it
+    (ml === "en" ? get(file) : get(base + "." + ml + ".md").catch(function () { fell = true; return get(file); })).then(function (md) {
       var tr = window.RuachI18n ? window.RuachI18n.t : function (s) { return s; };
-      body.innerHTML = '<div class="hg-doc hg-own"><button type="button" class="btn ghost small hg-back" data-hg-back="' + esc(from || "") + '">← ' + esc(tr("Back")) + "</button>" +
-        render(md.replace(/^# .*\n/, function (h) { return "### " + h.slice(2); })) + "</div>";
+      state.ownEn = fell;
+      var html = render(md.replace(/^# .*\n/, function (h) { return "### " + h.slice(2); }));
+      state.ownEn = false;
+      body.innerHTML = '<div class="hg-doc hg-own"' + (fell ? ' dir="ltr" lang="en"' : "") + '><button type="button" class="btn ghost small hg-back" data-hg-back="' + esc(from || "") + '">← ' + esc(tr("Back")) + "</button>" +
+        html + "</div>";
       body.scrollTop = 0;
       var h = at && body.querySelector("#hg-" + slug(at));
       if (h) h.scrollIntoView({ block: "start" });

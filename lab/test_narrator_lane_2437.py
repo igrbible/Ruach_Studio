@@ -70,7 +70,9 @@ with tempfile.TemporaryDirectory() as tmp:
     check("take-realm refuses a version of another take", "only an imported take" in refused(lambda: post({"op": "take-realm", "names": ["ver"], "realm": "reader"})))
     check("  and writes nothing when one of them is refused", "realm" not in json.loads((out / "song" / "meta.json").read_text()))
     post({"op": "ws-add", "workspace": "🗣 T", "names": ["imp"], "realm": "reader"})
-    check("a workspace a reading makes is the Narrator's", C.realm_ws(C.load(cfg), "🗣 T") == "reader")
+    # HERESY 2941: since 2919c a name that comes with its emoji first is made by the name alone, the emoji in its field (this check asked the old name)
+    check("a workspace a reading makes is the Narrator's", C.realm_ws(C.load(cfg), "T") == "reader" and C.load(cfg)["ws_emoji"].get("T") == "🗣",
+          (C.load(cfg)["ws_realm"], C.load(cfg)["ws_emoji"]))
     post({"op": "ws-create", "workspace": "Old"})
     post({"op": "ws-add", "workspace": "Old", "names": ["imp"]})
     check("a Musician's workspace that holds only the Narrator's takes can be given to the Narrator",

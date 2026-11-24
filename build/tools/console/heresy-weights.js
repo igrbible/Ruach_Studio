@@ -76,21 +76,114 @@
   // HERESY 1296: «differs» is a copy of one's own, kept (the Forge's voices: the published tensors, their readers' names still in the header)
   function whole(p) { return p.rows.every(function (r) { return r.state === "here" || r.state === "fetched" || r.state === "differs"; }); }
 
+  // HERESY 2955 (a tester's Windows report of 23.11.2026: in the Musician's Cover or Remix, From a Recording's file picker did nothing, and the line
+  // under it told him to start the server with --transcriber): a control the page turns off because a model is not in this Studio says which one in
+  // plain words, beside a button that opens this card at that model's row, its Fetch there (openAt; the button is packButton's, and any [data-pack]
+  // button opens it). A part asked for that the last check does not list (no check has run here yet, or it ran before the part was one) gets its row
+  // while it is asked for; a model of the engine's whose files are here says the engine takes it in at its next start. Whisper is the lab's own: its
+  // /health says whether it is here (has), asked as the page starts and after each fetch, and said with the window's «ruach-packs»
+  var PACKS = {
+    transcriber: { part: "transcriber", label: "The transcriber: covers from a recording, a backing read (SheetSage2 with MERT-v2-FullSong)", engine: true },
+    whisper: { part: "whisper", label: "Whisper large-v3: the lyrics check, karaoke timing, sections by ear, a recording's words" },
+    refined: { extra: "refined", engine: true },
+    backbone: { extra: "backbone", engine: true },
+    qwen: { extra: "qwen" },
+    h3: { extra: "h3" },
+    trainer: { extra: "trainer" }                    // HERESY 2962: the Trainer's base, its variant the quant asked
+  };
+  var ENGINE_NEXT = "Its files are here: the engine takes it in at its next start.";
+  var HAS = { whisper: null };                       // null: not known (the lab away), and nothing is turned off for it
+  function has(pack) { return pack !== "whisper" || HAS.whisper !== false; }
+  function health() {
+    return fetch("/lab/health").then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; }).then(function (h) {
+      var w = h && typeof h.whisper === "boolean" ? h.whisper : null;
+      if (w !== HAS.whisper) {
+        HAS.whisper = w;
+        try { window.dispatchEvent(new CustomEvent("ruach-packs", { detail: { whisper: w } })); } catch (e) { /* an old browser: the rooms ask has() as they paint */ }
+      }
+      return HAS;
+    });
+  }
+  function asked(part) {                             // the row of a part asked for, where the last check has none: its size from the lab's list
+    var w = S.want, sizes = (S.data && S.data.parts) || {};
+    if (!w || w.part !== part || !sizes[part]) return null;
+    return { part: part, label: w.label, size: sizes[part], rows: [], asked: true };
+  }
+  function shownParts() {
+    var list = parts().slice(), w = S.want;
+    if (w && w.part && !list.some(function (p) { return p.part === w.part; })) { var a = asked(w.part); if (a) list.unshift(a); }
+    return list;
+  }
+  function openAt(pack, variant) {
+    var k = PACKS[pack];
+    if (!k) return Promise.resolve(false);
+    S.want = { pack: pack, part: k.part || "", extra: k.extra || "", label: k.label || "", engine: !!k.engine };
+    if (k.extra && variant) S.pick[k.extra] = variant;
+    if (window.ruachOpenEngineAt) window.ruachOpenEngineAt("models");
+    return load().then(function () {
+      var row = document.querySelector(k.part ? '#wtParts .wt-part[data-part="' + k.part + '"]' : '#wtExtras .wt-extra[data-extra="' + k.extra + '"]');
+      if (!row) return false;
+      row.scrollIntoView({ block: "center" });
+      var b = row.querySelector("button:not([disabled])");
+      if (b) b.focus({ preventScroll: true });
+      return true;
+    });
+  }
+  // the button, in English: the page's translator gives it the page's language where it lands, as it does every text the rooms write
+  function packButton(pack, variant) {
+    return '<button type="button" class="btn ghost small pack-get" data-pack="' + esc(pack) + '"' + (variant ? ' data-pack-v="' + esc(variant) + '"' : "") +
+      ' data-tip="Opens Engine → Models and LoRAs at its row: Fetch there brings it">' + (window.HeresyIcons ? window.HeresyIcons.ui("download", "ib-svg") : "") +
+      "<span>Engine → Models</span></button>";
+  }
+  function packSay(el, words, pack, variant) {       // a line of plain words with its button; no words: a line of ours emptied
+    if (!el) return;
+    if (!words) { if (el.dataset.pack) { el.textContent = ""; delete el.dataset.pack; delete el.dataset.packSaid; } return; }
+    if (el.dataset.pack === pack && el.dataset.packSaid === words && el.querySelector(".pack-say")) return;
+    el.innerHTML = '<span class="pack-say"></span> ' + packButton(pack, variant);
+    el.firstChild.textContent = words;
+    el.dataset.pack = pack;
+    el.dataset.packSaid = words;
+  }
+  document.addEventListener("click", function (e) {
+    var b = e.target && e.target.closest ? e.target.closest("button[data-pack]") : null;
+    if (!b || b.disabled) return;
+    e.preventDefault();
+    openAt(b.dataset.pack, b.dataset.packV);
+  });
+
   function load() {
     clearTimeout(S.timer);
     return lab("/weights").then(take).catch(function (e) {
       $("wtLine").textContent = tr("The lab does not answer:") + " " + e.message;
     }).then(schedule);
   }
+  // HERESY 2955 (a tester's Windows screenshot of 23.11.2026: Engine → Models → Refined said «0 fetched, 0 failed, in 0 s» in red and its toast the
+  // same in green, and nothing came: the lab had refused the run, Git for Windows not being there, and counted no file failed): a neutral count that
+  // lies. A run that failed as a whole with no file counted failed was refused: said so, «bad», with the run's own last words as its reason (its
+  // separators, its file rows and an indented command left out), never a count alone
+  function refused(j) {
+    if (!j || j.status === "running" || !(j.status === "failed" || (j.rc != null && j.rc !== 0))) return false;
+    return !(j.counts && j.counts.failed > 0);
+  }
+  function reason(j) {
+    var said = (j.lines || []).filter(function (l) {
+      var t = String(l || "").trim();
+      return t && !/^\s/.test(String(l)) && !/^—/.test(t) && !STATES[t.split(/\s+/)[0]];
+    });
+    return said.slice(-3).map(function (l) { return tr(l.trim().replace(/:$/, ".")); }).join(" ");
+  }
   // a run's end, seen once: what came, the LoRA list asked again, and the restart said where the engine needs one
   function take(d) {
     var j = d.job, was = S.was;
     S.data = d;
     S.was = j ? j.status + ":" + j.started : "";
+    if (j && j.status !== "running" && was === "running:" + j.started && j.kind === "check" && refused(j)) toast((tr("The check did not run.") + " " + reason(j)).trim(), "bad");   // HERESY 2955
     if (j && j.status !== "running" && was === "running:" + j.started && j.kind === "fetch") {
       var c = j.counts || {};
-      toast(tr("{0}: {1} fetched, {2} failed").replace("{0}", cap(tr(j.what))).replace("{1}", c.fetched || 0).replace("{2}", c.failed || 0), c.failed ? "bad" : "good");
+      if (refused(j)) toast((tr("{0}: not fetched.").replace("{0}", cap(tr(j.what))) + " " + reason(j)).trim(), "bad");   // HERESY 2955
+      else toast(tr("{0}: {1} fetched, {2} failed").replace("{0}", cap(tr(j.what))).replace("{1}", c.fetched || 0).replace("{2}", c.failed || 0), c.failed || j.status === "failed" ? "bad" : "good");
       if (S.hooks.props) S.hooks.props();
+      health();                                      // HERESY 2955: Whisper may be here now
     }
     paint();
     try { window.dispatchEvent(new CustomEvent("ruach-weights", { detail: d })); } catch (e) { /* an old browser: the Artist asks again itself */ }   // HERESY 1347
@@ -108,20 +201,20 @@
     if (!d || !$("wtParts")) return;
     var busy = running();
     paintLine(d);
-    $("wtParts").innerHTML = parts().map(function (p) {
-      var bad = p.rows.filter(function (r) { return r.state !== "here"; }), ok = whole(p);
+    $("wtParts").innerHTML = shownParts().map(function (p) {   // HERESY 2955: a part asked for first, where the last check has none
+      var bad = p.rows.filter(function (r) { return r.state !== "here"; }), ok = !p.asked && whole(p), want = !!(S.want && S.want.part === p.part);
       var here = p.rows.length - bad.length, own = p.rows.filter(function (r) { return r.state === "differs"; }).length;
-      var sum = (ok ? tr("all here") : tr("{0} here, {1} not").replace("{0}", here).replace("{1}", bad.filter(function (r) { return r.state !== "fetched" && r.state !== "differs"; }).length)) +
+      var sum = (p.asked ? tr("not in the last check here: Fetch brings it") : ok ? tr("all here") : tr("{0} here, {1} not").replace("{0}", here).replace("{1}", bad.filter(function (r) { return r.state !== "fetched" && r.state !== "differs"; }).length)) +
         (own ? " · " + tr("own copies kept: " + own) : "");
       var now = going({ part: p.part });             // HERESY 1302: its fetch under way, here
-      return '<div class="wt-part' + (ok ? " is-whole" : "") + (now ? " is-going" : "") + '" data-part="' + esc(p.part) + '">' +
+      return '<div class="wt-part' + (ok ? " is-whole" : "") + (now ? " is-going" : "") + (want ? " is-asked" : "") + '" data-part="' + esc(p.part) + '">' +
         '<div class="wt-head"><b>' + esc(tr(p.label)) + '</b><span class="wt-size">' + esc(p.size) + '</span><span class="wt-sum">' + esc(sum) + "</span>" +
         (ok && !now ? "" : '<button type="button" class="btn ghost small' + (now ? "" : " btn-icon") + '" data-wt-part="' + esc(p.part) + '"' + (busy ? " disabled" : "") + (now ? "" : ' data-tip="' + esc(tr("Fetch") + " · " + p.size) + '"') + ">" +
           (now ? (window.HeresyWait ? window.HeresyWait.wave() : "") + esc(tr("Fetching…")) : wtIco("download", tr("Fetch"))) + "</button>") + "</div>" +   // HERESY 2528: an icon, its word kept for a reader
         (now ? progress() : "") +
         (bad.length ? '<ul class="wt-rows">' + bad.map(function (r) {
           return '<li class="wt-row"><span class="wt-st is-' + esc(r.state) + '">' + esc(tr(r.state)) + '</span><code translate="no">' + esc(r.text) + "</code></li>";
-        }).join("") + "</ul>" : "") + "</div>";
+        }).join("") + "</ul>" : "") + (want && ok && S.want.engine ? '<div class="wt-asked-note">' + esc(tr(ENGINE_NEXT)) + "</div>" : "") + "</div>";
     }).join("");
     var all = $("wtFetch");
     all.hidden = !d.script || (!!d.last && parts().every(whole) && !going({ part: "missing" }));
@@ -133,7 +226,8 @@
     $("wtExtras").innerHTML = (d.extras || []).map(function (e) {
       var pick = S.pick[e.name] || (going({ extra: e.name }) && job().which.variant) || e.suggest || (e.variants.filter(function (v) { return !v.here; })[0] || e.variants[0]).id;   // HERESY 1834: the suggested size first
       var v = e.variants.filter(function (x) { return x.id === pick; })[0] || e.variants[0];
-      return '<div class="wt-extra" data-extra="' + esc(e.name) + '"><div class="wt-x-name"><b>' + esc(tr(e.label)) + "</b><span>" + esc(tr(e.what)) + "</span></div>" +
+      var wantX = !!(S.want && S.want.extra === e.name);   // HERESY 2955
+      return '<div class="wt-extra' + (wantX ? " is-asked" : "") + '" data-extra="' + esc(e.name) + '"><div class="wt-x-name"><b>' + esc(tr(e.label)) + "</b><span>" + esc(tr(e.what)) + "</span></div>" +
         '<select data-hc-pick="1" data-wt-pick="' + esc(e.name) + '" aria-label="' + esc(tr(e.label)) + '">' + e.variants.map(function (x) {
           return '<option value="' + esc(x.id) + '"' + (x.id === v.id ? " selected" : "") + ">" + esc((x.label || x.id) + " · " + x.size + (x.here ? " · " + tr("here") : "")) + "</option>";
         }).join("") + "</select>" +
@@ -141,7 +235,7 @@
         (going({ extra: e.name, variant: v.id }) ? '<button type="button" class="btn ghost small" data-wt-extra="' + esc(e.name) + '" disabled>' + (window.HeresyWait ? window.HeresyWait.wave() : "") + esc(tr("Fetching…")) + "</button>" :
           '<button type="button" class="btn ghost small btn-icon' + (v.here ? " is-here" : "") + '" data-wt-extra="' + esc(e.name) + '"' + (busy || v.here || !d.script ? " disabled" : "") +
           ' data-tip="' + esc(v.here ? tr("here") + " · " + v.size : tr("Fetch") + " · " + (v.label || v.id) + " · " + v.size) + '">' + wtIco(v.here ? "check" : "download", tr(v.here ? "Here" : "Fetch")) + "</button>") +
-        (going({ extra: e.name }) ? progress() : "") + "</div>";      // HERESY 1302
+        (going({ extra: e.name }) ? progress() : "") + (wantX && v.here && S.want.engine ? '<div class="wt-asked-note">' + esc(tr(ENGINE_NEXT)) + "</div>" : "") + "</div>";      // HERESY 1302
     }).join("");
     paintTiers(d, busy);                             // HERESY 1984
     paintLog(job());
@@ -182,6 +276,9 @@
       var phase = j.kind === "check" ? tr("checking") : j.checking ? tr("checking what is here after it") : tr("fetching");
       txt = cap(tr(j.what)) + ": " + phase + "… " + dur(d.now - j.started) +
         (j.written >= 1048576 ? " · " + tr("the disk has {0} less free than when it began").replace("{0}", gb(j.written)) : "");
+    } else if (j && refused(j)) {                    // HERESY 2955: a refused run says so and why, never «0 fetched, 0 failed»
+      txt = (j.kind === "fetch" ? tr("{0}: not fetched.").replace("{0}", cap(tr(j.what))) : tr("The check did not run.")) + " " + reason(j);
+      cls = "is-bad";
     } else if (j && j.kind === "fetch") {
       var c = j.counts || {};
       txt = tr("{0}: {1} fetched, {2} failed, in {3}.").replace("{0}", cap(tr(j.what))).replace("{1}", c.fetched || 0).replace("{2}", c.failed || 0).replace("{3}", dur(j.ended - j.started)) +
@@ -295,7 +392,7 @@
   }
   var HOW = "Each file comes at the revision the release pins and is checked against its size; a download cut short goes on where it stopped.";
   function fetchPart(name) {
-    var p = parts().filter(function (x) { return x.part === name; })[0];
+    var p = parts().filter(function (x) { return x.part === name; })[0] || asked(name);   // HERESY 2955: or the part asked for
     if (!p) return;
     start({ part: name }, tr("Fetch {0}?").replace("{0}", tr(p.label)) + "\n\n" + tr("About {0}.").replace("{0}", p.size) + " " + tr(HOW) + last(room(bytes(p.size))));   // HERESY 1984
   }
@@ -415,7 +512,9 @@
       paint();
     });
     window.addEventListener("ruach-lang", paint);
+    health();                                        // HERESY 2955
   }
   window.HeresyWeights = { init: init, load: load, fetchExtra: fetchExtra, fetchTier: fetchTier,   // HERESY 1347: for the Artist's own list; 1984
+    openAt: openAt, packButton: packButton, packSay: packSay, has: has, health: health,   // HERESY 2955
     state: function () { return { data: S.data, running: running(), pick: S.pick }; } };
 })();

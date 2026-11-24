@@ -157,7 +157,7 @@ def seedvr2(img, size, seed=42, work=None):
     import tempfile
     from PIL import Image
     if not seedvr2_grain.present(KIT):
-        raise RuntimeError("SeedVR2 is not here: its weights go into " + paths.SEEDVR2 + " (heresy/fetch-heresy.sh --upscaler)")
+        raise RuntimeError("SeedVR2 is not here: its weights go into " + paths.SEEDVR2 + " (Engine → Models and LoRAs fetches them)")   # HERESY 2962: no command line
     free = seedvr2_grain.free_mb()
     g = seedvr2_grain.pick(free, KIT)
     if g is None:

@@ -40,6 +40,10 @@ COUNTING = set()
 MARGIN = 1 << 30           # a copy wants this much more free room than it takes
 
 
+NT_STAYS = ("moving the Studio's folders elsewhere works on Linux and macOS for now: on Windows they stay inside the Studio's folder "
+            "(a move leaves a link in the folder's place, which Windows makes only in Developer Mode)")   # HERESY 2934
+
+
 def setup(kit, busy, settings_lock, settings_file, studio_port="7777", say=print):
     H.update(kit=Path(kit), busy=busy, settings_lock=settings_lock, settings_file=Path(settings_file), studio_port=str(studio_port), say=say)
 
@@ -202,6 +206,8 @@ def plan(name, to):
     """What a move would do, nothing done: the folder it ends in, the same disk or not, the room it needs and has, or why not."""
     if name not in NAMES:
         raise ValueError("no such folder of the Studio: " + str(name))
+    if winx.NT:                                       # HERESY 2934: a move leaves a link in the folder's place, which Windows makes only in Developer Mode
+        return {"ok": False, "why": NT_STAYS}
     kit = H["kit"]
     p = kit / name
     real = os.path.realpath(p)
@@ -398,6 +404,8 @@ def relink(data, scope=""):
     name = str(data.get("name", ""))
     if name not in NAMES:
         raise ValueError("no such folder of the Studio: " + name)
+    if winx.NT:                                       # HERESY 2934
+        raise ValueError(NT_STAYS)
     at = (record().get(name) or {}).get("at") or ""
     p = H["kit"] / name
     if not at:
@@ -427,7 +435,10 @@ def boot():
         p = H["kit"] / name
         at = (rec.get(name) or {}).get("at") or ""
         try:
-            if at and not p.is_symlink() and os.path.isdir(at) and (not p.exists() or (p.is_dir() and not any(p.iterdir()))):
+            if at and winx.NT:                        # HERESY 2934: no link made on Windows; the folder of its own made or kept
+                H["say"](f"[places] {name}: user/settings.json places it at {at}; {NT_STAYS}")
+                p.mkdir(exist_ok=True)
+            elif at and not p.is_symlink() and os.path.isdir(at) and (not p.exists() or (p.is_dir() and not any(p.iterdir()))):
                 if p.is_dir():
                     p.rmdir()
                 os.symlink(at, p)

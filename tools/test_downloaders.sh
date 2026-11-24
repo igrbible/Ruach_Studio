@@ -24,7 +24,10 @@ check() { if [ "$2" = 0 ]; then pass=$((pass + 1)); echo "  ${G}PASS${X}  $1"; e
 
 # --- a scratch install: the scripts, a stand-in hf, fixture file lists
 S="$T/root"; mkdir -p "$S/tools" "$S/tmp" "$T/expected"
-cp "$ROOT"/tools/{download-checkpoints.sh,download-loras.sh,hf-env.sh,hf_expect.py,downloader-requirements.txt} "$S/tools/"
+cp "$ROOT"/tools/{download-checkpoints.sh,download-loras.sh,hf-env.sh,hf_expect.py,hf_guard.py,downloader-requirements.txt} "$S/tools/"
+# HERESY 2944: and what the scripts reach for since: the HF guard (hf_guard.py, 2380) and where the weights live (launcher/paths.sh, 2330). Without
+# them the scratch install stopped before its first call, and five checks were red for that alone (the agent's item F25 after 2.1.0-rc1)
+mkdir -p "$S/launcher"; cp "$ROOT/launcher/paths.sh" "$S/launcher/"
 printf 'ntc-ai/yue2-particle-sliders 33cf42fb0a54f60d8264d64cf6c20f038c4d172b\n' > "$S/tools/hf-revisions.txt"
 cat > "$T/hf-stub" <<'STUB'
 #!/bin/bash
@@ -104,7 +107,10 @@ echo "${B}the LoRA downloader too${X}"
 [ $r != 0 ] && ! command grep -q ' done ' "$T/run.txt"; check "exit 0 with nothing fetched is a failure for every LoRA file" $? "exit $r"
 # per call (the stub ends each with --end--): the calls without --revision, out of all calls
 read -r norev ncalls < <(awk '/^--end--$/ {calls++; if (!rev) bad++; rev = 0; next} $0 == "--revision" {rev = 1} END {print bad + 0, calls + 0}' "$HF_STUB_LOG")
-[ "$ncalls" -gt 0 ] && [ "$norev" = 0 ]; check "  every LoRA call carries --revision" $? "$norev of $ncalls calls without it"
+# HERESY 2944: since 2380 the guard asks no download offline without the pinned file list, so the stub may see no call at all: each download
+# line of the script names --revision, and each call the stub saw carried it
+lines=$(command grep -c 'hf_guarded download' "$S/tools/download-loras.sh"); bare=$(command grep 'hf_guarded download' "$S/tools/download-loras.sh" | command grep -vc -- '--revision')
+[ "$lines" -gt 0 ] && [ "$bare" = 0 ] && [ "$norev" = 0 ]; check "  every LoRA call carries --revision" $? "$bare of $lines download lines and $norev of $ncalls calls without it"
 
 if [ "$ONLINE" = 1 ]; then
   echo "${B}the real pinned downloader (network, about 16 MB)${X}"

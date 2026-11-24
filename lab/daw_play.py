@@ -47,6 +47,8 @@ from pathlib import Path
 
 import numpy as np
 
+import winx   # HERESY 2934: nice where the system has it
+
 PIECE = 5.0                                   # seconds a piece; a multiple of the meters' 100 ms block
 PRE = 3.0                                     # seconds rendered before a piece and thrown away: the room's longest preset rings 2.4 s
 XF = 0.010                                    # seconds a piece runs on past its end, crossfaded into the next one's start
@@ -88,10 +90,11 @@ def _raw(spec, name, i0, n):
     return _window(spec, spec["paths"][name], i0, n)
 
 
-def _lane(spec, name, st, i0, n, rate):
-    """daw_mix.lane_of over a window: the lane's channel, then its shift (later by silence, earlier by its start dropped), the song's length kept"""
+def _lane(spec, name, st, i0, n, rate, path=""):
+    """daw_mix.lane_of over a window: the lane's channel, then its shift (later by silence, earlier by its start dropped), the song's length kept;
+    `path` (HERESY 2948): another version of the stem, a comped stretch's, read the same way"""
     k = round(float(st.get("offset_s") or 0) * rate)
-    y = _raw(spec, name, i0 - k, n)
+    y = _window(spec, spec["alts"][name][path], i0 - k, n) if path else _raw(spec, name, i0 - k, n)
     c = st.get("chan", "st")
     if c != "st" and y.shape[0] > 1:
         m = y[0] if c == "l" else y[1] if c == "r" else 0.5 * (y[0] + y[1])
@@ -131,9 +134,12 @@ def _cuts(i0, n, total, rate, ranges):
 
 
 def _place(y, lane_at, i0, n, total, rate, edits, edge):
-    """daw_mix.place over a window: each laid stretch read from the lane as it came (lane_at(from, frames)), crossfaded in at its «to»"""
+    """daw_mix.place over a window: each laid stretch read from the lane as it came (lane_at(from, frames)), crossfaded in at its «to»;
+    a comped one (HERESY 2948) from its own version of the stem (lane_at(from, frames, path))"""
     k0 = max(1, round(edge * rate))
-    for op, a, b, to in edits:
+    for e in edits:
+        op, a, b, to = e[:4]
+        path = e[4] if len(e) > 4 else ""
         e0 = round(a * rate)
         m0 = min(total, round(b * rate)) - e0
         if m0 <= 0:
@@ -156,7 +162,7 @@ def _place(y, lane_at, i0, n, total, rate, edits, edge):
             w[lo] = ramp[u[lo]]
             w[hi] = ramp[::-1][u[hi] - (m - k)]
         y = y.copy()
-        y[:, j0 - i0:j1 - i0] = y[:, j0 - i0:j1 - i0] * (1 - w) + lane_at(e0 + (j0 - d0), j1 - j0) * w
+        y[:, j0 - i0:j1 - i0] = y[:, j0 - i0:j1 - i0] * (1 - w) + (lane_at(e0 + (j0 - d0), j1 - j0, path) if path else lane_at(e0 + (j0 - d0), j1 - j0)) * w
     return y
 
 
@@ -223,7 +229,7 @@ def render_piece(spec, k):
     signals = []
     for name in names:
         st = v["strips"].get(name, daw_mix.NEUTRAL)
-        lane_at = lambda i, m, name=name, st=st: _lane(spec, name, st, i, m, rate)
+        lane_at = lambda i, m, path="", name=name, st=st: _lane(spec, name, st, i, m, rate, path)
         y = lane_at(a, n)
         if st["muted"]:
             y = y * _cuts(a, n, total, rate, st["muted"])[None, :]
@@ -293,7 +299,7 @@ class _Worker:
 
     def spawn(self):
         if self.p is None or self.p.poll() is not None:
-            self.p = subprocess.Popen(["nice", "-n", "5", self.python, str(HERE / "daw_play.py"), "--worker"], stdin=subprocess.PIPE,
+            self.p = subprocess.Popen(winx.nice(5) + [self.python, str(HERE / "daw_play.py"), "--worker"], stdin=subprocess.PIPE,
                                       stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, cwd=str(HERE),
                                       env=dict(os.environ, CUDA_VISIBLE_DEVICES="", OMP_NUM_THREADS="4"))
 
@@ -425,6 +431,15 @@ def open_session(d, info, body, refs_path, python):
             raise ValueError(f"{p} is not a version of {s['name']}")
         paths[s["name"]] = str(daw._inside(d, p))
         strips.append({"name": s["name"], "own": str(daw._inside(d, s["path"])), "added": bool(s.get("added"))})
+    alts = {}                                           # HERESY 2948: the versions the comped stretches name, each a version of its stem
+    for n, ps in daw_mix.comp_paths(mix).items():
+        s = next((x for x in info["strips"] if x["name"] == n), None)
+        if s is None:
+            raise ValueError(f"a stretch comped on {n}, which is no stem of this set")
+        for p in ps:
+            if p not in [x["path"] for x in s["versions"]]:
+                raise ValueError(f"{p} is not a version of {n}")
+            alts.setdefault(n, {})[p] = str(daw._inside(d, p))
     frames = sf.info(str(daw._inside(d, info["source"]))).frames
     ref = body.get("ref") or {}
     ref_said = {}
@@ -436,7 +451,7 @@ def open_session(d, info, body, refs_path, python):
         if sf.info(str(rp)).samplerate != rate:
             raise ValueError("the reference's rate is not the mix's: hear it in the Live way")
         ref_said = {"path": str(rp), "gain": g}
-    spec = {"rate": rate, "ch": ch, "frames": frames, "names": names, "paths": paths, "strips": strips,
+    spec = {"rate": rate, "ch": ch, "frames": frames, "names": names, "paths": paths, "strips": strips, "alts": alts,
             "source": str(daw._inside(d, info["source"])), "mix": mix, "ref": ref_said, "mono": bool(body.get("mono"))}
     h = hashlib.sha1(json.dumps(spec, sort_keys=True).encode()).hexdigest()[:16]
     sid = str(body.get("id") or "")

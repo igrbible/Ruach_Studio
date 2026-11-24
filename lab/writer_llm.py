@@ -40,6 +40,7 @@ HERESY 2469: a question in flight can be stopped (cancel(): the connection to ll
 with it."""
 import atexit, http.client, json, os, signal, socket, subprocess, sys, threading, time, urllib.error, urllib.request
 from winx import fcntl   # HERESY 2649: the fcntl module on Linux, its flock over msvcrt on Windows
+import winx              # HERESY 2934: the writer's server read and ended on Windows too
 from pathlib import Path
 
 import gpu_guard
@@ -63,7 +64,7 @@ LOCK = threading.Lock()
 DEVICES = ("auto", "cuda", "arc", "cpu")
 BACKENDS = ("sycl", "vulkan")
 BACKEND_DEFAULT = "sycl"            # until the Vulkan lane of 12.11 calls Vulkan stable for the writer; Engine → Writer switches it
-ARC_LOCK = os.environ.get("RUACH_ARC_LOCK") or "/tmp/claude-arc.lock"   # the Arc's one door: our probes and the nightly songs take it too
+ARC_LOCK = os.environ.get("RUACH_ARC_LOCK") or os.path.join(winx.TMP, "claude-arc.lock")   # the Arc's one door: our probes and the nightly songs take it too
 ARC_FLAG_REL = "tmp/arc-reset.json"   # the Arc's watchdog: fresh while it resets the card (lab.py ARC_FLAG)
 ARC_IDLE_S = 300                    # on the Arc it leaves sooner: the songs and Drama share that card
 ARC_WAIT_S = 600                    # the Arc chosen by hand: its turn waited for this long, then refused with why
@@ -86,7 +87,7 @@ def server(kit, where=None, backend=None):
     (HERESY 2463)."""
     if where == "arc":
         return Path(kit) / "vendor" / "llama.cpp" / ("build-vulkan" if backend == "vulkan" else "build-sycl") / "bin" / "llama-server"
-    return Path(kit) / "vendor" / "llama.cpp" / "build" / "bin" / "llama-server"
+    return Path(kit) / "vendor" / "llama.cpp" / "build" / "bin" / ("llama-server.exe" if winx.NT else "llama-server")   # HERESY 2934
 
 
 def here(kit):
@@ -512,8 +513,8 @@ def _health(timeout=2):
 
 def _cmd(pid):
     try:
-        return [w.decode("utf-8", "replace") for w in Path(f"/proc/{pid}/cmdline").read_bytes().split(b"\0") if w]
-    except OSError:
+        return winx.proc_cmdline(pid)                 # HERESY 2934: /proc on Linux, psutil elsewhere
+    except (OSError, ValueError):
         return []
 
 
@@ -525,12 +526,15 @@ def _is_writer(pid):
     """HERESY 2060: pid is the Studio's writer: a llama-server serving on its port (a pid the system has given to another process since is not; an ended
     one's cmdline is empty)."""
     w = _cmd(pid)
-    return bool(w) and os.path.basename(w[0]) == "llama-server" and _arg(w, "--port") == str(PORT)
+    return bool(w) and os.path.basename(w[0]) in ("llama-server", "llama-server.exe") and _arg(w, "--port") == str(PORT)   # HERESY 2934
 
 
 def _port_owner():
     """HERESY 2060: the writer that holds its port, found by the port's owner: the listening socket's inode in /proc/net/tcp, then the llama-server whose
     descriptors hold it. None when none does, or it is another user's (its descriptors cannot be read)."""
+    if not winx.PROC:                                   # HERESY 2934: Windows and macOS have no /proc/net/tcp: the port's owner by psutil
+        pid = winx.listener_pid(PORT)
+        return pid if pid and _is_writer(pid) else None
     want, socks = f":{PORT:04X}", set()
     for table in ("/proc/net/tcp", "/proc/net/tcp6"):
         try:
@@ -556,7 +560,7 @@ def _lab_of(pid):
     """HERESY 2060: the pid of another running lab that started this server (its parent, a lab.py), else None: a server whose lab ended has the system
     for its parent."""
     try:
-        ppid = int(Path(f"/proc/{pid}/stat").read_text(encoding="utf-8", errors="replace").rsplit(")", 1)[1].split()[1])
+        ppid = winx.proc_ppid(pid)                     # HERESY 2934: /proc on Linux, psutil elsewhere
     except (OSError, ValueError, IndexError):
         return None
     if ppid in (0, 1, os.getpid()):
@@ -581,7 +585,7 @@ def _adopt():
     model = os.path.basename(_arg(w, "-m"))
     v = next((k for k, x in VARIANTS.items() if os.path.basename(x["file"]) == model), None)
     try:
-        env = dict(e.split(b"=", 1) for e in Path(f"/proc/{pid}/environ").read_bytes().split(b"\0") if b"=" in e)
+        env = {k.encode(): v.encode() for k, v in winx.proc_environ(pid).items()}   # HERESY 2934: /proc on Linux, psutil elsewhere
     except OSError:
         env = {}
     cvd = env.get(b"CUDA_VISIBLE_DEVICES", b"").decode("ascii", "replace")
@@ -702,7 +706,9 @@ def ensure(kit):
         exe = server(kit, where, back)
         if not exe.is_file():
             _arc_release()
-            raise ValueError("llama.cpp's llama-server is not built: launcher/extras.sh builds it (a few minutes)")
+            raise ValueError("the Studio's own writer runs on Linux for now (llama.cpp's llama-server is not in the Windows and Mac packages): "
+                             "Engine → Writer and Artwork takes LM Studio, Ollama, vLLM or OpenRouter instead" if winx.NT or sys.platform == "darwin"
+                             else "llama.cpp's llama-server is not built: launcher/extras.sh builds it (a few minutes)")   # HERESY 2934
         args = ["-m", str(Path(kit) / VARIANTS[v]["file"]), "--host", "127.0.0.1", "--port", str(PORT), "-c", str(CTX), "-np", "1",
                 "--jinja", "--alias", ALIAS, "--no-webui", "-t", str(max(2, (os.cpu_count() or 4) // 2))]
         args += ["-ngl", "999"] if where in ("cuda", "arc") else ["-ngl", "0"]
@@ -715,13 +721,13 @@ def ensure(kit):
             env = dict(os.environ, CUDA_VISIBLE_DEVICES="" if gpu is None else str(gpu))
             cmd = [str(exe)] + args
             if gpu is None:                             # HERESY 2463: on the processor it yields to whatever else runs there (a training's optimizer), as Drama does
-                cmd = ["nice", "-n", str(CPU_NICE)] + cmd
+                cmd = winx.nice(CPU_NICE) + cmd                # HERESY 2934: nice where the system has it
         log = Path(kit) / "tmp" / "writer-llm.log"
         log.parent.mkdir(parents=True, exist_ok=True)
         said = ("the Intel Arc (" + back.upper() + ")" if where == "arc" else "the processor" if gpu is None
                 else f"GPU {gpu}" + (", part on the processor" if fit else ""))
         print(f"[lab] the Studio's writer: {v} on {said}" + (f" ({why})" if why else ""), file=sys.stderr, flush=True)
-        S.update(proc=subprocess.Popen(cmd, env=env, stdout=open(log, "ab"), stderr=subprocess.STDOUT, start_new_session=True),
+        S.update(proc=subprocess.Popen(cmd, env=env, stdout=open(log, "ab"), stderr=subprocess.STDOUT, **winx.group_kwargs()),   # HERESY 2934
                  pid=None, elsewhere=None, variant=v, gpu=gpu if where == "cuda" else None, fit=where == "cpu" or (where == "cuda" and fit),
                  started=time.time(), used=time.time(), error="", where=where, backend=back if where == "arc" else None)
         _say(f"its model ({v}) starting on {said}" + (f" ({why})" if why else ""))
@@ -900,6 +906,8 @@ def stop(why=""):
 def _ended(pid):
     """HERESY 2060: pid has ended, its descriptors (the port among them) closed: gone from /proc, or a zombie the system has yet to reap. Its cmdline is
     empty a moment earlier, while it still holds the port."""
+    if not winx.PROC:                                   # HERESY 2934: no /proc: ended when no process has the pid
+        return not winx.alive(pid)
     try:
         return Path(f"/proc/{pid}/stat").read_text(encoding="utf-8", errors="replace").rsplit(")", 1)[1].split()[0] in ("Z", "X")
     except (OSError, IndexError):

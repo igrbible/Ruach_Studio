@@ -51,6 +51,8 @@ import re
 import subprocess
 from pathlib import Path
 
+import winx   # HERESY 2934: a plugin's ENV/bin/python as Windows keeps it
+
 ID = re.compile(r"^[a-z0-9][a-z0-9_-]{0,47}$")
 TEXT = (".txt", ".json", ".md", ".csv")          # HERESY 1484: a step's report
 IMAGE = (".png", ".jpg", ".jpeg", ".svg", ".webp")  # HERESY 1553: a step's picture
@@ -97,7 +99,7 @@ def _step(raw, folder):
         params.append(q)
     py = str(raw.get("python") or "")                 # HERESY 1464: a step's own interpreter wins over its plugin's
     if py:
-        py = str(folder / py) if not Path(py).is_absolute() else py
+        py = str(winx.native(folder / py)) if not Path(py).is_absolute() else py   # HERESY 2934: ENV/bin/python is ENV\Scripts\python.exe on Windows
         if not Path(py).exists():
             return None
     return {"id": raw["id"], "label": str(raw.get("label") or raw["id"]), "say": str(raw.get("say") or ""),
@@ -181,7 +183,7 @@ def load(root, builtin=False):
                 raise ValueError("its id is missing or not a plain word")
             py = str(raw.get("python") or "")
             if py:
-                py = (folder / py) if not Path(py).is_absolute() else Path(py)
+                py = winx.native(folder / py) if not Path(py).is_absolute() else Path(py)   # HERESY 2934
                 if not Path(py).exists():
                     raise ValueError(f"its python is not there: {py}")
             steps = [s for s in (_step(r, folder) for r in raw.get("steps") or []) if s]

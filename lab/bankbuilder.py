@@ -40,6 +40,7 @@ import wave
 from pathlib import Path
 
 import paths                       # HERESY 2330: where the weights live
+import winx                        # HERESY 2934: a claim's worker alive, on every system
 
 import numpy as np
 
@@ -396,7 +397,7 @@ def claim(fd):
     except FileExistsError:
         try:
             host, pid = p.read_text().split()
-            if host == socket.gethostname() and (pid == str(os.getpid()) or not os.path.exists(f"/proc/{pid}")):
+            if host == socket.gethostname() and (pid == str(os.getpid()) or not winx.alive(pid)):   # HERESY 2934: /proc/PID on Linux alone
                 p.unlink(missing_ok=True)
                 return claim(fd) if pid != str(os.getpid()) else True
         except (OSError, ValueError):

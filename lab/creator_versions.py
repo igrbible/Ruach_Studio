@@ -188,13 +188,27 @@ def post(kit, data, scope=""):
             except FileNotFoundError:
                 book = {"id": vid, "title": title, "created": time.time(), "versions": [], "trash": []}
             vs, now = book["versions"], time.time()
+            # HERESY 2945 (the agent's item B9: «Текст после «Повторить» и «Убрать» — подверсией в Писателе, отличия помечены»): sub, a sub-version: the
+            # branch's next «.N» not used yet (in the versions or the trash: «2.0.3» → «2.0.3.1», none → «1»); from, the version it was made from, its
+            # differences against it shown in the Writer
+            if data.get("sub"):
+                used = {v.get("version") or "" for v in vs + (book.get("trash") or [])}
+                i = 1
+                while (f"{branch}.{i}" if branch else str(i)) in used:
+                    i += 1
+                branch = f"{branch}.{i}" if branch else str(i)
+            try:
+                came = int(data.get("from")) if data.get("from") not in (None, "") else None
+            except (TypeError, ValueError):
+                came = None
+            came = came if came is not None and any(v.get("n") == came for v in vs) else None
             last = next((v for v in reversed(vs) if (v.get("version") or "") == branch), None)   # HERESY 1614: the branch's last
             if last and all(last.get(f, "") == words[f] for f in WORDS) and json.dumps(last.get("params") or {}, sort_keys=True, ensure_ascii=False) == knobs:
                 last["takes"] = sorted(set(last.get("takes") or []) | set(takes))   # the same words again: their takes only
             else:
                 n = max([v.get("n", 0) for v in vs + (book.get("trash") or [])] + [0]) + 1
                 vs.append({"n": n, "at": now, **words, "version": branch, "mode": str(data.get("mode") or "")[:12], "takes": takes, "label": "", "star": False,
-                           "lock": False, "why": why, "params": params})
+                           "lock": False, "why": why, "params": params, **({"from": came} if came is not None else {})})
             book["title"], book["updated"] = title, now
             _write(d, book)
             return book

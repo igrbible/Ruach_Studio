@@ -1,6 +1,7 @@
 """HERESY 2269: a recording into a transcript without a card or Whisper: the recording kept as it came, read to 16 kHz by ffmpeg, heard by a
 stand-in Whisper (its whisper_job.py arguments checked), its paragraphs at the pauses, the list and the transcript read back, a script kept
-beside it with its acute, the transcript removed; a refusal for a file that is no recording."""
+beside it with its acute, the transcript removed; a refusal for a file that is no recording. HERESY 2955: without Whisper's folder the run says so
+at once in plain words, with where to get it."""
 import json
 import subprocess
 import sys
@@ -19,7 +20,7 @@ with tempfile.TemporaryDirectory() as tmp:
     fake.write_text(
         "import json, sys\n"
         "job, audio, out, lang, model = sys.argv[1:6]\n"
-        "assert job.endswith('whisper_job.py') and audio.endswith('audio16k.wav') and model == 'MODEL', sys.argv\n"
+        "assert job.endswith('whisper_job.py') and audio.endswith('audio16k.wav') and model.endswith('MODEL'), sys.argv\n"
         "import soundfile as sf\n"
         "i = sf.info(audio)\n"
         "assert i.samplerate == 16000 and i.channels == 1, i\n"
@@ -38,7 +39,8 @@ with tempfile.TemporaryDirectory() as tmp:
         yield T()
 
     r.setup(kit=kit, jobs=jobs, lock=lock, say=lambda s: None, cancelled=Cancelled, whisper_turn=turn,
-            whisper_env=lambda gpu=None: ({}, "cpu", "on the CPU: test"), whisper_py=sys.executable, whisper_dir="MODEL")
+            whisper_env=lambda gpu=None: ({}, "cpu", "on the CPU: test"), whisper_py=sys.executable, whisper_dir=str(kit / "MODEL"))
+    (kit / "MODEL").mkdir()                              # HERESY 2955: Whisper's folder there, as the run asks before it waits its turn
     r.HERE = kit                                         # whisper_job.py looked up beside the stand-in
     (kit / "whisper_job.py").write_text("")
     real_run = subprocess.run
@@ -75,4 +77,13 @@ with tempfile.TemporaryDirectory() as tmp:
     except ValueError:
         pass
     assert r.route_post("/reader/transcript-remove", {"id": tid}, {}) == (200, {"ok": True}) and not r.transcripts()["transcripts"]
+    # HERESY 2955: no Whisper here: said at once, in plain words, with where to get it (not «Whisper failed:» and a Python error after a turn)
+    (kit / "MODEL").rmdir()
+    gone = r.transcribe(wav.read_bytes(), {"file": "без уха.wav", "lang": "ru"})["id"]
+    for _ in range(200):
+        if not any(k.startswith("reader:tr-") for k in jobs):
+            break
+        time.sleep(0.05)
+    t = r.transcript(gone)
+    assert t["status"] == "failed" and t["error"] == "Whisper large-v3 is not in this Studio yet: Engine → Models and LoRAs fetches it (3.1 GB)", t
 print("test_reader_transcribe: ok")

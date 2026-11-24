@@ -37,6 +37,7 @@ TTL_SLOW = 90          # HERESY 2100: a holder whose last beat said beats went u
 OPEN = frozenset(("/lease", "/lora/bases", "/pianoteq/preview", "/audio/monitor/tone", "/audio/monitor/play", "/audio/monitor/stop",
                   "/audio/probe", "/audio/loop", "/handoff", "/daw/play", "/daw/play/stop",   # HERESY 2865: listening
                   "/history",                                                 # HERESY 2912: what was heard and saved, from any window
+                  "/song/room",                                               # HERESY 2942: what the window leaves the song at hand, a count
                   "/debug/bundle", "/debug/send", "/debug/clear"))   # reads and listening sent as POSTs (HERESY 2102: and the debug journal, which writes
                                                                     # nothing of the user's: a read-only window's journal is the one most wanted); the
                                                                     # page's own list is the same

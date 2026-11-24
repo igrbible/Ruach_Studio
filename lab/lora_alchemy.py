@@ -17,6 +17,7 @@ import math
 import os
 import re
 import struct
+import sys
 import threading
 from pathlib import Path
 
@@ -272,7 +273,7 @@ def cosine(rel_a, rel_b, half):
 # ---------------------------------------------------------------- the base weights' norms (once per model)
 
 _base_lock = threading.Lock()
-_base_state = {"running": False}
+_base_state = {"running": False, "error": "", "failed": None}   # HERESY 2934: why the last measure failed, and of which file
 
 
 def _model_path():
@@ -304,6 +305,8 @@ def base_norms():
     with _base_lock:
         if _base_state["running"]:
             return None
+        if _base_state["failed"] == str(cf):          # HERESY 2934: a measure that failed is not run again for the same file at every ask
+            return None
         _base_state["running"] = True
     threading.Thread(target=_measure_base, args=(p, cf), daemon=True).start()
     return None
@@ -334,6 +337,10 @@ def _measure_base(p, cf):
                 h[k] = math.sqrt(h[k])
         CACHE.mkdir(parents=True, exist_ok=True)
         cf.write_text(json.dumps(out))
+        _base_state.update(error="", failed=None)
+    except Exception as e:  # noqa: BLE001   HERESY 2934 (the Windows soak: «No module named 'gguf'» killed this thread unsaid): kept, said to the page
+        _base_state.update(error=f"{type(e).__name__}: {e}", failed=str(cf))
+        print(f"[lab] the base model's measure for the LoRA profile failed: {type(e).__name__}: {e}", file=sys.stderr, flush=True)
     finally:
         with _base_lock:
             _base_state["running"] = False
@@ -396,4 +403,5 @@ def report(ids):
             g.setdefault(find(i), []).append(i)
         groups[half] = [m for m in g.values()]
     return {"adapters": adapters, "errors": errors, "pairs": pairs, "groups": groups, "base": base is not None,
+            "base_error": "" if base is not None else _base_state["error"],   # HERESY 2934: why «how far it moves a layer» is not known
             "overlap_group": OVERLAP_GROUP}

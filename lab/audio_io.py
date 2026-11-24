@@ -19,6 +19,7 @@ import subprocess
 import tempfile
 import threading
 import time
+import sys
 import wave
 from pathlib import Path
 
@@ -158,11 +159,25 @@ def jack_ports():
     return out
 
 
+# HERESY 2934 (the Windows soak's sweep: /audio/devices said «/proc/asound has none» and «aplay is not here» on Windows): the tab reads ALSA,
+# Linux's sound system; elsewhere it says so once, and its gateway, monitor and measures refuse with the same words
+NOT_HERE = ("the audio interfaces are read through ALSA, Linux's sound system: on Windows and macOS none are listed yet, and the analog "
+            "gateway and the monitor run on Linux for now")
+
+
+def _linux_only():
+    if not sys.platform.startswith("linux"):
+        raise ValueError(NOT_HERE)
+
+
 def _which(b):
     return any(os.access(os.path.join(d, b), os.X_OK) for d in os.environ.get("PATH", "").split(os.pathsep) if d)
 
 
 def devices(root="/proc/asound", user_dir=None):
+    if not sys.platform.startswith("linux"):           # HERESY 2934
+        return {"physical": [], "virtual": [], "said": [NOT_HERE], "gateway": gateway(user_dir) if user_dir else {},
+                "monitor": monitor(user_dir) if user_dir else {}, "playing": monitor_state(), "linux_only": True}
     cs = {c["card"]: c for c in cards(root)}
     physical, virtual, said = [], [], []
     for p in pcms(root):
@@ -268,6 +283,7 @@ def card_of(dev):
 
 
 def set_monitor(user_dir, out, rate):
+    _linux_only()                                         # HERESY 2934
     rate = int(rate or 0)
     if rate and rate not in (44100, 48000, 88200, 96000, 176400, 192000):
         raise ValueError(f"{rate} Hz is no rate a converter runs at")
@@ -325,6 +341,7 @@ def monitor_stop():
 
 def monitor_play(user_dir, path, start=0.0, label=None, level_db=0.0):
     """A file through the monitor from `start` seconds, streamed in blocks (the converter's own rate by plughw); one at a time."""
+    _linux_only()                                         # HERESY 2934
     import soundfile as sf
     m = monitor(user_dir)
     if not m["out"]:
@@ -362,6 +379,7 @@ def monitor_play(user_dir, path, start=0.0, label=None, level_db=0.0):
 
 def monitor_tone(user_dir):
     """A 1 kHz tone at −20 dBFS through the monitor for 1.5 s (the loop test's own)."""
+    _linux_only()                                         # HERESY 2934
     m = monitor(user_dir)
     if not m["out"]:
         raise ValueError("no monitor is chosen")
@@ -375,6 +393,7 @@ def monitor_tone(user_dir):
 
 
 def set_gateway(user_dir, out, inp, rate):
+    _linux_only()                                         # HERESY 2934
     rate = int(rate or 0)
     if rate and rate not in (44100, 48000, 88200, 96000, 176400, 192000):
         raise ValueError(f"{rate} Hz is no rate a converter runs at")
@@ -423,6 +442,7 @@ def levels(path, skip=0.0):
 
 def probe(device, rate=48000, seconds=2, channels=2):
     """An input's floor: a short recording through plughw (any format the card takes), its levels; a refusal (busy, no such device) said."""
+    _linux_only()                                         # HERESY 2934
     if not re.fullmatch(r"[\w.:=,@-]+", str(device or "")):
         raise ValueError("no input device named")
     dev = re.sub(r"^hw:", "plughw:", device)
@@ -503,6 +523,7 @@ def loop_measure(rec, rate, level_db=-20.0):
 
 def loop(out_dev, in_dev, rate=48000, level_db=-20.0):
     """The tone out of out_dev and back from in_dev at once; measured. A refusal (a device busy or not there) said."""
+    _linux_only()                                         # HERESY 2934
     for d in (out_dev, in_dev):
         if not re.fullmatch(r"[\w.:=,@-]+", str(d or "")):
             raise ValueError("an output and an input are both needed")

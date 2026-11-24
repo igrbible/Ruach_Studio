@@ -26,6 +26,8 @@ from pathlib import Path
 ROOT = Path(os.path.abspath(__file__)).parent.parent   # not resolve(): in the dev Studio launcher/ is a link into heresy/root
 sys.path.insert(0, str(ROOT / "lab"))
 import paths  # noqa: E402  the weights' places, as launcher/paths.sh says them
+import winx  # noqa: E402
+winx.utf8_console()   # HERESY 2935: this window in UTF-8 (code page 866 garbled yue-server's Cyrillic in it), this script's output too
 NT = os.name == "nt"
 EXE = ".exe" if NT else ""
 
@@ -91,6 +93,33 @@ def card_answers(s):
     except (OSError, subprocess.SubprocessError):
         return False
     return r.returncode == 0 and "GPU " in r.stdout
+
+
+def listen_host(env):
+    """HERESY 2936 (Viktor 21.11.2026: «Для Windows по умолчанию только этот компьютер, конечно… Тогда запроса нет»): where the engine
+    listens. On this computer alone (127.0.0.1) while user/access.json says «this computer only», and a first start on Windows or macOS
+    writes that there, so neither system's firewall asks anything; private networks or a list, chosen in Engine → Security, on every
+    address (0.0.0.0) from the next start, the firewall asking once. A broken file is private networks, as the engine reads it. Linux
+    keeps start.sh (every address, the engine's gate deciding). YUE2CPP_HOST overrides."""
+    if env.get("YUE2CPP_HOST"):
+        return env["YUE2CPP_HOST"]
+    p = Path(env.get("RUACH_ACCESS") or ROOT / "user" / "access.json")
+    try:
+        mode = json.loads(p.read_text(encoding="utf-8")).get("mode")
+    except FileNotFoundError:
+        if not (NT or sys.platform == "darwin"):
+            return "0.0.0.0"                       # no decision yet: private networks, as the engine answers them
+        try:
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_text(json.dumps({"mode": "local", "nets": []}, indent=1) + "\n", encoding="utf-8")
+            say("  access       this computer only, written to user/access.json (a first start here: no firewall question); "
+                "Engine → Security opens it to your network")
+        except OSError as e:
+            say(f"  access       user/access.json could not be written ({e}): this computer only all the same")
+        return "127.0.0.1"
+    except (OSError, ValueError, AttributeError):
+        mode = "private"
+    return "127.0.0.1" if mode == "local" else "0.0.0.0"
 
 
 def main(argv):
@@ -168,7 +197,8 @@ def main(argv):
         say("the engine comes with the package (engine\\cuda and engine\\cpu on Windows, engine/ on a Mac), the models from the installer or Engine -> Models")
         return 1
 
-    args = ["--host", "0.0.0.0", "--port", port, "--model", f"{quant}={model}"]
+    host = listen_host(env)                            # HERESY 2936: this computer alone on Windows and macOS until Engine → Security opens it
+    args = ["--host", host, "--port", port, "--model", f"{quant}={model}"]
     for rs in ("v1", "v2"):                             # HERESY 2306: RS x3 v1 first, the default
         f = vae_dir / f"YuE2-VAE-RS-x3_{rs}-F32.gguf"
         if f.is_file():
@@ -226,8 +256,12 @@ def main(argv):
     except OSError:
         lan = "127.0.0.1"
     version = (ROOT / "VERSION").read_text(encoding="utf-8").strip() if (ROOT / "VERSION").is_file() else "?"
-    say(f"Ruach Studio {version} · {ROOT.name}  http://{lan}:{port}")
-    say(f"The Studio's port: {port}  · this machine: http://127.0.0.1:{port}  · your network: http://{lan}:{port}")
+    if host.startswith("127."):                         # HERESY 2936
+        say(f"Ruach Studio {version} · {ROOT.name}  http://127.0.0.1:{port}")
+        say(f"The Studio's port: {port}  · this computer only: http://127.0.0.1:{port}  · Engine → Security opens it to your network")
+    else:
+        say(f"Ruach Studio {version} · {ROOT.name}  http://{lan}:{port}")
+        say(f"The Studio's port: {port}  · this machine: http://127.0.0.1:{port}  · your network: http://{lan}:{port}")
     if guard_say:
         say("guard " + guard_say)
     if gpu_name and on_gpu:
@@ -252,6 +286,10 @@ def main(argv):
     if dry:
         say(subprocess.list2cmdline(cmd) if NT else " ".join(cmd))
         return 0
+    try:                                                # HERESY 2936: where it listens, for Engine → Security's words (lab/listen.py)
+        (ROOT / "tmp" / "engine-listen.json").write_text(json.dumps({"host": host, "port": int(port), "pid": os.getpid()}) + "\n", encoding="utf-8")
+    except (OSError, ValueError):
+        pass
     os.chdir(str(ROOT))
     if NT:                                              # Windows has no exec: the engine runs as this script's child, its exit is ours
         return subprocess.call(cmd, env=env)

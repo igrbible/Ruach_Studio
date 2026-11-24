@@ -52,7 +52,7 @@ If you came looking for a **YuE2 WebUI** or a **YuE studio**: this is one, grown
 > | into a DAW | a REAPER project with the score, sections and lyrics (experimental) | audio stems |
 > | the code | open, every change documented | closed |
 > | **polish out of the box** | **less**: a mix can buzz (Debuzz helps), lyrics can drift (the lyrics check finds where), some instruments YuE2 plays thinly or not at all (a LoRA teaches them) | **more** |
-> | **what you need** | **an NVIDIA GPU (24 GB for everything at full precision), Linux (Windows 11 and a Mac with Apple Silicon as a beta), 22.5 to 25.9 GB of disk for the install, 122 to 240 GB with every room ([what it downloads](#what-it-downloads))** | a browser |
+> | **what you need** | **an NVIDIA GPU (24 GB for everything at full precision), Linux (Windows 11 and a Mac with Apple Silicon as a beta), 29.3 to 36.0 GB of disk for the install, 128 to 249 GB with every room ([what it downloads](#what-it-downloads))** | a browser |
 > | **the licence of the songs** | the YuE2 weights are CC BY-NC 4.0 with an individual creator permission (M-A-P, 16.09.2026): a musician, a creator or a personal user acting on their own may publish, sell and license the songs, free of charge; a company needs the authors' licence ([MODEL_LICENSE](https://github.com/multimodal-art-projection/YuE/blob/main/MODEL_LICENSE)) | SUNO's terms per plan |
 >
 > Every week a video says some model *KILLS* SUNO. This is not a model: it is a workstation around one, open to the bone.
@@ -67,27 +67,29 @@ Around the model there is a whole studio of eight rooms: the **Musician** makes 
 
 ## What It Downloads
 
-Measured file by file against the pinned lists of the Studio's Hugging Face repositories (12.11.2026), the program and its Pythons on a fresh install's disk (01.11.2026; 1 GB = 10⁹ bytes). A model takes on the disk exactly what it downloads. Since 2.0.7 the install brings only what a song needs: the program, its Pythons, our fine-tune at the card's quant and two decoders. Everything else comes only when you ask for it: the Musician's other parts from **Engine → Models and LoRAs**, each with its size, and every other room from **Engine → Models and LoRAs → By room** (it measures the free disk first and fetches nothing that would not fit with 2 GB to spare) or from `launcher/extras.sh` in a terminal. The card decides the sizes, as the install does.
+Measured file by file against the pinned lists of the Studio's Hugging Face repositories (12.11.2026), the program and its Pythons on a fresh install's disk (01.11.2026; 1 GB = 10⁹ bytes). A model takes on the disk exactly what it downloads. Since 2.1.0 the install brings the whole of YuE2, so every room of the Musician works from the first start: the program, its Pythons, our fine-tune and m-a-p's own backbone at the card's quant, the two decoders, and the transcriber for covers with its Refined mode (2.0.7 to 2.0.10 brought only what a song needs). Everything else comes only when you ask for it: the Musician's other parts from **Engine → Models and LoRAs**, each with its size, and every other room from **Engine → Models and LoRAs → By room** (it measures the free disk first and fetches nothing that would not fit with 2 GB to spare) or from `launcher/extras.sh` in a terminal. The card decides the sizes, as the install does.
 
 | | what it is | 24 GB card | 12–16 GB card | 8 GB card |
 |---|---|---:|---:|---:|
 | the program | the Studio's code (0.2 GB downloaded) and its engine, built here | 0.9 GB | 0.9 GB | 0.9 GB |
 | its two Pythons | `.venv` and `.venv-art`, PyTorch for CUDA 12.8 in each (8.7 GB downloaded) | 16.5 GB | 16.5 GB | 16.5 GB |
 | our fine-tune | YuE2-RS-TW 2.0 ×0.75, the Studio's default backbone: m-a-p's YuE2-3B with our fine-tune folded in, at the card's quant | 7.2 GB (BF16) | 3.8 GB (Q8_0) | 3.8 GB (Q8_0) |
+| m-a-p's backbone | YuE2-3B as m-a-p made it, beside ours, at the same quant | 7.2 GB (BF16) | 3.8 GB (Q8_0) | 3.8 GB (Q8_0) |
 | the decoders | m-a-p's Standard, which also encodes a recording, and ours, YuE2-VAE-RS x3 v1, the Studio's default decoder (float32) | 1.3 GB | 1.3 GB | 1.3 GB |
-| **the install** | | **25.9 GB** | **22.5 GB** | **22.5 GB** |
-| + the Musician's parts | our second decoder (YuE2-VAE-RS x3 v2), the transcriber for covers, Whisper, the stems' models, UniverSR and Apollo-vocal, the LoRAs | 8.8 GB | 8.8 GB | 8.8 GB |
+| the transcriber | SheetSage2 with MERT-v2-FullSong (float32), for covers, a backing's score, the Library's sheet and the Trainer's set, and its Refined mode, anime-song's SheetSage2-Refined (F16) | 2.9 GB | 2.9 GB | 2.9 GB |
+| **the install** | | **36.0 GB** | **29.3 GB** | **29.3 GB** |
+| + the Musician's parts | our second decoder (YuE2-VAE-RS x3 v2), Whisper, the stems' models, UniverSR and Apollo-vocal, the LoRAs | 7.8 GB | 7.8 GB | 7.8 GB |
 | + Writer | Qwopus3.5-9B through llama.cpp, built here (0.75 GB) | 7.4 GB | 7.4 GB | 6.2 GB (compact) |
 | + Refiner | MuScriptor large (sound to MIDI), FlashSR (the Voice upscale's; else it comes on its first use) | 6.1 GB | 6.1 GB | 6.1 GB |
 | + Narrator | Fish Audio Drama 3, the stresses for Ukrainian, Russian and Belarusian, audio.cpp built here (1.0 GB) | 42.1 GB (Q8_0) | 26.0 GB (Q4_K) | 26.0 GB (Q4_K, partly from RAM) |
 | + Artist | the covers' helpers, Qwen-Image 2512 with Lightning | 42.9 GB (Q6) | 39.3 GB (Q4) | 39.3 GB (Q4, from RAM) |
 | + Videographer | MiniMax H3 int8, SeedVR2 7B sharp | 86.3 GB | needs 24 GB | needs 24 GB |
 | + LoRA Trainer | its base with MERT-v2-FullSong, the style listener | 20.2 GB | 16.3 GB | 12.9 GB |
-| **every room** | | **239.7 GB** | **126.5 GB** | **121.8 GB** |
+| **every room** | | **248.8 GB** | **132.3 GB** | **127.6 GB** |
 
-A card under 7 GB takes Q6_K (the install's models 4.3 GB) or, under 4.5 GB, m-a-p's own backbone at Q5_K_M, there being no fine-tune at it (4.0 GB): short songs only.
+A card under 7 GB takes Q6_K (the install's models 10.1 GB) or, under 4.5 GB, m-a-p's own backbone alone at Q5_K_M, there being no fine-tune at it (6.9 GB): short songs only.
 
-**Only when you ask for it by name:** another backbone beside yours (BF16 7.2, Q8_0 3.8, Q6_K 2.9, Q5_K_M 2.6 GB); every other sound engine: the IRA, five IRAE, the seven RS-FW merges (RS-FW 2.4 ×0.75 among them, the default before 2.0.6) and RS-TW 2.0 ×0.9 (By room → Sound engines: 100.3 GB at BF16, 53.3 at Q8_0, 41.2 at Q6_K; each also on its own in Engine → Models and LoRAs, 7.2, 3.8 or 2.9 GB); the Artist's ten shared adapters (7.5 GB), each fp8 fine-tune of Qwen-Image 2512 (20.4 GB), Qwen-Image 2.1 under Qwen's research licence (33.1 GB); MiniMax H3's every int8 tier (201 GB) or its BF16 (478 GB), SeedVR2 3B (7.3 GB) or all three (40.2 GB); the style listener in bf16 (22 GB); MuScriptor small or medium (0.2 or 0.6 GB); the 💎 workspaces from the Librarian (5.6 GB, all seven).
+**Only when you ask for it by name:** a backbone at another quant beside these (BF16 7.2, Q8_0 3.8, Q6_K 2.9, Q5_K_M 2.6 GB); every other sound engine: the IRA, five IRAE, the seven RS-FW merges (RS-FW 2.4 ×0.75 among them, the default before 2.0.6) and RS-TW 2.0 ×0.9 (By room → Sound engines: 100.3 GB at BF16, 53.3 at Q8_0, 41.2 at Q6_K; each also on its own in Engine → Models and LoRAs, 7.2, 3.8 or 2.9 GB); the Artist's ten shared adapters (7.5 GB), each fp8 fine-tune of Qwen-Image 2512 (20.4 GB), Qwen-Image 2.1 under Qwen's research licence (33.1 GB); MiniMax H3's every int8 tier (201 GB) or its BF16 (478 GB), SeedVR2 3B (7.3 GB) or all three (40.2 GB); the style listener in bf16 (22 GB); MuScriptor small or medium (0.2 or 0.6 GB); the 💎 workspaces from the Librarian (5.6 GB, all seven).
 
 **Not counted:** the NVIDIA driver and the CUDA toolkit 12.8 (the system's, or Pinokio's own), Pianoteq, Organteq and Airteq (Modartt's, yours to buy or to try, if you want them), and your takes. pip keeps no copy of the wheels it fetched (since 2.0.5; before, `~/.cache/pip` kept 8.7 GB more).
 
@@ -216,7 +218,7 @@ What it needs:
 
 - Linux, an NVIDIA GPU with CUDA. 24 GB runs everything (synthesis in BF16, training in bf16); smaller cards use smaller model copies (Q8_0 3.8 GB, Q6_K, Q5_K_M) and int8 training.
 - An Intel Arc card runs the engine as a beta (oneAPI, `./build.sh --sycl`), chosen as the Studio's card in Engine → GPUs: songs in every mode, adapters, Extend; training, the Artist and the Refiner's GPU steps stay on NVIDIA ([INSTALL.md › Intel Arc (beta)](INSTALL.md#intel-arc-beta)).
-- About 22.5 GB of disk for the install on a card of 16 GB or less and 25.9 GB on a 24 GB card, measured file by file (12.11.2026): the program 0.9 GB, its two Pythons 16.5 GB, the models 5.1 or 8.5 GB with Ruach Studio's own fine-tune and decoder among them; every other room only when you take it, 122 to 240 GB with all of them: [What It Downloads](#what-it-downloads) says each part. More for your takes.
+- About 29.3 GB of disk for the install on a card of 16 GB or less and 36.0 GB on a 24 GB card, measured file by file (12.11.2026; the base set of 2.1.0, 23.11.2026): the program 0.9 GB, its two Pythons 16.5 GB, the models 11.9 or 18.6 GB, the whole of YuE2 with Ruach Studio's own fine-tune and decoder among them; every other room only when you take it, 128 to 249 GB with all of them: [What It Downloads](#what-it-downloads) says each part. More for your takes.
 - The CUDA toolkit 12.8, `git`, `cmake`, `gcc`/`g++`, `python3.12`, `ffmpeg`, `curl`. FLAC needs nothing more: the engine encodes it itself, the Refiner and the exports through ffmpeg.
 - Only for the tests: `flac` and `metaflac` (`sudo apt install flac`) for the FLAC test, which checks the engine's encoder against the reference; Node.js 22+ and Chrome or Chromium for the page tests.
 
@@ -244,9 +246,9 @@ chmod +x RuachStudio-2.0.10-core-x86_64.AppImage
 
 ## Windows and macOS: Native (Beta)
 
-Since 2.0.9 the Studio comes as one zip for **Windows 11** (x64) and one for a **Mac with Apple Silicon** (macOS 13.3 and later), from the [v2.0.10 release](https://github.com/igrbible/Ruach_Studio/releases/tag/v2.0.10): no WSL2, no Docker, nothing to build. They are a beta: made and tried for the Musician and the Librarian, the other rooms following one by one, and not signed. A new beta is a new zip; there is no update in place yet.
+Since 2.0.9 the Studio comes as one zip for **Windows 11** (x64) and one for a **Mac with Apple Silicon** (macOS 13.3 and later), from the [v2.0.10 release](https://github.com/igrbible/Ruach_Studio/releases/tag/v2.0.10): no WSL2, no Docker, nothing to build. They are a beta: made and tried for the Musician and the Librarian, the other rooms following one by one, and not signed. A newer zip unpacked over the old folder updates it in place: the songs, the settings and the models stay, the new version's packages come at its first start, and a model its install set gained since (2.1.0-rc2: the transcriber) from Engine → Models.
 
-- **Windows 11**: unpack into a short folder (for example `C:\RuachStudio`: Windows' 260-character paths reach into the Studio's Python) and double-click `RuachStudio.cmd`. The first start brings Python 3.12, the lab's packages and the models a song needs into that folder only, then opens the Studio in your browser. The zip carries two engines, CUDA 12.8 for NVIDIA cards from Pascal (compute 6.1) to Blackwell and one for the processor (AVX2), and the start picks by what `nvidia-smi` sees. On a Pascal or Volta card the songs sing on the card while the lab's own work runs on the processor, as PyTorch's CUDA wheels start at compute 7.5. SmartScreen asks once: *More info → Run anyway*.
+- **Windows 11**: unpack into a short folder (for example `C:\RuachStudio`: Windows' 260-character paths reach into the Studio's Python) and double-click `RuachStudio.exe` (since 2.1.0-rc1: the lab and the engine in the background, their logs in `logs\` for a tester's report; `RuachStudio.cmd` still starts them the old way, each in a console window, and keeps no logs). The first start brings Python 3.12, the lab's packages and the models a song needs into that folder only, then opens the Studio in your browser. The zip carries two engines, CUDA 12.8 for NVIDIA cards from Pascal (compute 6.1) to Blackwell and one for the processor (AVX2), and the start picks by what `nvidia-smi` sees. On a Pascal or Volta card the songs sing on the card while the lab's own work runs on the processor, as PyTorch's CUDA wheels start at compute 7.5. SmartScreen asks once: *More info → Run anyway*.
 - **A Mac with Apple Silicon**: unpack it and open `RuachStudio.command`; the engine runs on Metal, its quant chosen by the Mac's memory. Gatekeeper stops the first start: right-click → *Open*, or System Settings → Privacy & Security → *Open Anyway*.
 
 ## Dependencies
@@ -578,6 +580,19 @@ Everything that changed: [CHANGELOG.md](CHANGELOG.md).
 - **Songs**: «Follow my sections» (2.0.10) off by default under the planning modes, with a guard that asks before a plan past 4:00; [Interlude] with words stays an interlude; the music cache in 8 bits for smaller cards.
 - **Windows**: `RuachStudio.exe` starts the Studio without console windows and makes a tester's report; the Weights panel and the system bar work natively ([#15](https://github.com/igrbible/Ruach_Studio/issues/15)).
 - **Around the rooms**: one play button everywhere, ✕ at the top right of every dialog, the Trainer's honest cards and clock, a deleted take freeing all of its files, Pinokio's page listing what the Studio stands on.
+
+Everything that changed: [CHANGELOG.md](CHANGELOG.md).
+
+### Done › 2.1.0-rc2 (November 2026)
+
+- **The whole of YuE2 in the install**: m-a-p's own backbone beside ours, both decoders, and the transcriber with its Refined mode, so covers and remixes work from the first start; an update brings the transcriber once.
+- **A missing model says so**: a control the Studio turns off because a model is not here looks off, names the model and opens Engine → Models at it; a refused download says why.
+- **Workspaces**: every chooser of workspaces is the Library's own tree, with its emoji column and the sections in a petal to the right.
+- **The guide in Hebrew**: F1 opens the whole guide and the Narrator's in Hebrew, right to left.
+- **The Narrator**: a voice for each paragraph; its voice laid over a song's clip in the Videographer.
+- **The Musician and the DAW**: how long a song can really be beside Max length; a plan with a chord that swallowed its notes planned again; comping a stretch from another version of a stem; the Refiner's Compare node.
+- **The Trainer**: its steps show the run you chose; the run's events in every chart view.
+- **Windows, macOS and Pinokio**: every room's Python found on Windows, no firewall question at the first start, the debug journal with the engine's and the lab's logs.
 
 Everything that changed: [CHANGELOG.md](CHANGELOG.md).
 

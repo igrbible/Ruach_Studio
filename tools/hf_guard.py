@@ -10,6 +10,9 @@ Viktor 11.11.2026: «Тройного сторожа на выгрузках и 
         (heresy/hf-manifest.tsv) holds for it at that pin. A file that fails a check never reaches its place: what was there stays,
         the part is removed, and its line says which check failed. A download that stops halfway leaves the downloader's own part
         (.incomplete, under DIR/.ruach-part/.cache) for the next run to go on from; nothing of it is used before it is whole and checked.
+        A file Hugging Face did not give whole and right is asked of the second channels (heresy/hf-channels.tsv, tools/hf_channels.py)
+        in their order, when its SHA-256 is known before it comes; what one sends is held to that SHA-256 as Hugging Face's would be,
+        and its line («via») names the channel that delivered it, --quiet or not. When Hugging Face gives it, nothing here changes.
     hf_guard.py verify REPO --revision REV --local-dir DIR [FILE ...] [--include PATTERN ...] [--strip PREFIX]
         the same three checks on the files here, each hashed; nothing is downloaded
     hf_guard.py manifest REPO --revision REV [FILE ...] [--include PATTERN ...]
@@ -46,6 +49,10 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)                                   # the Studio: this file is in its tools/
 sys.path.insert(0, HERE)
 from hf_expect import expected_files  # noqa: E402  the pinned lists, and their cache in tmp/hf/expect
+try:                                                           # the second channels (Viktor 21.11.2026): none when the module is not here
+    import hf_channels  # noqa: E402
+except ImportError:
+    hf_channels = None
 
 COLOR = sys.stdout.isatty() and not os.environ.get("NO_COLOR")
 G, Y, R, D, X = ("\033[32m", "\033[33m", "\033[31m", "\033[2m", "\033[0m") if COLOR else ("",) * 5
@@ -211,6 +218,8 @@ def cmd_download(a, verify_only=False):
     if remote is None:
         print(err)
         return 2
+    if getattr(remote, "stand_in", ""):              # hf_expect.py: Hugging Face's list could not be read, our manifest stands for it
+        print(f"{D}{repo} @ {rev[:12]}: {remote.stand_in}{X}")
     man = load_manifest()
     names = wanted(remote, a.files, a.include, a.exclude)
     if not names:
@@ -250,24 +259,34 @@ def cmd_download(a, verify_only=False):
     except OSError as e:
         said, rc = str(e), 127
     last = " ".join(ln.strip() for ln in said.splitlines() if ln.strip() and "%|" not in ln)[-240:]
+    chans = hf_channels.load() if hf_channels else []
     for path in need:
         exp, rel, target = plan[path]
         got = os.path.join(part, path)
         rec = os.path.join(part, RECORDS, path + ".metadata")
+        why = via = None
         if not os.path.isfile(got):
             unfinished = any(n.endswith(".incomplete") for _, _, fs in os.walk(os.path.join(part, RECORDS)) for n in fs)
-            print(f"{R}failed{X}    {rel}: the download did not complete (hf exit {rc}{': ' + last if last else ''})"
-                  + (f"; its unfinished part stays in {os.path.relpath(part, top)}/ for the next run to go on from" if unfinished else "")
-                  + ("; what was here stays as it was" if os.path.exists(target) else ""))
-            failed += 1
-            continue
-        bad = check_file(got, exp)
-        if bad:
-            for f in (got, rec):
-                if os.path.exists(f):
-                    os.unlink(f)
-            print(f"{R}failed{X}    {rel}: {bad}; the download is removed"
-                  + ("; what was here stays as it was" if os.path.exists(target) else "; nothing was put in its place"))
+            why = (f"the download did not complete (hf exit {rc}{': ' + last if last else ''})"
+                   + (f"; its unfinished part stays in {os.path.relpath(part, top)}/ for the next run to go on from" if unfinished else ""))
+            tail = "; what was here stays as it was" if os.path.exists(target) else ""
+        else:
+            bad = check_file(got, exp)
+            if bad:
+                for f in (got, rec):
+                    if os.path.exists(f):
+                        os.unlink(f)
+                why = f"{bad}; the download is removed"
+                tail = "; what was here stays as it was" if os.path.exists(target) else "; nothing was put in its place"
+        tried = []
+        if why and chans and exp["sha"]:             # the second channel (Viktor 21.11.2026): only for a file whose SHA-256 is known before it comes
+            via, delivered = hf_channels.deliver(repo, rev, path, exp["size"], exp["sha"], part, hf_program())
+            if via:
+                got, rec = delivered, None
+            else:
+                tried = delivered
+        if why and not via:
+            print(f"{R}failed{X}    {rel}: {why}{tail}" + (f"; tried also {'; '.join(tried)}" if tried else ""))
             failed += 1
             continue
         try:
@@ -275,6 +294,11 @@ def cmd_download(a, verify_only=False):
         except OSError as e:
             print(f"{R}failed{X}    {rel}: checked, but could not be put in its place ({e}); what was here stays as it was")
             failed += 1
+            continue
+        if via:                                      # delivered by a second channel: said always, with the record HF would have left
+            hf_channels.record(top, RECORDS, rel, rev, exp["sha"])
+            print(f"{G}via{X}       {rel}  {D}(delivered by {via}, checked: {exp['size']} bytes, SHA-256: {exp['by']}; "
+                  f"Hugging Face: {why[:120]}){X}")
             continue
         if os.path.isfile(rec):                      # its record beside it, as the downloader leaves one (models_plan.py reads it)
             dst = os.path.join(top, RECORDS, rel + ".metadata")

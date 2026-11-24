@@ -5526,6 +5526,11 @@ RuachI18n.add("he", {
 "On a public Wi-Fi (a café, a hotel, a train) or on a laptop without a firewall, everyone on that network counts as a private network too: choose This computer only, or list your own networks.": "ב-Wi-Fi ציבורי (בית קפה, מלון, רכבת) או בלפטופ בלי חומת אש, כל מי שברשת הזאת נחשב גם הוא לרשת פרטית: בחר \"המחשב הזה בלבד\", או פרט את הרשתות שלך.",
 "Engine → Security changes it any time. The internet at large is never let in, unless the Studio is started with RUACH_ALLOW_PUBLIC=1.": "מנוע ← אבטחה משנה את זה בכל עת. האינטרנט הפתוח לעולם לא מקבל גישה, אלא אם הנפחות הופעלה עם RUACH_ALLOW_PUBLIC=1.",
 "My decision is a conscious one": "זו החלטה מודעת שלי",
+"The Studio listens on this computer alone now (port {0}): no other computer or phone can open it, and {1} has nothing to ask of its firewall. Opened to a network, whoever opens its page there can do everything you can: make and delete songs, read your lyrics, run your graphics cards, fetch models with your keys.": "הסטודיו מאזין עכשיו למחשב הזה בלבד (פורט {0}): אף מחשב אחר או טלפון לא יכולים לפתוח אותו, ול-{1} אין מה לשאול על חומת האש שלו. כשהוא פתוח לרשת, כל מי שפותח שם את הדף שלו יכול לעשות כל מה שאתם יכולים: ליצור ולמחוק שירים, לקרוא את המילים שלכם, להעסיק את כרטיסי המסך שלכם, להוריד מודלים עם המפתחות שלכם.",
+"{0} asks once whether to let the Studio through its firewall, when it starts again": "{0} ישאל פעם אחת אם להעביר את הסטודיו דרך חומת האש, כשהוא יופעל מחדש",
+"The Studio still listens on this computer alone: restart it ({0}) to open it to your network, and {1} asks once about its firewall.": "הסטודיו עדיין מאזין למחשב הזה בלבד: הפעילו אותו מחדש ({0}) כדי לפתוח אותו לרשת שלכם, ו-{1} ישאל פעם אחת על חומת האש.",
+"its icon beside the clock → Restart the Studio": "הסמל שלו ליד השעון ← Restart the Studio",
+"close it and start it again": "סגרו אותו והפעילו שוב",
 "Batch": "אצווה",
 "How many pictures in one go: each the next seed (the seed, the seed + 1, …), in every shape picked": "כמה תמונות בבת אחת: כל אחת הזרע הבא (הזרע, הזרע + 1, …), בכל צורה שנבחרה",
 "Delete the saved style picked": "מחיקת הסגנון השמור שנבחר",
@@ -5591,6 +5596,7 @@ RuachI18n.add("he", {
 "Music half: {0} layers, attention {1} %, MLP {2} %": "חצי המוזיקה: {0} שכבות, קשב {1} %, MLP {2} %",
 "Sound half: {0} layers, attention {1} %, MLP {2} %": "חצי הצליל: {0} שכבות, קשב {1} %, MLP {2} %",
 "moves a layer by up to {0} % at 1.0": "מזיז שכבה עד {0} % ב-1.0",
+"How far it moves a layer is not measured: {0}": "כמה הוא מזיז שכבה לא נמדד: {0}",
 "Where it pushes:": "איפה הוא דוחף:",
 "{0} and {1} share their layers ({2}) and pull the same way: together they push harder than their strengths say, keep them lower.": "{0} ו-{1} חולקים את השכבות שלהם ({2}) ומושכים לאותו כיוון: יחד הם דוחפים חזק יותר ממה שהעוצמות שלהם אומרות, החזק אותם נמוך יותר.",
 "{0} and {1} share their layers ({2}) and pull against each other: some of each cancels the other.": "{0} ו-{1} חולקים את השכבות שלהם ({2}) ומושכים זה נגד זה: חלק מכל אחד מבטל את השני.",
@@ -5822,6 +5828,7 @@ RuachI18n.add("he", {
 "The input's floor, RMS / peak dBFS: {0}": "רצפת הרעש של הכניסה, RMS / שיא dBFS: {0}",
 "Not measured: {0}": "לא נמדד: {0}",
 "no sound card is seen here (/proc/asound has none)": "לא נראה כאן אף כרטיס קול (ב-/proc/asound אין אף אחד)",
+"the audio interfaces are read through ALSA, Linux's sound system: on Windows and macOS none are listed yet, and the analog gateway and the monitor run on Linux for now": "ממשקי השמע נקראים דרך ALSA, מערכת הקול של Linux: ב-Windows וב-macOS עדיין לא מוצג אף אחד, והשער האנלוגי והמוניטור רצים בינתיים רק על Linux",
 "aplay is not here: ALSA's software devices are not listed": "aplay לא נמצא כאן: התקני התוכנה של ALSA לא מוצגים",
 "arecord is not here: ALSA's software devices are not listed": "arecord לא נמצא כאן: התקני התוכנה של ALSA לא מוצגים",
 "PipeWire / Pulse do not run here (no pactl answer)": "PipeWire / Pulse לא רצים כאן (אין תשובה מ-pactl)",
@@ -9981,4 +9988,177 @@ RuachI18n.add("he", {
 // HERESY 2919c: the workspaces' emoji upgrade, said once
 RuachI18n.add("he", {
 "{0} workspaces now show their emoji in its own column": "{0} מרחבים מציגים עכשיו את האימוג'י שלהם בעמודה משלו"
+});
+// HERESY 2940 · 2941: the take's menu of workspaces, the realms in a move and an add
+RuachI18n.add("he", {
+"A move never takes a take out of its realm: these are the Musician's, and “{0}” is the Narrator's.": "העברה לעולם לא מוציאה טייק מהעולם שלו: אלה של המוזיקאי, ו-\"{0}\" של הקריין.",
+"A move never takes a take out of its realm: these are the Narrator's, and “{0}” is the Musician's.": "העברה לעולם לא מוציאה טייק מהעולם שלו: אלה של הקריין, ו-\"{0}\" של המוזיקאי.",
+"A move never takes a take out of its realm: these belong to both realms.": "העברה לעולם לא מוציאה טייק מהעולם שלו: אלה שייכים לשני העולמות.",
+"Link them into “{0}” instead? They stay where they are as well.": "לקשר אותם ל-\"{0}\" במקום זאת? הם נשארים גם במקום שבו הם נמצאים.",
+"Link them": "קשר אותם",
+"Linked into “{0}”: {1}": "קושרו ל-\"{0}\": {1}",
+"The checked belong to both realms ({0} of the Musician, {1} of the Narrator): a move keeps each take in its realm, so check the takes of one realm": "המסומנים שייכים לשני העולמות ({0} של המוזיקאי, {1} של הקריין): העברה שומרת כל טייק בעולם שלו; סמן טייקים של עולם אחד",
+"They leave every other workspace of their realm they are in (a locked one keeps its own; their links in the other realm stay).": "הם עוזבים כל מרחב אחר בעולם שלהם שהם נמצאים בו (מרחב נעול שומר את שלו; הקישורים שלהם בעולם האחר נשארים).",
+"Frozen: unfreeze it first (⋯ beside its name)": "מוקפא: בטל קודם את ההקפאה שלו (⋯ ליד השם שלו)",
+"Link into the Narrator's": "קישור למרחבים של הקריין",
+"Link into the Musician's": "קישור למרחבים של המוזיקאי"
+});
+// HERESY 2942: the music model's honest limits (the window of the song at hand, the floor under its ceiling, Extend's cap)
+RuachI18n.add("he", {
+"Max length {0} is past what the window holds for this song: about {1} of music whole, after its style and lyrics ({2} tokens) and its score ({3}). The song stops where the window ends. Longer: Long songs · Pieces (experimental).": "אורך מרבי {0} עובר את מה שהחלון מכיל לשיר הזה: בערך {1} של מוזיקה שלמה, אחרי הסגנון והמילים שלו ({2} טוקנים) והפרטיטורה שלו ({3}). השיר נעצר במקום שבו החלון נגמר. לשיר ארוך יותר: שירים ארוכים · בחלקים (ניסיוני).",
+"Max length {0} is past what the window holds for this song: about {1} of music whole ({4}–{5} by the score the model writes), after its style and lyrics ({2} tokens). The song stops where the window ends. Longer: Long songs · Pieces (experimental).": "אורך מרבי {0} עובר את מה שהחלון מכיל לשיר הזה: בערך {1} של מוזיקה שלמה ({4}–{5} לפי הפרטיטורה שהמודל יכתוב), אחרי הסגנון והמילים שלו ({2} טוקנים). השיר נעצר במקום שבו החלון נגמר. לשיר ארוך יותר: שירים ארוכים · בחלקים (ניסיוני).",
+"The window holds about {0} of this song's music whole: its style and lyrics take {1} tokens, its score {2}, of the {3}.": "החלון מכיל בערך {0} מהמוזיקה של השיר הזה בשלמותה: הסגנון והמילים שלו לוקחים {1} טוקנים, הפרטיטורה {2}, מתוך {3}.",
+"The window holds about {0} of this song's music whole ({4}–{5} by the score the model writes): its style and lyrics take {1} tokens of the {3}.": "החלון מכיל בערך {0} מהמוזיקה של השיר הזה בשלמותה ({4}–{5} לפי הפרטיטורה שהמודל יכתוב): הסגנון והמילים שלו לוקחים {1} טוקנים מתוך {3}.",
+"Max length goes past it: the song stops where the window ends.": "אורך מרבי עובר אותו: השיר נעצר במקום שבו החלון נגמר.",
+"The music's Min length {0} stood above its Max length {1}: sent with the floor at {1}": "האורך המזערי של המוזיקה {0} עמד מעל האורך המרבי שלה {1}: נשלח עם הרצפה ב-{1}",
+"The score's Min tokens {0} stood above its Max tokens {1}: sent with the floor at {1}": "הטוקנים המזעריים של הפרטיטורה {0} עמדו מעל הטוקנים המרביים שלה {1}: נשלח עם הרצפה ב-{1}",
+"{0} long: Extend goes to {1} at most": "באורך {0}: הארכה מגיעה עד {1} לכל היותר",
+"Music up to 10:00 (8:00 by default): past it a song loses its way (one ran on to 9:30, and that was too much). The window of 24,576 tokens may hold less: the style, the lyrics and the score take their part first.": "מוזיקה עד 10:00 (8:00 כברירת מחדל): מעבר לזה שיר מאבד את הדרך (אחד המשיך עד 9:30, וזה היה יותר מדי). חלון של 24,576 טוקנים עשוי להכיל פחות: הסגנון, המילים והפרטיטורה לוקחים קודם את חלקם.",
+"Text profiles make a pasted text ready to read, with a speech profile of your own (Direct, past 8:00); readings live in the Narrator": "פרופילי טקסט מכינים טקסט מודבק לקריאה, עם פרופיל דיבור משלך (Direct, מעל 8:00); הקריאות חיות אצל הקריין"
+});
+// HERESY 2943: the Trainer's curves together: the run's events, the held-out dots, a scale's span
+RuachI18n.add("he", {
+"Step {0}": "צעד {0}",
+"the {0} frozen: its loss leaves the sum": "ה-{0} הוקפא: ההפסד שלו יוצא מהסכום",
+"went on from its save": "המשיך מהשמירה שלו",
+"the {0}'s learning-rate curve {1} → {2}": "עקומת קצב הלמידה של ה-{0}: {1} → {2}",
+"The running average begins anew here.": "הממוצע הנע מתחיל כאן מחדש.",
+"held out at step {0}: {1} {2}": "מוחזקים בצד בצעד {0}: {1} {2}",
+"span {0}": "טווח {0}",
+"Smoothing": "החלקה",
+"The curves' smoothing, as TensorBoard's: 0 draws the logged points as they are, 0.99 the smoothest (0.92 by default); the faint line under each is the points themselves. The learning rate, the memory and the held-out dots are never smoothed, nor across the run's events. Kept in this browser.": "החלקת העקומות, כמו ב-TensorBoard: 0 מצייר את הנקודות שנרשמו כמו שהן, 0.99 החלק ביותר (0.92 כברירת מחדל); הקו החיוור מתחת לכל אחת הוא הנקודות עצמן. קצב הלמידה, הזיכרון ונקודות ההחזקה בצד לעולם לא מוחלקים, וגם לא מעבר לאירועי הריצה. נשמר בדפדפן הזה."
+});
+// HERESY 2945: the Writer's versions: the Section editor's sub-version and the version it came from
+RuachI18n.add("he", {
+"the Section editor": "עורך הקטעים",
+"from #{0}": "מתוך #{0}"
+});
+// HERESY 2942b: the Section editor's Extend within the music model's 10:00
+RuachI18n.add("he", {
+"Only past the take's end, 10:00 at most in all": "רק אחרי סוף הטייק, עד 10:00 בסך הכול",
+"Extend sings on to 10:00 at most": "הארכה ממשיכה לשיר עד 10:00 לכל היותר"
+});
+// HERESY 2948: comping in the DAW: the selection taken from another version of its stem
+RuachI18n.add("he", {
+"Take it from another version": "לקחת מגרסה אחרת",
+"The rest has no versions": "לשארית אין גרסאות",
+"This stem has one version: a file made from it (a cleaned voice…) is another": "לסטם הזה יש גרסה אחת: קובץ שנעשה ממנו (קול מנוקה…) הוא גרסה נוספת",
+"The selection from another version of this stem, laid over the lane with 10 ms crossfades; the lane's own version everywhere else": "הבחירה מגרסה אחרת של הסטם הזה, מונחת על הערוץ עם מעברים של 10 ms; בכל השאר נשמעת הגרסה של הערוץ עצמו",
+"{0}–{1} now from «{2}»": "{0}–{1} עכשיו מתוך «{2}»",
+"a version gone": "גרסה שכבר איננה"
+});
+// HERESY 2949: the Refiner's Compare node: two versions of the take, A and B, into the Compare window
+RuachI18n.add("he", {
+"A and B side by side": "A ו-B זה לצד זה",
+"Two versions of the take side by side, A and B: the original, a step's file, a mix; Compare opens them in the Compare window, switched in the same second. A wire from the take goes to A, from a step to B": "שתי גרסאות של הטייק זו לצד זו, A ו-B: המקור, קובץ של שלב, מיקס; «השוואה» פותחת אותן בחלון ההשוואה, בהחלפה באותה שנייה. חוט מהטייק הולך ל-A, משלב ל-B",
+"Two versions of this take side by side, A and B, in the Compare window: switched in the same second, blind if you like.": "שתי גרסאות של הטייק הזה זו לצד זו, A ו-B, בחלון ההשוואה: מתחלפות באותה שנייה, גם בעיוורון אם תרצה.",
+"The first: the original or any file a step made of this take": "הראשונה: המקור או כל קובץ ששלב יצר מהטייק הזה",
+"The second, heard against A: a step's file, a mix, the original": "השנייה, נשמעת מול A: קובץ של שלב, מיקס, המקור",
+"A and B in the Compare window, A first: one plays, the other takes over in the same second": "A ו-B בחלון ההשוואה, A קודם: אחת מתנגנת, השנייה ממשיכה מאותה שנייה",
+"Compare A and B": "השוואת A ו-B",
+"Pick a take: its versions come here": "בחר טייק: הגרסאות שלו יופיעו כאן",
+"Only the original so far: make a file from it in a step, then compare the two": "בינתיים יש רק את המקור: צור ממנו קובץ באחד השלבים ואז השווה בין השניים",
+"A and B are the same file: pick another for one of them": "A ו-B הם אותו קובץ: בחר קובץ אחר לאחת מהן"
+});
+// HERESY 2950: two-tone icons in Engine › Appearance
+RuachI18n.add("he", {
+"Icons": "סמלים",
+"One colour": "צבע אחד",
+"Two-tone, the theme's colours": "דו-גוניים, צבעי ערכת הנושא",
+"The Studio's line icons: ours in one colour, the text's (the default); or two-tone, the outline as always and their shapes filled faintly in the theme's own colours (the accent for what makes, red for what takes away, green for what keeps), so each theme paints them its way": "סמלי הקו של נפחות: שלנו בצבע אחד, צבע הטקסט (ברירת המחדל); או דו-גוניים: קו המתאר כתמיד, והצורות שלהם ממולאות קלות בצבעי ערכת הנושא עצמה (צבע ההדגשה למה שיוצר, אדום למה שמסיר, ירוק למה ששומר), כך שכל ערכת נושא צובעת אותם בדרכה"
+});
+// HERESY 2955: what a control turned off for a model that is not here says, and its way to Engine → Models
+RuachI18n.add("he", {
+"The transcriber: covers from a recording, a backing read (SheetSage2 with MERT-v2-FullSong)": "המתעתק: קאברים מהקלטה, קריאת פלייבק (SheetSage2 עם MERT-v2-FullSong)",
+"Whisper large-v3: the lyrics check, karaoke timing, sections by ear, a recording's words": "Whisper large-v3: בדיקת מילים, תזמון קריוקי, קטעים בשמיעה, המילים של הקלטה",
+"not in the last check here: Fetch brings it": "לא בבדיקה האחרונה כאן: «הורדה» מביאה אותו",
+"Its files are here: the engine takes it in at its next start.": "הקבצים שלו כאן: המנוע טוען אותו בהפעלה הבאה.",
+"Opens Engine → Models and LoRAs at its row: Fetch there brings it": "פותח את מנוע ← מודלים ו-LoRA בשורה שלו: «הורדה» שם מביאה אותו",
+"Engine → Models": "מנוע ← מודלים",
+"not in this Studio yet": "עדיין לא בנפחות הזאת",
+"off: this server keeps none": "כבויה: השרת הזה לא שומר אחת",
+"Covering a recording needs the transcriber (SheetSage2 with MERT-v2-FullSong), which this Studio does not have yet.": "קאבר מהקלטה צריך את המתעתק (SheetSage2 עם MERT-v2-FullSong), שעדיין אין בנפחות הזאת.",
+"Reading a backing needs the transcriber (SheetSage2 with MERT-v2-FullSong), which this Studio does not have yet.": "קריאת פלייבק צריכה את המתעתק (SheetSage2 עם MERT-v2-FullSong), שעדיין אין בנפחות הזאת.",
+"Writing a score from the sound needs the transcriber (SheetSage2 with MERT-v2-FullSong), which this Studio does not have yet.": "כתיבת פרטיטורה מהצליל צריכה את המתעתק (SheetSage2 עם MERT-v2-FullSong), שעדיין אין בנפחות הזאת.",
+"Ready to transcribe. Match sections needs Whisper large-v3, which this Studio does not have yet.": "מוכן לתעתוק. «התאמת קטעים» צריכה את Whisper large-v3, שעדיין אין בנפחות הזאת.",
+"Refined needs SheetSage2-Refined, which this Studio does not have yet.": "Refined צריך את SheetSage2-Refined, שעדיין אין בנפחות הזאת.",
+"BF16 (7.2 GB) is not in this Studio yet: Engine → Models and LoRAs fetches it under Backbone, and the Studio offers it after its next start.": "BF16 (7.2 GB) עדיין לא בנפחות הזאת: מנוע ← מודלים ו-LoRA מוריד אותו בשורה «מודל הליבה», והנפחות מציעה אותו אחרי ההפעלה הבאה.",
+"The server keeps no library: songs made in this tab stay until it reloads.": "השרת לא מחזיק ספרייה: שירים שנוצרו בכרטיסייה הזאת נשארים עד שהיא נטענת מחדש.",
+"This engine keeps no settings file, so it answers this computer and private networks; started the Studio's way (its icon, Pinokio or start.sh), it lets you choose.": "המנוע הזה לא שומר קובץ הגדרות, ולכן הוא עונה למחשב הזה ולרשתות פרטיות; כשהוא מופעל כמו שהנפחות מופעלת (מהסמל שלה, מ-Pinokio או מ-start.sh), אפשר לבחור.",
+"it needs Whisper large-v3, which this Studio does not have yet: Engine → Models": "צריך את Whisper large-v3, שעדיין אין בנפחות הזאת: מנוע ← מודלים",
+"The lyrics check and karaoke timing need Whisper large-v3, which this Studio does not have yet.": "בדיקת המילים ותזמון הקריוקי צריכים את Whisper large-v3, שעדיין אין בנפחות הזאת.",
+"Whisper large-v3 is not in this Studio yet: Engine → Models and LoRAs fetches it (3.1 GB)": "Whisper large-v3 עדיין לא בנפחות הזאת: מנוע ← מודלים ו-LoRA מוריד אותו (3.1 GB)",
+"{0}: not fetched.": "{0}: לא הורד.",
+"The check did not run.": "הבדיקה לא רצה.",
+"On Windows the Weights panel downloads through the bash of Git for Windows, and none is installed here.": "ב-Windows, מודלים ו-LoRA מורידים דרך ה-bash של Git for Windows, והוא לא מותקן כאן.",
+"Install Git for Windows (https://git-scm.com/download/win), then press again. The models a song needs come without it too.": "התקן את Git for Windows (https://git-scm.com/download/win) ולחץ שוב. המודלים ששיר צריך מגיעים גם בלעדיו."
+});
+// HERESY 2956: why a chooser's workspace takes nothing new
+RuachI18n.add("he", {
+"A 💎 set: nothing new lands in it": "סט 💎: שום דבר חדש לא נכנס אליו",
+"Frozen: nothing new lands in it": "מוקפא: שום דבר חדש לא נכנס אליו",
+"Archived: nothing new lands in it": "בארכיון: שום דבר חדש לא נכנס אליו",
+"The regeneration's own section: nothing new lands in it": "המדור של היצירה מחדש: שום דבר חדש לא נכנס אליו",
+"They are here already": "הם כבר כאן"
+});
+// HERESY 2956: why a chooser's workspace takes nothing new
+RuachI18n.add("he", {
+"Its sections": "המדורים שלו"
+});
+// HERESY 2959: the chord guard's words
+RuachI18n.add("he", {
+"The chords swing between {0} and {1} bar by bar ({#2} times): the plan may have split its key.": "האקורדים מתנדנדים בין {0} ל-{1} תיבה אחר תיבה ({#2} פעמים): ייתכן שהתוכנית פיצלה את הסולם שלה.",
+"Chords with a double sharp or flat: {0}.": "אקורדים עם דיאז כפול או במול כפול: {0}.",
+"Chromatic music does this on purpose too: hear it first, or rewrite the score.": "גם מוזיקה כרומטית עושה זאת בכוונה: הקשב קודם, או כתוב מחדש את הפרטיטורה.",
+"Rewrite the score": "כתיבה מחדש של הפרטיטורה",
+"A chord in the plan swallowed its notes: the model plans it again with a new music seed": "אקורד בתוכנית בלע את התווים שלו: המודל מתכנן אותו מחדש עם זרע מוזיקה חדש"
+});
+// HERESY 2960: a run's own steps 1-3 and a new run's form
+RuachI18n.add("he", {
+"read only": "קריאה בלבד",
+"Telemetry ›": "טלמטריה ›",
+"New run from this one": "ריצה חדשה לפי זו",
+"New run": "ריצה חדשה",
+"The form for a new run with this run's set, kind and knobs; its name is yours to give": "הטופס של ריצה חדשה עם הסט, הסוג והכפתורים של זו; את השם נותן אתה",
+"The form for a new run, fresh: nothing an earlier form left": "הטופס של ריצה חדשה, מאפס: שום דבר ממה שהשאיר טופס קודם",
+"The material this run's set was made from, as the set remembers it.": "החומר שממנו נעשה הסט של ריצה זו, כפי שהסט זוכר אותו.",
+"The set this run trains on.": "הסט שעליו ריצה זו מתאמנת.",
+"What this run was given: its kind, its trainer and its knobs.": "מה ניתן לריצה זו: הסוג שלה, המאמן שלה והכפתורים שלה.",
+"The form for another run opens with “New run”.": "הטופס של ריצה אחרת נפתח ב„ריצה חדשה”.",
+"The form for a new run: {0} stays as it is.": "הטופס של ריצה חדשה: {0} נשארת כמו שהיא.",
+"not recorded": "לא נרשם",
+"The set {0} is no longer among the prepared sets.": "הסט {0} כבר אינו בין הסטים המוכנים.",
+"folder": "תיקייה",
+"made from": "נעשה מ",
+"made on": "נעשה ב",
+"sheets by": "תווים מאת",
+"in the run": "בריצה",
+"held out": "מוחזקים בצד",
+"kind": "סוג",
+"trainer": "מאמן"
+});
+// HERESY 2961: the held-out bucket's tip in the Trainer's charts
+RuachI18n.add("he", {
+"held out, {#0} saves from step {1} to {2}: {3} {4} on average": "מוחזקים בצד, {#0} שמירות מצעד {1} עד {2}: {3} {4} בממוצע",
+"step {0}: {1}": "צעד {0}: {1}"
+});
+// HERESY 2962: the Trainer's missing weights in words
+RuachI18n.add("he", {
+"The Studio’s trainer is missing {0}: they come with its base in Engine → Models.": "למאמן של ה-Studio חסרים: {0}. הם מגיעים עם הבסיס שלו במנוע ← מודלים."
+});
+// HERESY 2963: the Videographer's voice row
+RuachI18n.add("he", {
+"The Narrator's voice": "הקול של הקריין",
+"Starts at": "מתחיל ב",
+"The song under it": "השיר מתחתיו",
+"How far the song goes down under the voice: down in 0.3 s before it, back in 0.8 s after it": "כמה השיר יורד מתחת לקול: יורד 0.3 שניות לפניו, חוזר תוך 0.8 שניות אחריו",
+"Change…": "החלף…",
+"This take is not in the library now: the clip cannot be cut with it": "הטייק הזה לא בספרייה עכשיו: אי אפשר לערוך איתו את הקליפ",
+"A take of the Narrator over the clip, by link (it stays in the Narrator's world): from the song's start, before its first sung line, unless moved; the song goes down under it and back after it; its words as titles of their own, in italics below the sung lines": "טייק של הקריין מעל הקליפ, בקישור (נשאר בעולם הקריין): מתחילת השיר, לפני השורה המושרת הראשונה, אלא אם הוזז; השיר יורד מתחתיו וחוזר אחריו; מילותיו ככתוביות משלהן, בנטוי מתחת לשורות המושרות",
+"Add the Narrator's voice…": "הוסף את קול הקריין…",
+"The clip's voice is laid on: the next clip cut mixes it": "קול הקליפ הונח: עריכת הקליפ הבאה תמקסס אותו",
+"The clip's voice is taken off": "קול הקליפ הוסר",
+"No take of the Narrator in the library yet: read one in the Narrator first": "בספרייה עדיין אין טייק של הקריין: הקרא אחד קודם אצל הקריין",
+"The Narrator's voice over the clip": "קול הקריין מעל הקליפ",
+"A take of the Narrator's world, by link: it stays home, the clip only names it.": "טייק מעולם הקריין, בקישור: הוא נשאר בבית, הקליפ רק נוקב בשמו."
 });

@@ -74,6 +74,8 @@ La lista «Cuantización» pinta cada cuantización según la prueba en crudo de
 
 **Voz del lector**: la voz propia del motor, mantenida desde el primer trozo; o **Tu propia voz…**, un clip breve de una voz que el motor sigue, aceptado solo bajo el aviso rojo y con el consentimiento marcado (clonar una voz sin el consentimiento de su dueño es delito en muchos países, y la responsabilidad es tuya). Con el Studio no viene ninguna voz hecha. El tono de cada trozo se mide al leerlo; un trozo cuya voz pasó al otro género se vuelve a leer con otra semilla.
 
+**Una voz para cada párrafo.** En una narración, un pequeño chip ↳ está en el margen junto a la primera línea de cada párrafo: un clic elige la voz con la que se lee ese párrafo (una voz tuya, un grupo o de nuevo la voz de encima del texto), y los párrafos siguientes la mantienen hasta que a uno se le dé otra; una franja fina del color de esa voz los acompaña. El texto en sí queda limpio, y las voces siguen a sus párrafos mientras lo editas; un diálogo tiene en cambio una voz por hablante, y una lectura por versículos ninguna.
+
 Las emociones y los sonidos van entre corchetes, como los lee Drama 3: `[calm]`, `[sad]`, `[whispering]`, `[pause]`, `[laughs]`. **Paleta de etiquetas** los inserta: una emoción, un ritmo o un estilo al principio de su frase, una pausa o un sonido en el cursor. **Leer las etiquetas en línea** está activado por defecto en un diálogo y desactivado en una narración, donde se busca una lectura limpia de libro. **Estilo** da a toda la lectura un corchete propio, como `calm, warm, unhurried narration`.
 
 ### Acentos y la tilde aguda <!-- #stresses-and-the-acute -->

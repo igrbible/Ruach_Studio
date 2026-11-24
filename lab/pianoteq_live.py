@@ -145,7 +145,7 @@ class Server:
         port = _free_port()
         proc = subprocess.Popen([str(binary), "--headless", "--quiet", "--prefs", str(prefs), "--serve", f"127.0.0.1:{port}"],
                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True, env=env,
-                                preexec_fn=lambda: os.nice(10))
+                                preexec_fn=(lambda: os.nice(10)) if os.name == "posix" else None)   # HERESY 2934: Windows takes no preexec_fn
         _SRV.update(proc=proc, port=port, dir=d, binary=str(binary), last=time.time())
         for _ in range(80):
             try:

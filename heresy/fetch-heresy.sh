@@ -92,7 +92,11 @@ while [ $# -gt 0 ]; do
   esac
   shift
 done
-SEP="$ROOT/.venv/bin/audio-separator"
+# HERESY 2934: a Python environment made on Windows keeps its programs in Scripts\ with .exe (as tools/hf-env.sh reads it, 2924)
+venv_exe() { if [ -x "$ROOT/$1/bin/$2" ] || [ ! -e "$ROOT/$1/Scripts/$2.exe" ]; then echo "$ROOT/$1/bin/$2"; else echo "$ROOT/$1/Scripts/$2.exe"; fi; }
+case "$(uname -s 2>/dev/null)" in MINGW*|MSYS*|CYGWIN*) ON_WIN=1 ;; *) ON_WIN=0 ;; esac
+ART_ENV_HOW="lab/install-venv.sh --art"; [ $ON_WIN = 1 ] && ART_ENV_HOW="which the Windows install does not make yet: the Artist paints on Linux for now"
+SEP="$(venv_exe .venv audio-separator)"
 PINS="$ROOT/heresy/hf-revisions.txt"
 G=$'\e[1;32m' Y=$'\e[1;33m' R=$'\e[1;31m' D=$'\e[2m' X=$'\e[0m'
 if [ -n "${NO_COLOR:-}" ] || [ ! -t 1 ]; then G="" Y="" R="" D="" X=""; fi
@@ -126,6 +130,9 @@ again() {   # again CMD…: run into $LOG; once more after 30 s when it fails
   sleep 30
   "$@" >"$LOG" 2>&1
 }
+# the second channel (Viktor 21.11.2026, tools/hf_channels.py): a file Hugging Face did not give, delivered by another channel and held to the same
+# SHA-256, says which channel gave it on a «via» line of the guard's; that line is shown here, not left in $LOG (nothing shows when Hugging Face gave all)
+vias() { grep -a '^via ' "$LOG" 2>/dev/null | sed 's/^/          /'; return 0; }
 
 # the Kit's machinery: pinned downloader, caches in tmp/, hf_complete (sizes against the pinned list)
 # --check downloads no weights; it may cache a pinned revision's file list in tmp/hf/expect (a few KB)
@@ -168,6 +175,7 @@ hf_repo() {
   fi
   mkdir -p "$dir"
   again hf_guarded download --quiet "$repo" --revision "$rev" --local-dir "$dir" "$@"   # HERESY 2380: the triple guard (tools/hf_guard.py)
+  vias
   if hf_complete "$repo" "$rev" "$dir" "$@" >/dev/null 2>&1; then say_got "$dir" "$tag"; else say_fail "$dir" "$tag: $(why)"; fi
 }
 
@@ -238,6 +246,7 @@ hf_into() {
   # HERESY 2380 (Viktor 11.11.2026: «Тройного сторожа на выгрузках и скачиваниях моделей»): each file into .incoming only at the pin, of the pinned size
   # and with our manifest's SHA-256; settle moves what this call asked for, so nothing older lying in .incoming replaces a file of a room
   again hf_guarded download --quiet "$repo" --revision "$rev" --local-dir "$RS_INCOMING" --include "${inc[@]}"
+  vias
   settle "${inc[@]}"
   if hf_complete "$repo" "$rev" "$dir" --strip "$strip" --include "$@" >/dev/null 2>&1; then say_got "$what" "$tag"; else say_fail "$what" "$tag: $(why)"; fi
 }
@@ -266,6 +275,7 @@ hf_into_at() {
   hf_ready >/dev/null || { say_fail "$what" "(the pinned downloader would not install: tools/hf-env.sh)"; return; }
   mkdir -p "$dir"
   again hf_guarded download --quiet "$repo" --revision "$rev" --local-dir "$dir" --include "$@"   # HERESY 2380: the triple guard
+  vias
   if hf_complete "$repo" "$rev" "$dir" --include "$@" >/dev/null 2>&1; then say_got "$what" "$tag"; else say_fail "$what" "$tag: $(why)"; fi
 }
 
@@ -425,6 +435,7 @@ if [ -n "$WRITER" ]; then
   [ $go = 1 ] && hf_into "${RS_WRITER#"$ROOT"/}/Qwopus3.5-9B-GGUF ($WRITER and its licence)" "$V2" "$W_FILE" "$O/LICENSE"
   clone https://github.com/ggml-org/llama.cpp.git "$ROOT/vendor/llama.cpp"
   if [ -x "$ROOT/vendor/llama.cpp/build/bin/llama-server" ]; then say_here "llama-server" "(vendor/llama.cpp/build)"
+  elif [ $ON_WIN = 1 ]; then say_miss "llama-server" "(the Studio's own writer runs on Linux for now: Engine → Writer and Artwork takes LM Studio, Ollama, vLLM or OpenRouter)"
   else say_miss "llama-server" "→ bash launcher/extras.sh builds it (or: cd vendor/llama.cpp && cmake -B build -DGGML_CUDA=ON && cmake --build build -j --target llama-server)"; fi
 fi
 
@@ -599,7 +610,7 @@ if [ $ARTWORK = 1 ]; then
   if [ $go = 1 ]; then
     hf_into "${RS_ARTIST#"$ROOT"/}/nsfw-filter (Falconsai/nsfw_image_detection)" goldhub/Ruach_Studio_Models_v2 "artwork/nsfw-filter/*"                         # HERESY 1445: from v2 · paths: repo
     hf_into "${RS_ARTIST#"$ROOT"/}/Qwen3-4B-Instruct-2507" goldhub/Ruach_Studio_Models_v2 "artwork/Qwen3-4B-Instruct-2507/*"   # paths: repo
-    [ -x "$ROOT/.venv-art/bin/python" ] || say_miss "$ROOT/.venv-art" "(the Artist paints in its own environment: lab/install-venv.sh --art)"
+    [ -x "$(venv_exe .venv-art python)" ] || say_miss "$ROOT/.venv-art" "(the Artist paints in its own environment: $ART_ENV_HOW)"
   fi
 fi
 # HERESY 1323 (Viktor 10.10.2026: «Забирай 2512 тоже в Студию»; «как альтернативу для менее мощных карт бери смело … Q6_K +
@@ -624,7 +635,7 @@ if [ -n "$QWEN" ]; then
           hf_into "${RS_ARTIST#"$ROOT"/}/Qwen-Image-2512 (its parts)" goldhub/Ruach_Studio_Models_v2 "artwork/Qwen-Image-2512/model_index.json" "artwork/Qwen-Image-2512/README.md" "artwork/Qwen-Image-2512/scheduler/*" "artwork/Qwen-Image-2512/tokenizer/*" "artwork/Qwen-Image-2512/text_encoder/*" "artwork/Qwen-Image-2512/vae/*" "artwork/Qwen-Image-2512/transformer/config.json"   # paths: repo
           hf_into "${RS_ARTIST#"$ROOT"/}/Qwen-Image-2512/gguf ($quant)" goldhub/Ruach_Studio_Models_v2 "artwork/Qwen-Image-2512/gguf/qwen-image-2512-$quant.gguf"   # HERESY 1445: from v2 · paths: repo
           hf_into "${RS_ARTIST#"$ROOT"/}/Qwen-Image-2512/lightning" goldhub/Ruach_Studio_Models_v2 "artwork/Qwen-Image-2512/lightning/Qwen-Image-2512-Lightning-8steps-V1.0-bf16.safetensors"   # paths: repo
-          [ -x "$ROOT/.venv-art/bin/python" ] || say_miss "$ROOT/.venv-art" "(the painters paint in their own environment: lab/install-venv.sh --art)"
+          [ -x "$(venv_exe .venv-art python)" ] || say_miss "$ROOT/.venv-art" "(the painters paint in their own environment: $ART_ENV_HOW)"
         fi ;;
       2.1)
         asked qwen "Artwork: Qwen-Image-2.1 (Qwen's research licence: not for commercial use)"
@@ -664,7 +675,7 @@ if [ -n "$QFINE" ]; then
       hf_into "${RS_ARTIST#"$ROOT"/}/Qwen-Image-2512 (its parts)" goldhub/Ruach_Studio_Models_v2 "artwork/Qwen-Image-2512/model_index.json" "artwork/Qwen-Image-2512/README.md" "artwork/Qwen-Image-2512/scheduler/*" "artwork/Qwen-Image-2512/tokenizer/*" "artwork/Qwen-Image-2512/text_encoder/*" "artwork/Qwen-Image-2512/vae/*" "artwork/Qwen-Image-2512/transformer/config.json"   # paths: repo
       hf_into "${RS_ARTIST#"$ROOT"/}/Qwen-Image-2512/lightning" goldhub/Ruach_Studio_Models_v2 "artwork/Qwen-Image-2512/lightning/Qwen-Image-2512-Lightning-8steps-V1.0-bf16.safetensors"   # paths: repo
       hf_into "${RS_ARTIST#"$ROOT"/}/Qwen-Image-2512/checkpoints/$f" goldhub/Ruach_Studio_Models_v2 "artwork/Qwen-Image-2512/checkpoints/$f"   # paths: repo
-      [ -x "$ROOT/.venv-art/bin/python" ] || say_miss "$ROOT/.venv-art" "(the painters paint in their own environment: lab/install-venv.sh --art)"
+      [ -x "$(venv_exe .venv-art python)" ] || say_miss "$ROOT/.venv-art" "(the painters paint in their own environment: $ART_ENV_HOW)"
     fi
   done
 fi

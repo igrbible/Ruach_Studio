@@ -12,7 +12,8 @@ os.environ["CUDA_VISIBLE_DEVICES"] = ""
 for _k in ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS"):
     os.environ.setdefault(_k, "6")                 # a share of the processor, not all of it: a training may be feeding its cards
 try:
-    os.nice(10)                                    # and behind it: a wave's data loading goes first
+    import winx                                    # HERESY 2934: Windows has no os.nice (an AttributeError ended this script there)
+    winx.lower_priority(10)                        # and behind it: a wave's data loading goes first
 except OSError:
     pass
 import numpy as np

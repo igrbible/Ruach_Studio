@@ -628,6 +628,7 @@ def _window_run(jid, name, req, codes, own, win, a, b, A, B, lyrics, state):
 # only from the kept codes after them. The drafts are hidden as they land and go to the trash once their codes (and in B their voice) are taken; the
 # ledger (cache/section-chain/ID.json) is written after every step, so a failure, a Stop or a restart of the lab goes on from its step (2812).
 import math, os, re, shutil, signal, subprocess  # noqa: E402,E401
+import winx  # noqa: E402   HERESY 2934: nice where the system has it
 from pathlib import Path  # noqa: E402
 
 CHAIN = {"poll": 2.0, "full_every": 15.0, "full_for": 1800.0, "away_for": 180.0, "lost": 20}   # the waits, seconds (the test makes them short)
@@ -636,6 +637,7 @@ A_OPS, B_OPS, ENDS, CUTS = ("replace", "line"), ("once", "interlude"), ("from", 
 # laid in by E's pass as Repeat and Remove are; it takes no stretch of its own, so the section before the gap may have its own edit in the same
 # assembly («replace the bridge and insert an interlude after it»): its place is what the rules weigh, as a once more's or an interlude's
 MAX_ALL, MAX_SUNG, MAX_LEN = 12, 8, 900.0          # twelve edits a queue, eight sung (1414's own cap), the page's 15:00 (Extend's own cap)
+MAX_SING = 600.0                                   # HERESY 2942: a take Extend sings on stays within the music model's 10:00 (900 was Speech's, now the Narrator's)
 CHAIN_WS = "Section editor"
 KEEP_FAILED, KEEP_DONE = 24 * 3600, 7 * 24 * 3600   # a ledger after a failure or a stop; one cut down to its take after the take is made
 RUNS = {}                                           # chain id -> {cancel, job (the engine's under way), pid (the voice split's)}
@@ -814,6 +816,8 @@ def _rules(ops, end):
                   sum(y - x for x, y in o["spans"]) * (1 if k in ("copy", "insert") else -1) if k in CUTS else 0)
     if total > MAX_LEN + 0.01:
         raise ValueError("The new take would run past 15:00")
+    if any(o["op"] == "extend" for o in ops) and total > MAX_SING + 0.01:   # HERESY 2942: the model sings 10:00 at most
+        raise ValueError("Extend sings on to 10:00 at most")
 
 
 def _ldir():
@@ -921,6 +925,10 @@ def chain(body):
         x = body.get(k)
         if x is not None and (not isinstance(x, str) or len(x) > 2 ** 20):
             raise ValueError(f"{k}: ABC text, a megabyte at most")
+    for k in ("lyrics_after", "lyrics_before"):         # HERESY 2945: the words Repeat, Remove and Insert leave, and the source's
+        x = body.get(k)
+        if x is not None and (not isinstance(x, str) or len(x) > 2 ** 18):
+            raise ValueError(f"{k}: text, 256 KB at most")
     try:
         bar = float(body.get("bar")) if body.get("bar") and 0.3 <= float(body.get("bar")) <= 8 else None
     except (TypeError, ValueError):
@@ -936,7 +944,8 @@ def chain(body):
     title = str(body.get("title") or "").strip()[:200] or (str((req or {}).get("title") or name) + " · " + " · ".join(_said(o) for o in ops) + " " + v)
     led = {"id": cid, "name": name, "v": v, "vi": ord(v) - 65, "title": title, "src_title": str((req or {}).get("title") or name),
            "lyrics": lyrics, "lyrics_a": lyrics_a, "ws": str(body.get("ws") or "")[:200], "abc_render": body.get("abc_render"),
-           "abc_after": body.get("abc_after"), "bar": bar, "window_held": bool(body.get("window_held")), "edited_src": edited, "ops": ops,
+           "abc_after": body.get("abc_after"), "lyrics_after": body.get("lyrics_after") or "", "scope": re.sub(r"[^a-z0-9_-]", "", str(body.get("scope") or "").lower())[:20],
+           "bar": bar, "window_held": bool(body.get("window_held")), "edited_src": edited, "ops": ops,
            "steps": steps, "next": 0, "joined": codes, "ins": [], "render": None, "take": None, "job": None, "job_k": None, "want": "",
            "sent_at": 0, "drafts": [], "status": "queued", "why": "", "at": time.time()}
     _lsave(led)
@@ -1151,7 +1160,7 @@ def _chain_voice(wav, a, b, run):
     """vocal_rest.py as _voice runs it, at nice 19 in a chain (nice 9 before it, its own os.nice(10) on top: a trainer's loader goes first),
     its pid kept so Stop can end it"""
     import sys as _sys
-    cmd = ["nice", "-n", "9", str(P.get("py") or _sys.executable), os.path.join(os.path.dirname(os.path.abspath(__file__)), "vocal_rest.py"), str(wav),
+    cmd = winx.nice(9) + [str(P.get("py") or _sys.executable), os.path.join(os.path.dirname(os.path.abspath(__file__)), "vocal_rest.py"), str(wav),
            f"{a:.2f}", f"{b:.2f}"]
     try:
         p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=dict(os.environ, CUDA_VISIBLE_DEVICES=""))
@@ -1313,7 +1322,7 @@ def _phase_c(led, s, req, run):
         _measure(led)
     else:
         more = o["more"]
-        total = min(900, math.ceil(len(joined) / FPS + more))
+        total = min(MAX_SING, math.ceil(len(joined) / FPS + more))   # HERESY 2942
         for key in ("abc", "abc_continue", "harmony"):
             body.pop(key, None)
         body.update(cot="off", semantic_keep=",".join(map(str, joined)), duration=total)
@@ -1448,6 +1457,8 @@ def _arranged(led, spans):
         else:
             for k in ("abc", "abc_continue", "harmony"):
                 rq.pop(k, None)
+        if led.get("lyrics_after"):                    # HERESY 2945: the words the cuts leave, not the render's
+            rq["lyrics"] = led["lyrics_after"]
         if rq.get("end_at") not in (None, ""):         # an ended take's end, where it lands now (cut out with its part: none)
             e = _mapper(spans)(float(rq["end_at"]))
             if e is None:
@@ -1473,7 +1484,8 @@ def _phase_e(led, s, req, run):
     if not led.get("render"):                          # nothing sung: 1714's own take, edited.from the source, its codes by the token map
         spans, short = _spans(led, cuts, _seconds(led["name"]))
         with P["cpu"]:
-            r = P["takeedit"].make(P["outputs"], led["name"], {"op": "arrange", "spans": spans, "abc": led.get("abc_after") or "", "title": led["title"]},
+            r = P["takeedit"].make(P["outputs"], led["name"], {"op": "arrange", "spans": spans, "abc": led.get("abc_after") or "", "title": led["title"],
+                                                                  "lyrics": led.get("lyrics_after") or None},   # HERESY 2945
                                    P["take_dir"])
         led["take"] = r["name"]
     else:
@@ -1534,6 +1546,25 @@ def _note(led):
     if e and e.get("short"):
         tail = "; " + ", ".join(f"{_mss(a)}–{_mss(b)}" for a, b in e["short"]) + " (under half a second between the cuts) went with the part beside it"
     return f"Section editor, version {led['v']}: " + "; ".join(f"{i}) {w}" for i, w in enumerate(words, 1)) + tail + f". The rest is {led['name']}'s own."
+
+
+def _sub_version(led):
+    """HERESY 2945 (the agent's item B9 after 2.1.0-rc1: «Текст после «Повторить» и «Убрать» — подверсией в Писателе, отличия помечены»): the words Repeat,
+    Remove and Insert leave, kept in the Writer's versions of the source's title as a sub-version of its branch («v2.0.3» → «v2.0.3.1»), from the version
+    that made the source (its differences against it shown there), the new take with it. Said, never silent, when it cannot be kept"""
+    after = led.get("lyrics_after")
+    if not isinstance(after, str) or not after.strip() or not led.get("take"):
+        return
+    try:
+        import creator_versions as cv
+        req = json.loads((P["outputs"] / led["take"] / "request.json").read_text(encoding="utf-8"))
+        book = cv.get(P["kit"], title=led["src_title"], scope=led.get("scope") or "")
+        base = next((v for v in reversed(book.get("versions") or []) if led["name"] in (v.get("takes") or [])), None)
+        cv.post(P["kit"], {"op": "keep", "title": led["src_title"], "sub": True, "from": base["n"] if base else None, "style": req.get("style") or "",
+                           "lyrics": after, "abc": req.get("abc") or "", "mode": req.get("cot") or "", "takes": [led["take"]], "why": "section"},
+                scope=led.get("scope") or "")
+    except Exception as e:                             # the take is made; its words kept apart are said missing
+        P["say"](f"section editor · {led['take']}: its words were not kept in the Writer's versions: {e}")
 
 
 def _record(led):
@@ -1603,6 +1634,7 @@ def _chain_run(led, state):
             led["take"] = led["render"]
         s = None
         _record(led)
+        _sub_version(led)                              # HERESY 2945
         led["status"] = "done"
         P["say"](f"section editor · {name} · version {led['v']}: {led['take']}")
     except Stopped:

@@ -20,6 +20,8 @@ A failure to read the cards is said, never taken for "every card free".
 import json, os, subprocess, sys
 from pathlib import Path
 
+import winx                                         # HERESY 2934: processes read on Windows too
+
 HEAVY_MB = 2048                                     # a stranger above this is a service, not the desktop
 KIT = Path(__file__).resolve().parent.parent
 
@@ -27,8 +29,8 @@ KIT = Path(__file__).resolve().parent.parent
 def _ours(pid, root):
     root = str(root)
     try:
-        exe = os.path.realpath(f"/proc/{pid}/exe")
-        cmd = Path(f"/proc/{pid}/cmdline").read_bytes().replace(b"\0", b" ").decode("utf-8", "replace")
+        exe = winx.proc_exe(pid)                       # HERESY 2934: /proc on Linux, psutil elsewhere
+        cmd = " ".join(winx.proc_cmdline(pid))
     except OSError:
         return False                                   # gone, or not ours to read: not counted as ours
     return exe.startswith(root) or root in cmd
@@ -36,8 +38,7 @@ def _ours(pid, root):
 
 def _name(pid):
     try:
-        cmd = Path(f"/proc/{pid}/cmdline").read_bytes().split(b"\0")
-        words = [c.decode("utf-8", "replace") for c in cmd if c]
+        words = winx.proc_cmdline(pid)                 # HERESY 2934
         for w in words:
             if "vllm" in w.lower():
                 return "vLLM"
@@ -66,10 +67,13 @@ def _limits(root):
 
 def snapshot(root=KIT):
     """[{index, total_mb, free_mb, limit_mb, room_mb, share, foreign: [(pid, name, mb)], ok, why}] for every card."""
-    q = subprocess.run(["nvidia-smi", "--query-gpu=index,uuid,memory.total,memory.free", "--format=csv,noheader,nounits"],
-                       capture_output=True, text=True, timeout=20)
-    a = subprocess.run(["nvidia-smi", "--query-compute-apps=pid,gpu_uuid,used_memory", "--format=csv,noheader,nounits"],
-                       capture_output=True, text=True, timeout=20)
+    try:
+        q = subprocess.run(["nvidia-smi", "--query-gpu=index,uuid,memory.total,memory.free", "--format=csv,noheader,nounits"],
+                           capture_output=True, text=True, timeout=20)
+        a = subprocess.run(["nvidia-smi", "--query-compute-apps=pid,gpu_uuid,used_memory", "--format=csv,noheader,nounits"],
+                           capture_output=True, text=True, timeout=20)
+    except FileNotFoundError:                          # HERESY 2934: said, not «[WinError 2] The system cannot find the file specified»
+        raise RuntimeError(winx.NO_NVSMI)
     if q.returncode != 0 or not q.stdout.strip():
         raise RuntimeError("nvidia-smi did not answer: " + (q.stderr.strip() or "no cards listed"))
     apps = {}

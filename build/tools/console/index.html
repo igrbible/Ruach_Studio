@@ -63,7 +63,7 @@
   for (var k in g) if (typeof f[k] === "string") document.documentElement.style.setProperty("--" + k, f[k] ? "var(--scripts), " + JSON.stringify(f[k]) + ", " + g[k] : "var(--sans)");
   if (window.ruachScriptFonts) window.ruachScriptFonts(f);
   if (typeof f.buttons !== "string" || f.buttons) document.documentElement.classList.add("fonts-buttons");   // HERESY 1493: Jura on the buttons unless «Same as the text»
-  var L = JSON.parse(localStorage.getItem("yue2.look") || '{"corners":"soft","glow":"on","hover":"accent"}'), o = ["hover", "glow", "motion", "corners"];
+  var L = JSON.parse(localStorage.getItem("yue2.look") || '{"corners":"soft","glow":"on","hover":"accent"}'), o = ["hover", "glow", "motion", "corners", "icons"];   // HERESY 2950: icons too
   for (var i = 0; i < o.length; i++) if (typeof L[o[i]] === "string") document.documentElement.dataset[o[i]] = L[o[i]];
   var T = JSON.parse(localStorage.getItem("yue2.textSize") || "{}");   // HERESY 1169: the text's size before the first paint
   if (T.g) document.documentElement.style.setProperty("--fs-g", T.g + "pt");
@@ -512,6 +512,9 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
           <select data-hc-pick="1" id="lookTheme"></select></label>
         <label class="field"><span class="label">Corners</span>
           <select id="lookCorners"><option value="">Rounded</option><option value="soft">Softer</option><option value="square">Square</option></select></label>
+        <!-- HERESY 2950 (Viktor 15.11.2026: colour icons an option in the Engine, ours in one colour by default): two-tone, the outline the text's colour, the shapes filled from the theme's own colours -->
+        <label class="field"><span class="label">Icons</span>
+          <select id="lookIcons" data-tip="The Studio's line icons: ours in one colour, the text's (the default); or two-tone, the outline as always and their shapes filled faintly in the theme's own colours (the accent for what makes, red for what takes away, green for what keeps), so each theme paints them its way"><option value="">One colour</option><option value="duo">Two-tone, the theme's colours</option></select></label>
         <!-- HERESY 1720 (Viktor 22.10.2026: «опцию для дефолта… Дефолт пусть будет как есть сейчас - как давно») -->
         <label class="field"><span class="label">Take time</span>
           <select id="lookWhen" data-tip="A take's time on its card and wherever it is shown: how long ago, or its exact date and time. A click on a card's time flips it to the other for that take; its tip always says the other"><option value="">How long ago</option><option value="exact">The exact time</option></select></label>
@@ -1293,7 +1296,7 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
                   <div class="toggles" id="transcribers">
                     <label class="toggle" data-tip="SheetSage2 by m-a-p with its rotary angles rounded to bfloat16, as it was trained: the base and the default. MERT, the ear SheetSage2 listens with, places every moment of the song by these angles; computed exactly, they are not the ones it learnt, and its bars and meters drift (on twenty of our songs: 82 false meter changes with exact angles, 8 with these, where the songs have 9). Its risk: a rare false meter change can still slip in."><input type="radio" name="transcriber" value="sheetsage2-bf16" checked /><span translate="no">Heretical</span></label>
                     <label class="toggle" data-tip="Not our fine-tune: SheetSage2-Refined is anime-song's community fine-tune of m-a-p's SheetSage2 (CC BY-NC 4.0), run with bfloat16 angles as its author's reference runs it. On twenty of our songs it wrote every score: the bar count right on 9 (Heretical 8), odd meters and a drill's half time heard, slash and tension chords. Its risk: a wider chord vocabulary than the song model learnt from SheetSage2, so its rarer chords are new words to it; in a song where it hears no chords, it writes none."><input type="radio" name="transcriber" value="sheetsage2-refined" /><span translate="no">Refined</span></label>
-                  </div></div>
+                  </div><p class="cover-status pack-line" id="transcriberMiss"></p></div>
                 <label class="check" id="transcriberModesRow" hidden data-tip="Refined alone: each key written with its mode (dorian, phrygian, lydian, mixolydian, locrian), as K:Ddor in the score; off, a key is major or minor, as SheetSage2 writes it. Its risk: the song model learnt its keys from SheetSage2's scores, so a mode is a word new to it"><input type="checkbox" id="transcriberModes" />
                   <span>Keys with their modes (dorian, mixolydian…)</span></label>
                 <div class="cover-act">
@@ -1348,6 +1351,7 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
                 <textarea id="abc" rows="8" spellcheck="false" class="mono" placeholder="X:1&#10;L:1/8&#10;M:4/4&#10;K:C"></textarea>
               </label>
               <p class="row-hint score-guard" id="scoreGuard" hidden></p>
+              <p class="row-hint chord-guard" id="chordGuard" hidden></p>   <!-- HERESY 2959: the chord guard's word on the plan in the form -->
               <!-- HERESY 1609: the engine's abc_continue (1608) -->
               <label class="check opening-check" data-tip="The score in the box is only an opening: a few bars you played on the roll or a MIDI keyboard, hummed and written from the sound, or typed. The model plans the rest of the song on from it, in its key and meter, and the whole score, your opening first, is sung. Full plan or Melody only. After Mothersuperior's hum-to-song, through timoncool's yue2.cpp"><input type="checkbox" id="abcOpening" /> <span><strong>Only the opening</strong>: the model writes the rest of the song on from it</span></label>
               <!-- HERESY 1704: a chord bed (after timoncool's YuE2-Studio, MIT, and gary4juce's yuey scaffold) -->
@@ -2238,6 +2242,20 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
         </div>
       </details>
 
+      <!-- HERESY 2949 (the agent's item E19 after 2.1.0-rc1; Viktor 05.11.2026: «две стороны одной медали в двух разных комнатах»): the Compare node, two
+           inputs and the Compare window's own code (heresy-derived.js compareTwo); a place of the list as Made from This Take is, a node of the canvas -->
+      <details class="drawer is-step is-step-off" id="comparePanel" open>
+        <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Compare</span><span class="sum-say">Two versions of this take side by side, A and B, in the Compare window: switched in the same second, blind if you like.</span></span></summary>
+        <div class="drawer-body rm-body">
+          <div class="dv-actions">
+            <label class="field" data-tip="The first: the original or any file a step made of this take"><span class="label">A</span><select id="cmpA"></select></label>
+            <label class="field" data-tip="The second, heard against A: a step's file, a mix, the original"><span class="label">B</span><select id="cmpB"></select></label>
+            <button type="button" class="btn primary small" id="cmpGo" data-tip="A and B in the Compare window, A first: one plays, the other takes over in the same second">Compare A and B</button>
+            <span class="row-hint" id="cmpSay"></span>
+          </div>
+        </div>
+      </details>
+
       <!-- HERESY 1011: Whisper against the lyrics, run on Forge by heresy-lab (heresy-gloss.js) -->
       <details class="drawer" id="glossPanel" open>
         <summary><span class="chev" aria-hidden="true"></span><span class="sum-head"><span class="sum-name">Lyrics Check</span><span class="sum-say">Whisper listens to this take on Forge and matches what it hears to your lyrics, minute by minute.</span></span></summary>
@@ -2329,7 +2347,7 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
              field gone, the file kept in the hidden #arModel beside #arPainter, picked in The Artist's brushes -->
         <div class="ar-get-row"><button type="button" class="btn ghost small icon-only" id="arGet" aria-label="Get painters and adapters…" data-ui="cloud-download" data-tip="The painters, the Qwen fine-tunes and the adapters the Studio can fetch for the Artist, each with its size, here or not: from the Studio's models repository and from their makers"></button></div>   <!-- HERESY 1347 -->
         <!-- HERESY 1319: the sampling: steps, sampler, schedule; 2512's Lightning and guidance -->
-        <details class="ar-sampling" id="arSampling"><summary><span class="label">Sampling</span> <em id="arSampSay"></em><span class="info is-warn" id="arSampWarn" tabindex="-1" role="img" aria-label="A warning on the sampling" hidden></span></summary>
+        <details class="ar-sampling" id="arSampling"><summary><span class="label">Sampling</span> <em id="arSampSay"></em><span class="info is-warn" id="arSampWarn" role="img" aria-label="A warning on the sampling" hidden></span></summary>
           <div class="ar-samp-row">
             <label class="field ar-samp-steps"><span class="label">Steps</span><input type="number" id="arSteps" min="4" max="16" step="1" inputmode="numeric" data-tip="How many steps from the noise to the picture: Qwen-Image 2512 with Lightning 4 to 16 (8 its own), 2512 without it and Qwen-Image 2.1 10 to 60" /></label>
             <label class="field"><span class="label">Sampler</span><select id="arSampler" data-tip="How each step is taken. Euler: the plain step; Euler SDE: fresh noise each step (soft on Qwen without Lightning). ER-SDE: a stochastic solver of third order, one look a step. RES 2s and 3s: the refined exponential solver, two or three looks a step (ODE: without noise). Heun++: up to three looks a step. Exp Heun 2 x0: the exponential Heun, two looks (SDE: with noise). More looks: finer, and as many times longer"><option value="euler" translate="no">Euler</option><option value="euler-sde" translate="no">Euler SDE</option><option value="er_sde" translate="no">ER-SDE</option><option value="res_2s" translate="no">RES 2s</option><option value="res_2s_ode" translate="no">RES 2s ODE</option><option value="res_3s" translate="no">RES 3s</option><option value="res_3s_ode" translate="no">RES 3s ODE</option><option value="heunpp2" translate="no">Heun++ 2</option><option value="exp_heun_2_x0" translate="no">Exp Heun 2 x0</option><option value="exp_heun_2_x0_sde" translate="no">Exp Heun 2 x0 SDE</option></select></label>
@@ -2343,12 +2361,12 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
           </div>
         </details>
         <!-- HERESY 1387: regional prompts, as InvokeAI's regional guidance -->
-        <details class="ar-sampling ar-regions" id="arRegions"><summary><span class="label">Regions</span> <em id="arRegSay"></em><span class="info" tabindex="-1" role="img" aria-label="About the regions" data-tip="Up to three parts of the frame, each with words of its own: at every step the painter is asked once more for each region, with the prompt and the region's words, and the answers are blended by soft-edged boxes (Latent Couple's way). Each region costs a whole pass more a step. Qwen-Image 2512"></span></summary>
+        <details class="ar-sampling ar-regions" id="arRegions"><summary><span class="label">Regions</span> <em id="arRegSay"></em><span class="info" role="img" aria-label="About the regions" data-tip="Up to three parts of the frame, each with words of its own: at every step the painter is asked once more for each region, with the prompt and the region's words, and the answers are blended by soft-edged boxes (Latent Couple's way). Each region costs a whole pass more a step. Qwen-Image 2512"></span></summary>
           <div class="ar-reg-list" id="arRegList"></div>
           <div class="ar-reg-foot"><button type="button" class="btn ghost small icon-only" id="arRegAdd" aria-label="Add a region" data-tip="Add a region" data-ui="plus"></button><span class="row-hint" id="arRegNote" hidden>Not with Qwen-Image 2.1: it edits by words</span></div>
         </details>
         <!-- HERESY 1394 (Viktor 12.10.2026: «A & B - лучшие. B - реально круто. Впиливай всю эту ересь!»; «По надписи всё правильно»): the lettering, its words apart from the prompt -->
-        <details class="ar-sampling ar-letters" id="arLetters"><summary><span class="label">Lettering</span> <em id="arLetSay" translate="no"></em><span class="info" tabindex="-1" role="img" aria-label="About the lettering" data-tip="A title, and a second line under it, lettered as part of the painting, not laid over it: Qwen-Image paints them with the picture, or Qwen-Image 2.1 letters a finished one, the reference. Each picture is read back by the listener (Qwen2.5-Omni) and one misspelled is painted again with another seed, up to three times; one still misspelled is said so, with what it reads"></span></summary>
+        <details class="ar-sampling ar-letters" id="arLetters"><summary><span class="label">Lettering</span> <em id="arLetSay" translate="no"></em><span class="info" role="img" aria-label="About the lettering" data-tip="A title, and a second line under it, lettered as part of the painting, not laid over it: Qwen-Image paints them with the picture, or Qwen-Image 2.1 letters a finished one, the reference. Each picture is read back by the listener (Qwen2.5-Omni) and one misspelled is painted again with another seed, up to three times; one still misspelled is said so, with what it reads"></span></summary>
           <div class="ar-let-row"><label class="field ar-let-title"><span class="label">Title</span><input type="text" id="arLetTitle" maxlength="60" spellcheck="false" data-tip="The words to letter, exactly as they are to be spelled" /></label>
             <button type="button" class="btn ghost small icon-only" id="arLetTake" disabled aria-label="The take's title" data-tip="The title of the take picked on the right" data-ui="type"></button></div>
           <label class="field"><span class="label">Second line</span><input type="text" id="arLetSub" maxlength="80" spellcheck="false" data-tip="Smaller, under the title: the artist, the album; empty for none" /></label>
@@ -2360,7 +2378,7 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
           <div class="ar-reg-foot"><button type="button" class="btn ghost small" id="arLetClear">Clear</button><span class="row-hint" id="arLetNote" hidden></span></div>
         </details>
         <!-- HERESY 2332 (Viktor 09.11.2026: «выход из ComfyUI… перенести мои два воркфлоу»): his AIO QWEN IMAGE 2512 HERESY Draft #4, ComfyUI's way -->
-        <details class="ar-sampling ar-comfy" id="arComfy"><summary><span class="label">ComfyUI's way</span> <em id="arComfySay"></em><span class="info" tabindex="-1" role="img" aria-label="About ComfyUI's way" data-tip="Painted as ComfyUI paints it, so the same seed gives the same picture as there: its noise, its schedules, its guidance, his AIO QWEN IMAGE 2512 HERESY Draft #4's nodes (Skimmed CFG, the negative as nothing, words concatenated, the seed variance, a character adapter hooked by keyframes, his text encoder and VAE). Qwen-Image 2512. The two buttons fill the form as his first and second pass"></span></summary>
+        <details class="ar-sampling ar-comfy" id="arComfy"><summary><span class="label">ComfyUI's way</span> <em id="arComfySay"></em><span class="info" role="img" aria-label="About ComfyUI's way" data-tip="Painted as ComfyUI paints it, so the same seed gives the same picture as there: its noise, its schedules, its guidance, his AIO QWEN IMAGE 2512 HERESY Draft #4's nodes (Skimmed CFG, the negative as nothing, words concatenated, the seed variance, a character adapter hooked by keyframes, his text encoder and VAE). Qwen-Image 2512. The two buttons fill the form as his first and second pass"></span></summary>
           <div class="ar-reg-foot"><button type="button" class="btn ghost small" id="arCfP1" data-tip="His AIO #4 first pass: Hyphoria in fp8, 16:9, 12 steps of ER-SDE on Bong tangent, Lightning 0.55 with CFG 4.5 and Skimmed CFG 2.5, the negative as nothing, the seed variance, the character adapter hooked by his keyframes, his encoder and VAE">AIO #4 · first pass</button><button type="button" class="btn ghost small" id="arCfP2" data-tip="His AIO #4 second pass: 60 steps from step 20, no Lightning, Detailz 0.6 and Qwen Enhancer 0.7, the extra noise 1.0 (as his QWEN2_00075 was made; the saved graph has 0.6), the colours put back to the picture's; then on a picture Second pass… ×2">AIO #4 · second pass</button></div>
           <label class="check" data-tip="On: the run is painted ComfyUI's way with the settings below; off: the Artist's own way"><input type="checkbox" id="arCfOn" /> <span>Paint ComfyUI's way</span></label>
           <div class="ar-samp-row">
@@ -2400,7 +2418,7 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
           </div>
         </details>
         <!-- HERESY 2332: his Ultimate Samplers Testing (JasonHoku's grid), one run on a board -->
-        <details class="ar-sampling ar-grid" id="arGrid"><summary><span class="label">Samplers grid</span> <em id="arGridSay"></em><span class="info" tabindex="-1" role="img" aria-label="About the samplers grid" data-tip="His Ultimate Samplers Testing: every sampler ticked × every schedule ticked × the steps × the CFG × the stepped adapter's strengths × the prompts, painted ComfyUI's way in one run (the painter loaded once, each prompt read once), laid out on a board: samplers down, schedules across. 64 pictures at most. The adapters on in the form stay on in every picture"></span></summary>
+        <details class="ar-sampling ar-grid" id="arGrid"><summary><span class="label">Samplers grid</span> <em id="arGridSay"></em><span class="info" role="img" aria-label="About the samplers grid" data-tip="His Ultimate Samplers Testing: every sampler ticked × every schedule ticked × the steps × the CFG × the stepped adapter's strengths × the prompts, painted ComfyUI's way in one run (the painter loaded once, each prompt read once), laid out on a board: samplers down, schedules across. 64 pictures at most. The adapters on in the form stay on in every picture"></span></summary>
           <div class="ar-grid-axis"><span class="label">Samplers</span><div class="ar-grid-chips" id="arGridSamplers"></div></div>
           <div class="ar-grid-axis"><span class="label">Schedules</span><div class="ar-grid-chips" id="arGridSchedules"></div></div>
           <div class="ar-samp-row">
@@ -2473,6 +2491,7 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
         </nav>
 
         <section class="tr-pane" data-pane="raw">
+          <div class="tr-runof"></div>   <!-- HERESY 2960: the run chosen, its page read only; or the new run's bar -->
           <div class="tr-phead"><b>Material</b><span class="row-hint">a folder of songs in <code>datasets/raw/</code>; pick it, choose the tracks, give each its lyrics</span></div>
           <!-- HERESY 2093 (Viktor 05.11.2026: «Давай вообще удалим … Слишком много услужливости. У нас есть гайды по тренеру… Ничего по стартовым датасетам не даём»): no ready sets offered here; one's own songs in datasets/raw/ -->
           <div class="tr-picks" id="trRaw"></div>
@@ -2484,6 +2503,7 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
         </section>
 
         <section class="tr-pane" data-pane="set">
+          <div class="tr-runof"></div>   <!-- HERESY 2960: the run chosen, its page read only; or the new run's bar -->
           <div class="tr-phead"><b>The set</b><span class="row-hint">a caption for every track: the style line, then the lyrics; made into <code>datasets/prepared/</code></span></div>
           <div class="field-row wrap">
             <label class="field"><span class="label">Trigger word <em>calls the style by name later</em></span><input type="text" id="trTrigger" placeholder="fosforida" /></label>
@@ -2496,6 +2516,7 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
         </section>
 
         <section class="tr-pane" data-pane="train">
+          <div class="tr-runof"></div>   <!-- HERESY 2960: the run chosen, its page read only; or the new run's bar -->
           <div class="tr-phead"><b>Train</b><span class="row-hint">a set, a kind of adapter, the knobs; the run takes a card of its own</span></div>
           <div class="tr-sets" id="trSets"></div>
           <div class="tr-bar"><span class="label">Kind</span><span id="trKinds"></span><span class="row-hint" id="trKindSay"></span></div>
@@ -2740,6 +2761,7 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
         <select id="vdClipUp" class="vd-move" aria-label="The upscale" data-tip="How a shot's video comes to the clip's size: by Lanczos, as MiniMax H3 drew it (nothing invented), or SeedVR2's upscale where a shot has one (sharper, and its own faces)"><option value="lanczos">upscale: Lanczos, as H3 drew it</option><option value="seedvr2">upscale: SeedVR2 where made</option></select>   <!-- HERESY 2356 -->
         <button type="button" class="btn ghost small icon-only" id="vdClipDraft" aria-pressed="false" data-tip="The clip at a third of its size, quickly encoded, to see the cut, the passes and the titles in a moment before the full one; a file of its own beside the clip" data-ui="zap" aria-label="Quick draft"></button>   <!-- HERESY 2245 -->
         <button type="button" class="btn ghost small" id="vdClipLook" data-tip="The clip's colour: a look over every picture, a 3D LUT as a colourist lays one, from a breath of it to all of it; the lyrics and the titles stay as they are">LUT</button>   <!-- HERESY 2010; 2443: LUT in every language -->   <!-- HERESY 2592: LUT in the bar's row too (it stood under it, alone) --></div>
+        <div class="vd-voice" id="vdVoice" hidden></div>   <!-- HERESY 2963: the Narrator's voice over the clip -->
         <p class="row-hint vd-films-none">No animatic or clip yet: «Animatic» and «Clip» make them.</p>
         <!-- HERESY 2392: the animatic and the clip play in the left viewer above -->
       </section>
@@ -3169,6 +3191,7 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
 <script src="heresy-weights.js"></script>
 <script src="heresy-gpulive.js"></script>
 <script src="heresy-settings.js"></script>
+<script src="heresy-fields.js"></script>   <!-- HERESY 2957: every field named (its settings key, else where it stands), for the browser's own tools -->
 <script src="heresy-i18n.js"></script>
 <script src="heresy-i18n-ru.js"></script>
 <script src="heresy-i18n-uk.js"></script>

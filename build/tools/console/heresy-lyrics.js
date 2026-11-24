@@ -602,6 +602,11 @@
         });
       });
       tagsl.innerHTML = bands.join("");
+      if (area.dataset.reading) {                     // HERESY 2947: the Narrator's voices beside its paragraphs stand by the same rows
+        var tops = [];
+        for (var j = 0; j < kids.length; j++) tops.push(kids[j].offsetTop);
+        area.dispatchEvent(new CustomEvent("lyr-drawn", { detail: { tops: tops, scroll: st, lh: lh, H: H, W: area.clientWidth, top: area.offsetTop + bt, left: area.offsetLeft + bl } }));
+      }
     }
     function later() { if (!queued) { queued = true; requestAnimationFrame(draw); } }
     function lineAt(pos) { return area.value.slice(0, pos).split("\n").length - 1; }

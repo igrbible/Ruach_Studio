@@ -9,6 +9,10 @@ if curl -sf -m 3 "http://127.0.0.1:$PORT/health" >/dev/null; then
 fi
 cd "$ROOT/lab" || exit 1
 export PYTHONUNBUFFERED=1
+# HERESY 2980 (a tester's debug journal, Windows native 2.1.0-rc1, 23.11.2026: its studio.log and lab.log said «no journal … [WinError 2]» and nothing else): under Pinokio the lab's lines go to tmp/logs/lab.log
+# too (the debug journal reads it where there is no systemd journal); past 4 MB the file goes to lab.1.log at the next start
+LOG="$ROOT/tmp/logs/lab.log"; mkdir -p "$ROOT/tmp/logs"
+[ "$(wc -c < "$LOG" 2>/dev/null || echo 0)" -gt 4000000 ] && mv -f "$LOG" "$ROOT/tmp/logs/lab.1.log"
 export RUACH_LAUNCHER=pinokio   # HERESY 1362: the page's updater sends the user to Pinokio's own Update
-"$ROOT/.venv/bin/python" "$ROOT/lab/lab.py"
-echo "ruach start stopped: the lab ended (exit $?); its last lines are above"
+"$ROOT/.venv/bin/python" "$ROOT/lab/lab.py" 2>&1 | tee -a "$LOG"
+echo "ruach start stopped: the lab ended (exit ${PIPESTATUS[0]}); its last lines are above"

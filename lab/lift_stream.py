@@ -12,6 +12,8 @@ import threading
 
 import numpy as np
 
+import winx   # HERESY 2934: nice where the system has it
+
 FS = 8388607                                  # full scale in 24 bits, the old engine's clamp(±1) × 8388607
 CAP = 8 << 20                                  # bytes in one answer at most: about 29 s of a 48 kHz stereo take
 GAIN_MAX = 16.0                                # +24 dB: past any +dB (6 at most) and the volume past 100 % (1.5) together
@@ -100,7 +102,7 @@ def opus(path, g):
             for f0 in range(0, frames, 1 << 20):
                 raw = f.read(min(1 << 20, frames - f0) * fb_in)
                 pcm += lifted(samples(raw[:len(raw) - len(raw) % fb_in], code, bits), g)
-        p = subprocess.run(["nice", "-n", "10", "ffmpeg", "-v", "error", "-f", "s24le", "-ar", str(rate), "-ac", str(ch), "-i", "-",
+        p = subprocess.run(winx.nice(10) + ["ffmpeg", "-v", "error", "-f", "s24le", "-ar", str(rate), "-ac", str(ch), "-i", "-",
                             "-c:a", "libopus", "-b:a", "128k", "-vbr", "on", "-application", "audio", "-f", "ogg", "-"],
                            input=bytes(pcm), capture_output=True, timeout=600)
         if p.returncode != 0 or not p.stdout:
