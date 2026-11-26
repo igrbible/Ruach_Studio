@@ -16,6 +16,7 @@ native Windows Studio (and any machine without bash). Linux keeps start.sh; this
 Extra arguments go to yue-server (for example --keep-loaded).
 """
 import json
+import time
 import os
 import shutil
 import socket
@@ -110,7 +111,11 @@ def listen_host(env):
             return "0.0.0.0"                       # no decision yet: private networks, as the engine answers them
         try:
             p.parent.mkdir(parents=True, exist_ok=True)
-            p.write_text(json.dumps({"mode": "local", "nets": []}, indent=1) + "\n", encoding="utf-8")
+            # HERESY 3014 (Viktor 25.11.2026, of the window «Who may open this Studio?» in his Windows VM: «Ты же сам предложил залочить
+            # виндозную сборку под локалхост онли»; his 21.11: «Для Windows по умолчанию только этот компьютер… Тогда запроса нет»): the first
+            # start's decision is written as made, so the page never asks; Engine → Security still changes it
+            p.write_text(json.dumps({"mode": "local", "nets": [], "acknowledged": time.strftime("%Y-%m-%d %H:%M")}, indent=1) + "\n",
+                         encoding="utf-8")
             say("  access       this computer only, written to user/access.json (a first start here: no firewall question); "
                 "Engine → Security opens it to your network")
         except OSError as e:

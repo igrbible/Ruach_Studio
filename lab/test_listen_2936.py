@@ -42,6 +42,8 @@ try:
     start.NT = True
     check(start.listen_host(env) == "127.0.0.1" and json.loads(acc.read_text())["mode"] == "local" and any("this computer only" in s for s in said),
           "Windows, a first start: this computer alone, «this computer only» written to user/access.json and said; no firewall question")
+    check(bool(json.loads(acc.read_text()).get("acknowledged")),
+          "HERESY 3014: the first start's «this computer only» is written as decided, so the page asks nothing")
     acc.write_text(json.dumps({"mode": "private", "nets": [], "acknowledged": "2026-11-21 20:00"}))
     check(start.listen_host(env) == "0.0.0.0", "Windows, private networks chosen: every address (the firewall asks once, from that start)")
     acc.write_text(json.dumps({"mode": "list", "nets": ["10.99.0.0/24"]}))
