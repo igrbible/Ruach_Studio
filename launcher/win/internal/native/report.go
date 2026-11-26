@@ -143,13 +143,29 @@ func (s *Studio) toolRow(l Layout, t BundledTool) string {
 		st, _ := os.Stat(found[0])
 		said = fmt.Sprintf("%.1f MB (not started for the report: it has no version to say)", float64(st.Size())/(1<<20))
 	} else {
-		out, err := s.P.Output(15*time.Second, found[0], t.Args...)
-		switch said = firstLine(out); {
-		case said != "":
-		case err != nil:
-			said = "does not start: " + err.Error()
-		default:
-			said = "says nothing of its version"
+		// HERESY 3015: each copy asked in turn until one says its version: engine\cuda's needs the driver's nvcuda.dll, so on a computer with
+		// no NVIDIA driver it cannot start (0xc0000135) while engine\cpu's, the one the Studio runs there, answers; rc3's first Windows run's
+		// report said «does not start» of a llama-server that ran. The copies that did not answer are said beside the one that did
+		var failed []string
+		for i, p := range found {
+			out, err := s.P.Output(15*time.Second, p, t.Args...)
+			if line := firstLine(out); line != "" {
+				said = line
+				if i > 0 {
+					said += " (" + where[i] + "; " + strings.Join(failed, "; ") + ")"
+				}
+				break
+			}
+			why := "says nothing of its version"
+			if err != nil {
+				why = "does not start: " + err.Error()
+			}
+			failed = append(failed, where[i]+" "+why)
+		}
+		if said == "" && len(found) == 1 {
+			said = strings.TrimPrefix(failed[0], where[0]+" ")
+		} else if said == "" {
+			said = strings.Join(failed, "; ")
 		}
 	}
 	return strings.Join(where, " + ") + " · " + said
