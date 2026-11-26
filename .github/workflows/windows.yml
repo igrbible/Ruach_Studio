@@ -20,6 +20,10 @@ on:
         description: "Package the Windows engines of this earlier run (its id) instead of building them; empty builds them here (the Mac engine is built anyway)"
         required: false
         default: ""
+      natives:
+        description: "HERESY 3015: with engines_from, build the natives (llama.cpp, audio.cpp, muscriptor) here anyway (true) instead of taking the earlier run's (false)"
+        required: false
+        default: "false"
       soak:
         description: "HERESY 3013: soak the package on GitHub's Windows (install, every GET route, a song on the processor, the light parts one at a time); false leaves it out"
         required: false
@@ -241,7 +245,7 @@ jobs:
     # ruach-muscriptor link it in, llama.cpp's two get it merged by mt.exe, and each is checked here and again in the package. A leg that
     # fails is said in the run; the package is made without it, and its room says so on Windows.
     name: Natives · windows-x64 · ${{ matrix.what }} · ${{ matrix.kind }}
-    if: ${{ !inputs.engines_from }}
+    if: ${{ !inputs.engines_from || inputs.natives == 'true' }}
     runs-on: windows-2022
     timeout-minutes: 300
     strategy:
@@ -274,9 +278,12 @@ jobs:
         if: ${{ matrix.what == 'llama' }}
         shell: pwsh
         run: |
-          $gpu = if ("${{ matrix.kind }}" -eq "cuda12") { @("-T", "cuda=$env:CUDA_PATH", "-DGGML_CUDA=ON") } else { @("-DGGML_CUDA=OFF") }
+          # HERESY 3015 (rc3's first Windows run): @(...) around the if, or its one-element array comes back a bare string and @gpu splats it
+          # letter by letter ("Unknown argument -"); LLAMA_USE_PREBUILT_UI=OFF, as the Studio never opens llama-server's own web page: at this pin
+          # its build fetched the page from a Hugging Face bucket ("b1" is not there, "latest" is a newer page its check refuses: MSB8066)
+          $gpu = @(if ("${{ matrix.kind }}" -eq "cuda12") { "-T", "cuda=$env:CUDA_PATH", "-DGGML_CUDA=ON" } else { "-DGGML_CUDA=OFF" })
           cmake -S llama.cpp -B llama.cpp/build -G "Visual Studio 17 2022" -A x64 -DBUILD_SHARED_LIBS=OFF -DLLAMA_OPENSSL=OFF -DLLAMA_BUILD_TESTS=OFF `
-            -DLLAMA_BUILD_EXAMPLES=OFF -DGGML_NATIVE=OFF -DGGML_AVX2=ON -DGGML_FMA=ON -DGGML_F16C=ON @gpu
+            -DLLAMA_BUILD_EXAMPLES=OFF -DLLAMA_USE_PREBUILT_UI=OFF -DLLAMA_BUILD_UI=OFF -DGGML_NATIVE=OFF -DGGML_AVX2=ON -DGGML_FMA=ON -DGGML_F16C=ON @gpu
           if ($LASTEXITCODE) { throw "llama.cpp did not configure" }
           cmake --build llama.cpp/build --config Release -j $env:NUMBER_OF_PROCESSORS --target llama-server llama-mtmd-cli -- /v:minimal
           if ($LASTEXITCODE) { throw "llama.cpp did not build" }
@@ -378,14 +385,15 @@ jobs:
           name: ruach-page
           path: page
       - uses: actions/download-artifact@v8
-        if: ${{ !inputs.engines_from }}
+        if: ${{ !inputs.engines_from || inputs.natives == 'true' }}
         with:
           pattern: ruach-engine-windows-x64-*
           path: engines
       - uses: actions/download-artifact@v8
         if: ${{ inputs.engines_from }}
         with:
-          pattern: ruach-engine-windows-x64-*
+          # HERESY 3015: with natives=true the earlier run gives its two engines alone (-cpu, -cuda12), the natives come from this run
+          pattern: ${{ inputs.natives == 'true' && 'ruach-engine-windows-x64-c*' || 'ruach-engine-windows-x64-*' }}
           path: engines
           run-id: ${{ inputs.engines_from }}
           github-token: ${{ github.token }}
@@ -582,7 +590,12 @@ jobs:
           }
           $swept = 0                                       # HERESY 2937: every GET route of the packaged lab once
           if ($ok) { python "$R\tools\lab-sweep.py" http://127.0.0.1:41870 --out lab-sweep-package.txt; $swept = $LASTEXITCODE }
-          if (-not $p.HasExited) { Stop-Process -Id $p.Id -Force }
+          # HERESY 3015 (rc3's first Windows run): the lab started here by hand, outside RuachStudio.exe's job object, is ended with its tree: its
+          # https door (lab/https_door.py starts tls_door.py, its folder the package) outlived Stop-Process, answered for the launcher's lab in
+          # the next step and held the package, so 2998's move below was refused ("being used by another process")
+          if (-not $p.HasExited) { taskkill /PID $p.Id /T /F | Out-Null }
+          Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -and $_.CommandLine.Contains($R) } | ForEach-Object { "ending what this step's lab left: $($_.Name) ($($_.ProcessId)) $($_.CommandLine)"; Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+          $global:LASTEXITCODE = 0
           "---- the lab's log (last 30 lines)"
           Get-Content lab-err.txt -Tail 30
           if (-not $ok) { throw "the packaged lab did not answer on Windows" }
@@ -629,7 +642,12 @@ jobs:
           $song = -join ([char[]](0x041C, 0x043E, 0x0439, 0x0020, 0x0442, 0x0440, 0x0435, 0x043A, 0x0020, 0x0031))
           $K = Join-Path $env:RUNNER_TEMP "Ruach Studio $test\$who\RuachStudio"
           New-Item -ItemType Directory -Force (Split-Path $K) | Out-Null
-          Move-Item (Resolve-Path unpacked\RuachStudio).Path $K
+          $R = (Resolve-Path unpacked\RuachStudio).Path
+          # HERESY 3015: after RuachStudio.exe's stop nothing of the package runs on (its job object ends the lab, the engine and what they started);
+          # anything left would hold the folder against a person moving or deleting it, so it is named here, never ended quietly
+          $left = @(Get-CimInstance Win32_Process | Where-Object { ($_.CommandLine -and $_.CommandLine.Contains($R)) -or ($_.ExecutablePath -and $_.ExecutablePath.StartsWith($R, [StringComparison]::OrdinalIgnoreCase)) })
+          if ($left) { $left | ForEach-Object { "still running from the package: $($_.Name) ($($_.ProcessId), parent $($_.ParentProcessId)) $($_.CommandLine)" }; throw "the package is held by $($left.Count) process(es) left after the launcher's stop (above)" }
+          Move-Item $R $K
           "the Studio now in $K"
           $now = Join-Path $env:RUNNER_TEMP "now2.manifest"; $bad = @()
           foreach ($x in @(Get-Item -LiteralPath "$K\RuachStudio.exe") + @(Get-ChildItem -LiteralPath "$K\engine" -Recurse -Filter *.exe)) {
@@ -667,7 +685,8 @@ jobs:
             }
             "inspect: " + $got.Substring(0, [Math]::Min(300, $got.Length))
           }
-          if (-not $p.HasExited) { Stop-Process -Id $p.Id -Force }
+          if (-not $p.HasExited) { taskkill /PID $p.Id /T /F | Out-Null }   # HERESY 3015: with its https door
+          $global:LASTEXITCODE = 0
           "---- the lab's log (last 30 lines)"
           Get-Content lab-cy-err.txt -Tail 30
           if (-not $ok) { throw "the lab in $K did not answer without PYTHONUTF8" }
@@ -784,15 +803,19 @@ jobs:
             Write-Host ("{0}: {1} after {2:N0} s" -f $Tag, $a.Code, ((Get-Date) - $t0).TotalSeconds)
             return $a
           }
-          function LabJob([string]$Prefix, [int]$Minutes) {
-            # a lab job by its key in /health (the upscale answers 202 at once and runs on)
-            $t0 = Get-Date; $state = ""
+          function LabJob([string]$Prefix, [int]$Minutes, [string]$DoneFile) {
+            # a lab job by its key in /health (the upscale answers 202 at once and runs on). HERESY 3015: a job that ends well leaves /health
+            # (lab.py pops its key; a failed one stays, "failed"), so its key gone, or never seen, is read by the file it writes last: there, done;
+            # not there, gone without it. rc3's first soak waited 40 min on an upscale done after 17, its last seen "running" kept as its state
+            $t0 = Get-Date; $state = ""; $seen = $false
             while (((Get-Date) - $t0).TotalMinutes -lt $Minutes) {
               Start-Sleep 10
               $h = Ask "$Lab/health"
               if ($h.Code -ne 200) { continue }
               $hit = ($h.Text | ConvertFrom-Json).jobs.PSObject.Properties | Where-Object { $_.Name -like "$Prefix*" } | Select-Object -First 1
-              if ($hit) { $state = [string]$hit.Value }
+              if ($hit) { $state = [string]$hit.Value; $seen = $true }
+              elseif (Test-Path -LiteralPath $DoneFile) { $state = "done"; break }
+              elseif ($seen) { $state = "gone from /health without $DoneFile"; break }
               if ($state -in "done", "failed", "error", "cancelled") { break }
             }
             Write-Host ("{0}: {1} after {2:N0} s" -f $Prefix, $state, ((Get-Date) - $t0).TotalSeconds)
@@ -919,7 +942,14 @@ jobs:
                     & (Join-Path $Root "runtime\ffmpeg\ffmpeg.exe") -v error -y -i $audio -c:a flac (Join-Path $set "other.flac")
                   }
                   $out = Join-Path $env:RUNNER_TEMP "nam-out"; New-Item -ItemType Directory -Force $out | Out-Null
-                  $params = Join-Path $env:RUNNER_TEMP "nam-params.json"; [IO.File]::WriteAllText($params, "{}", [Text.UTF8Encoding]::new($false))
+                  # HERESY 3015: the step plays a stem through the capture chosen (the page always sends one; without it nam.py says "choose a
+                  # capture first", rc3's first soak): the first of the Studio's guitar captures Engine -> Models just brought, as GET /nam/captures lists them
+                  $caps = Ask "$Lab/nam/captures"
+                  $capId = ""
+                  if ($caps.Code -eq 200) { $capId = [string](@(($caps.Text | ConvertFrom-Json).groups | Sort-Object { $_.id -ne "guitar" } | ForEach-Object { $_.captures }) | Select-Object -First 1).id }
+                  if (-not $capId) { $why = "GET /nam/captures: $($caps.Code), no capture to play through: $($caps.Text)"; break }
+                  "the capture: $capId"
+                  $params = Join-Path $env:RUNNER_TEMP "nam-params.json"; [IO.File]::WriteAllText($params, (@{ capture = $capId } | ConvertTo-Json -Compress), [Text.UTF8Encoding]::new($false))
                   & $Py (Join-Path $Root "lab\builtin_steps\ruach\nam.py") $set $out $params 2>&1 | Tee-Object -FilePath "$Logs\nam.txt"
                   $rc = $LASTEXITCODE; $global:LASTEXITCODE = 0
                   if ($rc -or -not (Test-Path -LiteralPath (Join-Path $out "nam.flac"))) { $why = "the Amp (NAM) step: exit $rc (nam.txt)" }
@@ -929,7 +959,7 @@ jobs:
                   $u.Text | Out-File -Encoding utf8 "$Logs\upscale-asked.json"
                   $uid = if ($u.Code -eq 202) { ($u.Text | ConvertFrom-Json).id } else { "" }
                   if (-not $uid) { $why = "GET /upscale: $($u.Code) $($u.Text)"; break }
-                  $state = LabJob "upscale:ci-soak-10s:$uid" 40
+                  $state = LabJob "upscale:ci-soak-10s:$uid" 40 (Join-Path $Root "outputs\ci-soak-10s\derived\$uid\manifest.json")
                   if ($state -ne "done") { $why = "the upscale of 10 s: $state" }
                 }
               }

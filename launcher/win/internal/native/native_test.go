@@ -115,7 +115,11 @@ func (f *fakePlat) Output(_ time.Duration, exe string, args ...string) (string, 
 		return "Python 3.12.10\n", nil
 	case strings.HasSuffix(exe, "ffmpeg.exe") && strings.Join(args, " ") == "-hide_banner -version":
 		return "ffmpeg version 9.0.2-essentials_build-www.gyan.dev Copyright (c) 2000-2026 the FFmpeg developers\nbuilt with gcc 15.2.0\n", nil
+	case strings.HasSuffix(exe, "llama-server.exe") && strings.Join(args, " ") == "--version" && strings.Contains(exe, "cuda"):
+		return "", errors.New("exit status 0xc0000135") // HERESY 3015: engine\cuda's without the driver's nvcuda.dll
 	case strings.HasSuffix(exe, "llama-server.exe") && strings.Join(args, " ") == "--version":
+		return "version: 1 (fb4b273)\nbuilt with MSVC 19.44.35230.0 for x64\n", nil
+	case strings.HasSuffix(exe, "llama-mtmd-cli.exe") && strings.Join(args, " ") == "--version":
 		return "", errors.New("exit status 0xc0000135")
 	case strings.HasSuffix(exe, "audiocpp_server.exe") || strings.HasSuffix(exe, "ruach-muscriptor.exe"):
 		panic("a server or a usage-only tool started for the report: " + exe)
@@ -543,12 +547,20 @@ func TestReportToolRows(t *testing.T) {
 	put("engine", "cuda", "audiocpp_server.exe")
 	put("engine", "cpu", "ruach-muscriptor.exe")
 	r := s.Summary(context.Background())
+	l2 := studio(t, newFake(), &fakeUI{}, false)
+	for _, k := range []string{"cuda", "cpu"} {
+		full := filepath.Join(l2.Cfg.Layout.Root, "engine", k, "llama-mtmd-cli.exe")
+		_ = os.MkdirAll(filepath.Dir(full), 0o755)
+		_ = os.WriteFile(full, []byte("x"), 0o644)
+	}
+	r2 := l2.Summary(context.Background())
 	sep := string(filepath.Separator)
 	for _, want := range []string{
 		"ffmpeg       runtime" + sep + "ffmpeg" + sep + "ffmpeg.exe · ffmpeg version 9.0.2-essentials_build-www.gyan.dev Copyright (c) 2000-2026 the FFmpeg developers\n",
 		"ffprobe      not in runtime\\ffmpeg: Engine → Models → Windows programs brings it\n",
 		"fluidsynth   not in runtime\\fluidsynth: Engine → Models → Windows programs brings it\n",
-		"llama-server engine" + sep + "cuda" + sep + "llama-server.exe + engine" + sep + "cpu" + sep + "llama-server.exe · does not start: exit status 0xc0000135\n",
+		// HERESY 3015: engine\cuda's cannot start without the NVIDIA driver, engine\cpu's answers, and both are said
+		"llama-server engine" + sep + "cuda" + sep + "llama-server.exe + engine" + sep + "cpu" + sep + "llama-server.exe · version: 1 (fb4b273) (engine" + sep + "cpu" + sep + "llama-server.exe; engine" + sep + "cuda" + sep + "llama-server.exe does not start: exit status 0xc0000135)\n",
 		"llama-mtmd-cli not in engine\\cuda or engine\\cpu: the Windows package brings it\n",
 		"ruach-muscriptor engine" + sep + "cpu" + sep + "ruach-muscriptor.exe · 3.0 MB (not started for the report: it has no version to say)\n",
 		"audiocpp_server engine" + sep + "cuda" + sep + "audiocpp_server.exe · 3.0 MB (not started for the report: it has no version to say)\n",
@@ -556,6 +568,10 @@ func TestReportToolRows(t *testing.T) {
 		if !strings.Contains(r, want) {
 			t.Errorf("the report lacks %q:\n%s", want, r)
 		}
+	}
+	// no copy answers: each one's why, never an empty row
+	if want := "llama-mtmd-cli engine" + sep + "cuda" + sep + "llama-mtmd-cli.exe + engine" + sep + "cpu" + sep + "llama-mtmd-cli.exe · engine" + sep + "cuda" + sep + "llama-mtmd-cli.exe does not start: exit status 0xc0000135; engine" + sep + "cpu" + sep + "llama-mtmd-cli.exe does not start: exit status 0xc0000135\n"; !strings.Contains(r2, want) {
+		t.Errorf("the report lacks %q:\n%s", want, r2)
 	}
 	if len(BundledTools) != 7 {
 		t.Errorf("%d tools: ffmpeg, ffprobe, fluidsynth (2989), llama-server, llama-mtmd-cli, ruach-muscriptor, audiocpp_server (2992)", len(BundledTools))
