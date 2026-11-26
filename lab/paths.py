@@ -39,6 +39,7 @@ REFINER_UPBUNDLE = "models/refiner/upscale/upbundle"
 REFINER_MIDI = "models/refiner/midi"                     # MuScriptor
 REFINER_INSTRUMENTS = "models/refiner/instruments"       # the sound banks, Pianoteq and its kin
 REFINER_AMBIENT = "models/refiner/ambient"               # nature under a song
+REFINER_NAM = "models/refiner/nam"                       # the Amp (NAM) step's captures (HERESY 2987), Engine → Models' part «nam» (2994)
 ARTIST = "models/artist"                                 # the painters, their prompt writer, LoRAs, upscalers, the filter
 ARTIST_LORAS = "models/artist/loras"
 ARTIST_UPSCALERS = "models/artist/upscalers"
@@ -70,6 +71,7 @@ MAP = (
     (r"^models/RS-(FW|TW)-([^/]+)/(.+)$", r"models/engine/finetunes/RS-\1-\2/\3"),
     (r"^models/(YuE2-VAE-RS/.+)$", r"models/engine/vae/\1"),
     (r"^VAE-RS/(YuE2-VAE-RS[^/]*\.gguf)$", r"models/engine/vae/\1"),   # a repo path, not 2.0.6's: our decoders in goldhub/YuE2-RS-Finetunes (11.11)
+    (r"^nam/(.+)$", r"models/refiner/nam/\1"),   # a repo path, not 2.0.6's: the Amp (NAM) captures in goldhub/Ruach_Studio_Models_v2 under nam/ (HERESY 2994)
     (r"^models/(eagle3/.+)$", r"models/engine/helpers/\1"),
     (r"^models/(muscriptor/.+)$", r"models/refiner/midi/\1"),
     (r"^models/upbundle/(.+)$", r"models/refiner/upscale/upbundle/\1"),

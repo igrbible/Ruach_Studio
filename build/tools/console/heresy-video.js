@@ -231,9 +231,8 @@
     var author = $("vdAuthor") ? $("vdAuthor").value : (p.author || ""), verse = $("vdVerse") ? $("vdVerse").value : (p.verse || "");   // HERESY 2246
     var hw = $("vdHeroWords") ? $("vdHeroWords").value : ((p.hero && p.hero.words) || "");   // HERESY 2356: the hero's words, his skin, the places
     var hh = state.heroHuman !== undefined ? state.heroHuman : (p.hero && typeof p.hero.human === "boolean" ? p.hero.human : null);
-    var hl = state.heroLast !== undefined ? state.heroLast : !!(p.hero && p.hero.last);   // HERESY 2361: the hero's picture as his shots' last frame
     return { look: look, scenes: scenes, moves: moves, brief: brief, heroes: heroes, clip_title: clipTitle, credits: credits, intos: intos, author: author, verse: verse,
-             places: placesOf(p), hero_words: String(hw || "").replace(/\s+/g, " ").trim(), hero_human: hh, hero_last: hl };
+             places: placesOf(p), hero_words: String(hw || "").replace(/\s+/g, " ").trim(), hero_human: hh };
   }
   function save() {
     var p = state.plan;
@@ -241,8 +240,8 @@
     var c = collect();
     var body = { name: p.name, look: c.look, scenes: c.scenes, moves: c.moves, brief: c.brief, heroes: c.heroes, clip_title: c.clip_title, credits: c.credits, intos: c.intos, author: c.author, verse: c.verse, places: c.places };
     if (state.fontDirty) { body.font_titles = p.font_titles || ""; body.font_lyrics = p.font_lyrics || ""; state.fontDirty = false; }   // HERESY 2394: sent when chosen (a lab before it keeps the rest)
-    if (p.hero) { body.hero_words = c.hero_words; body.hero_human = c.hero_human; body.hero_last = c.hero_last; }   // HERESY 2356; 2361
-    return api("/video/save", body).then(function (q) { state.plan = q; state.dirty = false; state.heroHuman = undefined; state.heroLast = undefined; paint(); say(tr("kept")); })
+    if (p.hero) { body.hero_words = c.hero_words; body.hero_human = c.hero_human; }   // HERESY 2356 (2361's hero_last removed by 2995)
+    return api("/video/save", body).then(function (q) { state.plan = q; state.dirty = false; state.heroHuman = undefined; paint(); say(tr("kept")); })
       .catch(function (e) { say(e.message, true); });
   }
 
@@ -1997,8 +1996,6 @@
     box.dataset.hero = key;
     var human = state.heroHuman !== undefined ? state.heroHuman : (typeof h.human === "boolean" ? h.human : !NOT_SKIN.test(ta.value));
     if (sk) sk.setAttribute("aria-pressed", human ? "true" : "false");
-    var hl = $("vdHeroLast");                             // HERESY 2361
-    if (hl) hl.setAttribute("aria-pressed", (state.heroLast !== undefined ? state.heroLast : !!h.last) ? "true" : "false");
   }
   function heroPaint() {
     var el = $("vdHero"), h = state.plan && state.plan.hero;
@@ -2252,8 +2249,6 @@
       if (ho) { heroOff(); return; }
       var hs = e.target.closest("[data-vdheroskin]");      // HERESY 2356: the hero's skin, his to say
       if (hs) { state.heroHuman = hs.getAttribute("aria-pressed") !== "true"; hs.setAttribute("aria-pressed", state.heroHuman ? "true" : "false"); state.dirty = true; $("vdSave").disabled = state.busy; return; }
-      var hlb = e.target.closest("[data-vdherolast]");     // HERESY 2361: the hero's picture as his shots' last frame
-      if (hlb) { state.heroLast = hlb.getAttribute("aria-pressed") !== "true"; hlb.setAttribute("aria-pressed", state.heroLast ? "true" : "false"); state.dirty = true; $("vdSave").disabled = state.busy; return; }
       if (ht) { heroFlip(+ht.dataset.vdherotg, ht); return; }
       var shb = e.target.closest("[data-vdshoot]");          // HERESY 1868
       if (shb) { shootMenu(+shb.dataset.vdshoot, shb); return; }

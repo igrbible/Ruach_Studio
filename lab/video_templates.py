@@ -22,7 +22,7 @@ def _node():
     if not n:
         return None, "no Node.js (22 or newer) on this machine"
     try:
-        v = subprocess.run([n, "--version"], capture_output=True, text=True, timeout=20).stdout.strip()
+        v = subprocess.run([n, "--version"], capture_output=True, text=True, timeout=20, encoding="utf-8", errors="replace").stdout.strip()
         major = int(v.lstrip("v").split(".")[0])
     except (OSError, ValueError, subprocess.SubprocessError):
         return None, "Node.js does not answer"
@@ -73,7 +73,7 @@ def render(name, variables, out, font=None, chrome=None, workers=2, timeout=900)
         part = Path(str(out) + ".part.mov")
         p = subprocess.run(nice + [node, str(entry), "render", str(proj), "--format", "mov", "--workers", str(workers), "--no-browser-gpu", "--quiet",
                                    "--variables", json.dumps(variables, ensure_ascii=False), "-o", str(part)],
-                           cwd=tmp, env=env, capture_output=True, text=True, timeout=timeout)
+                           cwd=tmp, env=env, capture_output=True, text=True, timeout=timeout, encoding="utf-8", errors="replace")
         if p.returncode != 0 or not part.is_file():
             part.unlink(missing_ok=True)
             raise RuntimeError("HyperFrames: " + ((p.stderr or p.stdout).strip()[-400:] or "no output"))
@@ -88,7 +88,7 @@ def overlay(video, layer, out, at=0.0, threads="4"):
     p = subprocess.run(nice + ["ffmpeg", "-v", "error", "-y", "-i", str(video), "-itsoffset", f"{float(at):.3f}", "-i", str(layer), "-filter_complex",
                                "[0:v][1:v]overlay=0:0:format=auto:eof_action=pass,format=yuv420p[v]", "-map", "[v]", "-map", "0:a?", "-c:v", "libx264",
                                "-preset", "veryfast", "-crf", "20", "-c:a", "copy", "-threads", threads, "-movflags", "+faststart", str(part)],
-                       capture_output=True, text=True, timeout=3600)
+                       capture_output=True, text=True, timeout=3600, encoding="utf-8", errors="replace")
     if p.returncode != 0 or not part.is_file():
         part.unlink(missing_ok=True)
         raise RuntimeError("ffmpeg, the overlay: " + (p.stderr.strip()[-300:] or "no output"))

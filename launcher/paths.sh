@@ -21,6 +21,7 @@ RS_REFINER_UPBUNDLE="$ROOT/models/refiner/upscale/upbundle"
 RS_REFINER_MIDI="$ROOT/models/refiner/midi"
 RS_REFINER_INSTRUMENTS="$ROOT/models/refiner/instruments"
 RS_REFINER_AMBIENT="$ROOT/models/refiner/ambient"
+RS_REFINER_NAM="$ROOT/models/refiner/nam"
 RS_ARTIST="$ROOT/models/artist"
 RS_ARTIST_LORAS="$ROOT/models/artist/loras"
 RS_ARTIST_UPSCALERS="$ROOT/models/artist/upscalers"
@@ -46,6 +47,7 @@ RS_MAP_OLD=(
   '^models/RS-(FW|TW)-([^/]+)/(.+)$'
   '^models/(YuE2-VAE-RS/.+)$'
   '^VAE-RS/(YuE2-VAE-RS[^/]*\.gguf)$'
+  '^nam/(.+)$'
   '^models/(eagle3/.+)$'
   '^models/(muscriptor/.+)$'
   '^models/upbundle/(.+)$'
@@ -81,6 +83,7 @@ RS_MAP_NEW=(
   'models/engine/finetunes/RS-\1-\2/\3'
   'models/engine/vae/\1'
   'models/engine/vae/\1'
+  'models/refiner/nam/\1'
   'models/engine/helpers/\1'
   'models/refiner/midi/\1'
   'models/refiner/upscale/upbundle/\1'

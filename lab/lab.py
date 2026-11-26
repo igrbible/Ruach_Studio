@@ -138,6 +138,8 @@ on Forge, next to it (Viktor 30.09.2026: «Считай всё на Големе
   /gloss and /spectrum take &source=derived/… to work on a derived file instead of the take
   GET /plugins · POST /plugin/run {name, source, plugin, step, params}   HERESY 1460: the Refiner's steps of one's own from
                                    user/plugins/*/plugin.json (plugins.py), each a branch of kind "plugin" in derived/
+  GET /nam/captures   HERESY 2987: the captures the Refiner's Amp (NAM) plays a stem through, grouped by kind, the user's own from user/nam/
+  POST /nam/capture-add?name=   HERESY 3012: a .nam of the user's own (its bytes the body), read as the step plays it, kept in user/nam/
   GET /plugins/page?plugin=ID · GET|POST /plugins/call?plugin=ID&path=…   HERESY 2261: a plugin's own panel for the page and the script
                                    that answers it (plugins.py: "page", "calls")
   GET /daw/set?name=&set=derived/stems-…   HERESY 1470: the Refiner's DAW: a set's strips, their versions, the rest (daw.py)
@@ -146,6 +148,7 @@ on Forge, next to it (Viktor 30.09.2026: «Считай всё на Големе
   GET /daw/loudness?name=&set=   HERESY 1755: the set's source a 100 ms block as the DAW's loudness meter reads it, and its integrated loudness
                                  (the reference, matched to the mix; /daw/chunk with strip=source plays it)
   GET /peaks?name=&path=[&n=400]   any sound of the take's tree as its wave (HERESY 1487: the tree's players)
+  GET /take/peaks?name=   HERESY 2997: the take's peaks.json with each channel's peaks (the players' stereo wave), kept there
   GET /take/wave?name=[&n=1200]   HERESY 2022: the take's own wave for the family tree, with the level the old Peak clip would have cut at
   GET /take/bands?name=[&n=600]   HERESY 2044: the take's energy under 250 Hz, to 4 kHz and over, a stretch, for the compare window's colours
                                   and what stood over it (peakedge.py: cut, over, places, flat, hot, flats)
@@ -184,10 +187,33 @@ WHISPER_MISSING = "Whisper large-v3 is not in this Studio yet: Engine → Models
 def need_whisper():
     if not WHISPER_DIR.is_dir():
         raise RuntimeError(WHISPER_MISSING)
+
+
+# HERESY 2986 (the check of 2984, 25.11.2026: Stems pressed before Engine → Models let audio-separator fetch ep317 and htdemucs_ft itself, at
+# no pin, on a line that cuts files short: a tester's first path): a split whose models are not whole here is refused at once, in 2955's way
+STEMS_MISSING = "The stems' models are not whole in this Studio yet: Engine → Models and LoRAs fetches them (1.0 GB)"
+STEMS_SPLIT = paths.at(paths.REFINER_SEPARATION, KIT)
+EP317 = [("roformer", "model_bs_roformer_ep_317_sdr_12.9755.ckpt", 639331213), ("roformer", "model_bs_roformer_ep_317_sdr_12.9755.yaml", 0)]
+HTDEMUCS = [("demucs", "htdemucs_ft.yaml", 0)] + [("demucs", s + ".th", 84141271)
+                                               for s in ("f7e0c4bc-ba3fe64a", "d12395a8-e57c48e6", "92cfc3b6-ef3bcb9c", "04573f0d-f3cf25b2")]
+
+
+def need_stems(mode):
+    """the models a split in MODE reads (stems_job.py's: ep317 for each mode, htdemucs_ft for four), each here at its whole size (0: any)"""
+    rooms = {"roformer": Path(os.environ.get("LAB_ROFORMER_DIR") or STEMS_SPLIT / "roformer"),
+             "demucs": Path(os.environ.get("LAB_DEMUCS_DIR") or STEMS_SPLIT / "demucs")}
+    for room, name, size in EP317 + (HTDEMUCS if mode == "four" else []):
+        try:
+            got = (rooms[room] / name).stat().st_size
+        except OSError:
+            got = -1
+        if (got != size) if size else (got <= 0):
+            raise RuntimeError(STEMS_MISSING)
 # HERESY 1021: everything inside the Kit (Viktor: «Ничего не привязываем к извне»). The lab's own
 # venv has torch, audio-separator, faster-whisper and numpy; cuDNN 9 and cuBLAS come with torch.
 import winx  # noqa: E402   HERESY 2934: the environment's Python as this system keeps it (read here, before the imports below)
 winx.utf8_console()   # HERESY 2935: its console (RuachStudio.cmd's window) and its output in UTF-8, before it says anything
+winx.runtime_path(HERE.parent)   # HERESY 2989: the Windows package's programs (runtime/ffmpeg, runtime/fluidsynth) first on PATH, for every job too
 LAB_PY = Path(os.environ.get("LAB_PY") or winx.venv_python(HERE.parent))   # HERESY 1080: the Studio's one environment; 2934: Scripts\python.exe on Windows
 WHISPER_PY = Path(os.environ.get("LAB_WHISPER_PY", LAB_PY))
 NV = Path(os.environ.get("LAB_NVIDIA_LIBS", HERE.parent / ".venv/lib/python3.12/site-packages/nvidia"))
@@ -244,6 +270,7 @@ import h3_shots  # noqa: E402   HERESY 1868: the Videographer's shots made alive
 import vram  # noqa: E402   HERESY 2899: everything the Studio holds in a card's memory, in any room, listed and let go from the bar
 import frames_job  # noqa: E402   HERESY 1913: the Artist draws a plan's shots
 import upscale_shots  # noqa: E402   HERESY 1876b: and made larger by SeedVR2
+import vg_night  # noqa: E402   HERESY 2982: a clip's whole render as one order, tonight or now
 import file_tags  # noqa: E402   HERESY 1635: the song's tags on the downloads, before the signature
 import gpu_live  # noqa: E402   HERESY 1264: the cards second by second, for the page's live graphs
 import winx  # noqa: E402   HERESY 2924b: a process group ended on Windows too (taskkill /T there, os.killpg here)
@@ -257,6 +284,7 @@ import machine  # noqa: E402   HERESY 1304: the machine as a new studio's first 
 import artist_loras  # noqa: E402   HERESY 1316: the Artist's adapters
 import pianoteq_live  # noqa: E402   HERESY 1977: the Pianoteq installed here, through its own JSON-RPC
 import modartt  # noqa: E402   HERESY 2036: Pianoteq's way for Organteq and Airteq too
+import nam_amp  # noqa: E402   HERESY 2987: the Refiner's Amp (NAM), its engine and its captures
 import weights  # noqa: E402   HERESY 1289: the Engine's Models card over heresy/fetch-heresy.sh
 import lineage  # noqa: E402   HERESY 1988: a take's family tree
 import https_door  # noqa: E402   HERESY 1985: the Studio over https: its door, its authority, the settings handed over
@@ -563,6 +591,41 @@ def free_gpu(need=None, role="jobs", why="a lab job", only=None, claim=True, unl
     return card["index"], card["free_mb"]
 
 
+_TORCH_CARDS = []
+
+
+def torch_sees_cards():
+    """HERESY 2986 (the check of 2984, 25.11.2026: the upscale ran on the processor where torch saw no card, its job and manifest naming the card
+    the guard gave): whether the Studio's torch reads on a card at all (2686's CPU wheels do not), asked once of the lab's Python by NVML's count,
+    no card touched. When it cannot be asked: True, said in the log, and the card as before (the job itself then says what fails)."""
+    if not _TORCH_CARDS:
+        try:
+            p = subprocess.run([str(LAB_PY), "-c", "import torch; print(torch.cuda.is_available())"], capture_output=True, text=True, timeout=180,
+                               env=dict(os.environ, PYTORCH_NVML_BASED_CUDA_CHECK="1"), stdin=subprocess.DEVNULL, encoding="utf-8", errors="replace")
+            said = (p.stdout or "").strip().splitlines()[-1:]
+        except (OSError, subprocess.SubprocessError) as e:
+            p, said = None, [str(e)]
+        if p is None or p.returncode or said not in (["True"], ["False"]):
+            print(f"torch could not be asked for its cards ({(said or ['no answer'])[-1][:200]}): a card the guard gives is named", file=sys.stderr, flush=True)
+            return True
+        _TORCH_CARDS.append(said == ["True"])
+    return _TORCH_CARDS[0]
+
+
+def card_or_processor(need):
+    """HERESY 2984 (the Windows VM's run of every model, 25.11.2026: the Refiner's stems and upscale refused with «no nvidia-smi here»): a
+    card for a model job as free_gpu gives it, or (None, None) on a machine with no NVIDIA card at all, where the processor is the one way
+    there is (as 2677's split of a backing). Cards that are there but busy are refused aloud, as before."""
+    if not torch_sees_cards():                        # HERESY 2986: torch here reads on the processor: no card named, held or emptied for it
+        return None, None
+    try:
+        return free_gpu(need)
+    except RuntimeError as e:
+        if str(e) != winx.NO_NVSMI:
+            raise
+        return None, None
+
+
 def more_gpus(need, exclude=(), most=1, role="jobs"):
     """HERESY 1354: the other cards given to `role` with room for `need` now, the most free first; never a card of another role (no
     fallback): the Artist spreads a run's pictures over them."""
@@ -683,7 +746,7 @@ def training_now():
     if not now:
         try:
             p = subprocess.run(["systemctl", "--user", "list-units", "ruach-train-*", "--state=active", "--no-legend", "--plain"],
-                               capture_output=True, text=True, timeout=5)
+                               capture_output=True, text=True, timeout=5, encoding="utf-8", errors="replace")
             now = bool(p.stdout.strip())
         except (OSError, subprocess.SubprocessError):
             now = False
@@ -799,10 +862,11 @@ def studio_restart():
         raise RuntimeError(f"the Studio does not answer: {e}")
     if hw.get("busy"):
         raise ValueError("the Studio is rendering now: restart it when the run is done")
-    # HERESY 1259: only a studio that runs as its systemd unit is restarted from here. Under Pinokio or by hand (./start.sh) there is
-    # no unit: «restarting» was a word for nothing, and the page then said the Studio was back. The card is saved all the same.
+    # HERESY 1259: only a studio that runs as its systemd unit is restarted from here. From its icon (RuachStudio.exe, RuachStudio.command,
+    # Pinokio's Linux menu) or by hand (./start.sh) there is no unit: «restarting» was a word for nothing, and the page then said the Studio
+    # was back. The card is saved all the same. HERESY 3002: the words as the page's own key says them (2988), no launcher named by its brand.
     if not shutil.which("systemctl") or subprocess.run(["systemctl", "--user", "is-active", "--quiet", "ruach-studio"], timeout=10).returncode != 0:
-        raise ValueError("the Studio does not run as a service here (RuachStudio.exe, Pinokio, or ./start.sh by hand): stop it and start it "
+        raise ValueError("the Studio does not run as a service here (its icon, or ./start.sh by hand): stop it and start it "
                          "again there to move it; the card is saved")   # HERESY 2930: no systemctl on Windows and macOS
 
     # HERESY 2063: the cards' look shared for 2 s let go as the restart is asked and again when it is done, so the page's next ask sees the
@@ -868,7 +932,7 @@ def gloss(name, force=False, cached_only=False, source="", job=None):
         raw = CACHE / f"{name}{tag}.whisper.json"
         t0 = time.time()
         p = subprocess.run([str(WHISPER_PY), str(HERE / "whisper_job.py"), str(audio), str(raw), lang, str(WHISPER_DIR)],
-                           env=env, capture_output=True, text=True, timeout=1800)
+                           env=env, capture_output=True, text=True, timeout=1800, encoding="utf-8", errors="replace")
         if p.returncode != 0:
             raise RuntimeError("Whisper failed: " + (p.stderr.strip().splitlines() or ["no output"])[-1])
     w = json.load(open(raw, encoding="utf-8"))
@@ -965,7 +1029,7 @@ def timing_async(name, force=False, cached_only=False, auto=False):
                     job["gpu"] = gpu
                     part = Path(str(words) + ".part")
                     p = subprocess.run([str(WHISPER_PY), str(HERE / "whisper_job.py"), str(audio), str(part), lang or "",
-                                        str(WHISPER_DIR), "words"], env=env, capture_output=True, text=True, timeout=1800)
+                                        str(WHISPER_DIR), "words"], env=env, capture_output=True, text=True, timeout=1800, encoding="utf-8", errors="replace")
                     if p.returncode != 0:
                         raise RuntimeError("Whisper failed: " + (p.stderr.strip().splitlines() or ["no output"])[-1][-300:])
                     os.replace(part, words)
@@ -987,7 +1051,7 @@ def timing_async(name, force=False, cached_only=False, auto=False):
                             env = dict(env, WHISPER_HOTWORDS=" ".join(timing.sung(lyrics).split())[:600])
                             part = Path(str(words2) + ".part")
                             p = subprocess.run([str(WHISPER_PY), str(HERE / "whisper_job.py"), str(src), str(part), lang or "",
-                                                str(WHISPER_DIR), "words"], env=env, capture_output=True, text=True, timeout=1800)
+                                                str(WHISPER_DIR), "words"], env=env, capture_output=True, text=True, timeout=1800, encoding="utf-8", errors="replace")
                             if p.returncode != 0:
                                 raise RuntimeError((p.stderr.strip().splitlines() or ["no output"])[-1][-300:])
                             os.replace(part, words2)
@@ -1049,7 +1113,7 @@ def timing_recording(data):
                         job["gpu"] = gpu
                         part = Path(str(words) + ".part")
                         r = subprocess.run([str(WHISPER_PY), str(HERE / "whisper_job.py"), str(src), str(part), lang or "", str(WHISPER_DIR), "words"],
-                                           env=env, capture_output=True, text=True, timeout=1800)
+                                           env=env, capture_output=True, text=True, timeout=1800, encoding="utf-8", errors="replace")
                         if r.returncode != 0:
                             raise RuntimeError("Whisper failed: " + (r.stderr.strip().splitlines() or ["no output"])[-1][-300:])
                         os.replace(part, words)
@@ -1099,7 +1163,7 @@ def spectrum_file(name, source="", mode="mono"):
     with cpu:
         tmp = out.with_name(out.name + ".part")
         p = subprocess.run([str(NUMPY_PY), str(HERE / "spectrum_job.py"), str(audio), str(tmp), mode],
-                           capture_output=True, text=True, timeout=600)
+                           capture_output=True, text=True, timeout=600, encoding="utf-8", errors="replace")
         if p.returncode != 0:
             raise RuntimeError("spectrum failed: " + (p.stderr.strip().splitlines() or ["no output"])[-1])
         tmp.replace(out)
@@ -1167,7 +1231,8 @@ DAW_IR = {}   # HERESY 1531: the room's impulses, by preset and rate
 DAW_LOUD = {}   # HERESY 1755: the sources' loudness blocks, by file and its time
 GRID_LOCK = threading.Lock()   # HERESY 2313: a take's bar grid heard one at a time
 DAW_PROCS = {}   # HERESY 1539: a running mix's process, by its job's key, so Stop can end it
-FILE_PEAKS = collections.OrderedDict()               # HERESY 1487: (name, path, n) -> (stamp, peaks, seconds)
+FILE_PEAKS = collections.OrderedDict()               # HERESY 1487: (name, path, n) -> (stamp, peaks, seconds, channels: 2997)
+PEAKS_LOCK = threading.Lock()                        # HERESY 2997: one writer of a take's peaks.json at a time
 TAKE_WAVE = collections.OrderedDict()                # HERESY 2022: (name, n) -> (stamp, wave)
 TAKE_BANDS = collections.OrderedDict()               # HERESY 2044: (name, n) -> (stamp, bands)
 
@@ -1263,11 +1328,18 @@ def file_peaks(name, rel, n):
     k, stamp = (name, rel, int(n)), (st.st_mtime_ns, st.st_size)
     hit = FILE_PEAKS.get(k)
     if not hit or hit[0] != stamp:
-        pk, secs = daw_kit.file_peaks(d, rel, n)
-        FILE_PEAKS[k] = hit = (stamp, pk, round(secs, 3))
+        w = peakedge.channels(p, max(50, min(4000, int(n))))   # HERESY 2997: each channel too, in one read on daw.file_peaks's stretches
+        FILE_PEAKS[k] = hit = (stamp, w["peaks"], round(w["seconds"], 3), w["channels"])
         while len(FILE_PEAKS) > 400:
             FILE_PEAKS.popitem(last=False)
-    return {"peaks": hit[1], "seconds": hit[2]}
+    return {"peaks": hit[1], "seconds": hit[2], "channels": hit[3]}
+
+
+def take_peaks(name):
+    """HERESY 2997: the take's peaks.json with its channels (peakedge.take_peaks), asked by the page when the engine's has none"""
+    d = take_dir(name)
+    with PEAKS_LOCK:
+        return peakedge.take_peaks(d)
 
 
 def daw_info(name, rel):
@@ -1315,7 +1387,7 @@ def daw_async(name, rel, mix, versions, printed=False):
                 tmp.mkdir(parents=True, exist_ok=True)
                 spec = tmp / ".spec.json"
                 json.dump({"set": info["set"], "mix": mix, "versions": versions, "print": bool(printed)}, open(spec, "w", encoding="utf-8"), ensure_ascii=False)
-                p = subprocess.Popen([str(LAB_PY), str(HERE / "daw_job.py"), str(d), str(spec), str(tmp)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                p = subprocess.Popen([str(LAB_PY), str(HERE / "daw_job.py"), str(d), str(spec), str(tmp)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8", errors="replace")
                 DAW_PROCS[key] = p
                 if job.get("stop"):
                     p.terminate()
@@ -1412,7 +1484,7 @@ def bounce_async(name, rel, mix, versions, members, title="", dry=False):
                 spec = tmp / ".spec.json"
                 json.dump({"set": info["set"], "mix": mix, "versions": versions, "bounce": {"members": members, "title": title, "track": track, "dry": dry}},
                           open(spec, "w", encoding="utf-8"), ensure_ascii=False)
-                p = subprocess.Popen([str(LAB_PY), str(HERE / "daw_job.py"), str(d), str(spec), str(tmp)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                p = subprocess.Popen([str(LAB_PY), str(HERE / "daw_job.py"), str(d), str(spec), str(tmp)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8", errors="replace")
                 DAW_PROCS[key] = p
                 if job.get("stop"):
                     p.terminate()
@@ -1497,21 +1569,22 @@ def stems_async(name, mode, source=""):
 
     def work():
         try:
+            need_stems(mode)                                # HERESY 2986: before its turn, in words
             with turn(job):
                 job["status"] = "running"
-                gpu, free = free_gpu(8000)             # BS-Roformer and htdemucs_ft
+                gpu, free = card_or_processor(8000)    # BS-Roformer and htdemucs_ft; HERESY 2984: with no card here, the processor
                 job["gpu"] = gpu                       # HERESY 1157: said in the activity log and the bar's lamp
-                env = dict(os.environ, CUDA_VISIBLE_DEVICES=str(gpu), CUDA_DEVICE_ORDER="PCI_BUS_ID")
+                env = dict(os.environ, CUDA_VISIBLE_DEVICES="" if gpu is None else str(gpu), CUDA_DEVICE_ORDER="PCI_BUS_ID")
                 tmp = d / "derived" / (did + ".part")
                 shutil.rmtree(tmp, ignore_errors=True)
                 p = subprocess.run([str(LAB_PY), str(HERE / "stems_job.py"), str(audio), str(tmp), mode],
-                                   env=env, capture_output=True, text=True, timeout=3600)
+                                   env=env, capture_output=True, text=True, timeout=3600, encoding="utf-8", errors="replace")
                 if p.returncode != 0:
                     raise RuntimeError("stems failed: " + (p.stderr.strip().splitlines() or ["no output"])[-1][-300:])
                 r = json.loads(p.stdout.strip().splitlines()[-1])
             manifest = {"id": did, "kind": "stems", "parent": name, "mode": mode, "source": source or "the take", "models": r["models"],
                         "files": [dict(s, path=f"derived/{did}/{s['file']}") for s in r["stems"]],
-                        "took": r["took"], "gpu": gpu, "created": time.strftime("%Y-%m-%d %H:%M")}
+                        "took": r["took"], "gpu": "processor" if gpu is None else gpu, "created": time.strftime("%Y-%m-%d %H:%M")}
             json.dump(manifest, open(tmp / "manifest.json", "w", encoding="utf-8"), ensure_ascii=False, indent=2)
             shutil.rmtree(target, ignore_errors=True)
             tmp.rename(target)
@@ -1539,6 +1612,8 @@ def _backing_card(why):
     """A card for a split, or None for the processor: a card of the lab's jobs the guard gives (8 GB, as the Refiner's stems; the idle
     engine's models make room when the engine is on CUDA, as for the Refiner: on the Intel Arc they hold no CUDA card), never one a
     training run holds."""
+    if not torch_sees_cards():                        # HERESY 2986: torch here reads on the processor
+        return None
     held = set()
     for rname, run in list(training.RUNS.items()):
         if run.get("status") in ("running", "stopping"):
@@ -1575,6 +1650,7 @@ def _backing_split(name, source, job, what):
         raise FileNotFoundError(f"no audio in {name}")
     did = "stems-vocals" if not source else "stems-vocals-" + time.strftime("%Y%m%d-%H%M%S")
     target, tmp = d / "derived" / did, d / "derived" / (did + ".part")
+    need_stems("vocals")                              # HERESY 2986
     with turn(job):
         job["stage"] = what
         gpu = _backing_card("a voice over a backing: " + what)
@@ -1586,7 +1662,7 @@ def _backing_split(name, source, job, what):
         shutil.rmtree(tmp, ignore_errors=True)
         t0 = time.time()
         p = subprocess.run([str(LAB_PY), str(HERE / "stems_job.py"), str(audio), str(tmp), "vocals"], env=env, capture_output=True, text=True,
-                           timeout=7200, preexec_fn=(lambda: os.nice(10)) if gpu is None and os.name == "posix" else None)
+                           timeout=7200, preexec_fn=(lambda: os.nice(10)) if gpu is None and os.name == "posix" else None, encoding="utf-8", errors="replace")
         if p.returncode != 0:
             shutil.rmtree(tmp, ignore_errors=True)
             raise RuntimeError("the split failed: " + (p.stderr.strip().splitlines() or ["no output"])[-1][-300:])
@@ -1604,7 +1680,7 @@ def _backing_split(name, source, job, what):
 def _backing_run(args, timeout=1800):
     """backing.py in the Studio's environment, behind everything else; its one line of JSON."""
     p = subprocess.run([str(LAB_PY), str(HERE / "backing.py")] + [str(a) for a in args], capture_output=True, text=True, timeout=timeout, cwd=str(HERE),
-                       preexec_fn=(lambda: os.nice(10)) if os.name == "posix" else None)
+                       preexec_fn=(lambda: os.nice(10)) if os.name == "posix" else None, encoding="utf-8", errors="replace")
     if p.returncode != 0:
         raise RuntimeError((p.stderr.strip().splitlines() or ["backing.py said nothing"])[-1][-300:])
     return json.loads(p.stdout.strip().splitlines()[-1])
@@ -1907,7 +1983,7 @@ def backing_finish_of(name, engine_job="", sung=""):
 def midi_async(name, size="", source="", only="", fresh=False):   # HERESY 2913: fresh: transcribed again, the set made kept beside the new
     d = take_dir(name)
     if not muscriptor.binary(KIT).is_file():
-        raise FileNotFoundError("the MIDI transcriber is not built: ./build.sh builds it")
+        raise FileNotFoundError(muscriptor.not_built())   # HERESY 2992: on Windows the package's engine\cpu, not build.sh
     size = muscriptor.pick(KIT, size)
     if not size:
         raise FileNotFoundError("no MuScriptor model here: Engine → Models → Sound to MIDI fetches one")
@@ -2024,7 +2100,7 @@ def midi_export_async(name, way="mix", size="", quant="off", again=False, title=
     if (quant or "off") not in midi_export.QUANT:
         raise ValueError("quantize is off, 1/8 or 1/16")
     if not muscriptor.binary(KIT).is_file():
-        raise FileNotFoundError("the MIDI transcriber is not built: ./build.sh builds it")
+        raise FileNotFoundError(muscriptor.not_built())   # HERESY 2992: on Windows the package's engine\cpu, not build.sh
     size = muscriptor.pick(KIT, size)
     if not size:
         raise FileNotFoundError("no MuScriptor model here: Engine → Models → Sound to MIDI fetches one")
@@ -2208,6 +2284,46 @@ def clip_async(name, labels=None, lyrics=False, between="cut", shape="16:9", tit
     return dict(job, name=name)
 
 
+def clip_ask(name, data, check=False):
+    """HERESY 1838's /video/clip, its settings read and checked as the room sends them (a ValueError says which is wrong), then the clip's job;
+    HERESY 2982: the night queue's too (check: only checked, when the order is given)."""
+    between = str(data.get("between") or "cut")
+    if between not in videographer.BETWEEN:
+        raise ValueError("between the shots: a cut, through black, a flash, a dissolve, through white, a push or a zoom")
+    shape = str(data.get("shape") or "16:9")      # HERESY 1917
+    if shape not in videographer.SHAPES:
+        raise ValueError("the clip's shape: 16:9, 9:16, 1:1, 4k or tg")
+    reframe = str(data.get("reframe") or "hand")   # HERESY 2244
+    style = str(data.get("title_style") or "centre")   # HERESY 2246
+    if reframe not in videographer.REFRAME or style not in videographer.TITLE_STYLES:
+        raise ValueError("the crop: hand, centre or subject; the titles: centre, lower or corner")
+    look = data.get("look") if isinstance(data.get("look"), dict) else {}   # HERESY 2010: {id, strength}
+    lid = str(look.get("id") or "none")
+    if lid != "none":
+        luts.cube(KIT, lid)                     # a look not there is said now, not after minutes of cutting
+    film = [max(0.0, min(1.0, float(look.get(k) or 0))) for k in ("grain", "vignette", "halation", "jitter")]   # HERESY 2017: the film over it, 0–1; 2242
+    pr = look.get("primary") if isinstance(look.get("primary"), dict) else {}   # HERESY 2250: −1…1 each
+    pr = {k: max(-1.0, min(1.0, float(pr.get(k) or 0))) for k in ("lift", "gamma", "gain", "contrast", "saturation")}
+    up = str(data.get("upscale") or "lanczos")  # HERESY 2356: Lanczos (as H3 drew it) or SeedVR2's where made
+    if up not in videographer.UPSCALE:
+        raise ValueError("the upscale: lanczos or seedvr2")
+    mt = data.get("match")                      # HERESY 2249: the reference shot, or none
+    mt = int(mt) if isinstance(mt, (int, float)) and not isinstance(mt, bool) and mt >= 0 else None
+    if check:
+        return None
+    return clip_async(name, data.get("labels") or {}, bool(data.get("lyrics")), between, shape,
+                      bool(data.get("titles")), lid, float(look.get("strength", 1) or 0), *film,
+                      every=bool(data.get("every")), reframe=reframe, draft=bool(data.get("draft")), title_style=style,   # HERESY 1916, 1948, 2010; 2243–2246
+                      words=bool(data.get("words")), match=mt, primary=pr if any(pr.values()) else None, upscale=up)   # HERESY 2248–2250; 2356
+
+
+def clip_job(name, data):
+    """HERESY 2982: the clip job a clip_ask of these settings started, while the lab keeps it (gone once it ended well, as /video/clip reads it)."""
+    shape = str(data.get("shape") or "16:9")
+    with jobs_lock:
+        return jobs.get(f"video:{name}:clip" + ("" if shape == "16:9" else f":{shape}") + (":draft" if data.get("draft") else ""))
+
+
 def clip_voice(name):
     """HERESY 2963: the voice the clip's plan names, ready for the cut: {take, file, at, seconds, duck, lines}; None when it names none. A take gone
     or no longer the Narrator's refuses the cut aloud (never a clip quietly without the voice it was given)."""
@@ -2369,7 +2485,7 @@ def listen_opus(name):
             title = name
         part = d / "listen.opus.part"
         p = subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(src), "-map", "0:a:0", "-c:a", "libopus", "-b:a", "128k", "-vbr", "on",
-                            "-application", "audio", "-metadata", f"title={title}", "-f", "ogg", str(part)], capture_output=True, text=True, timeout=600)
+                            "-application", "audio", "-metadata", f"title={title}", "-f", "ogg", str(part)], capture_output=True, text=True, timeout=600, encoding="utf-8", errors="replace")
         if p.returncode != 0 or not part.is_file():
             part.unlink(missing_ok=True)
             raise RuntimeError("ffmpeg: " + (p.stderr.strip()[-300:] or "no output"))
@@ -2380,8 +2496,9 @@ def listen_opus(name):
 def orchestra_async(name, source, mode="instead", shift="12", instrument="", size=""):
     """HERESY 1884: orchestra.make_version as a job, one a take's stem, mode, octave and instrument; the one made is returned as it is."""
     d = take_dir(name)
-    if not orchestra.sfizz(KIT).is_file() or not orchestra.fluidsynth(KIT).is_file():
-        raise FileNotFoundError("the renderers are not built: heresy/MISC/claude-tc/midi/build-renderers.sh builds them")
+    why = orchestra.renderers_missing(KIT)             # HERESY 2989: on Windows FluidSynth from the package; an SFZ is refused at its render
+    if why:
+        raise FileNotFoundError(why)
     if mode not in orchestra.MODES:
         raise ValueError("the mode is instead, over or octave")
     if not source.startswith("derived/") or not source.endswith((".flac", ".wav")):
@@ -2475,7 +2592,7 @@ def remaster_async(name, settings):
                 cfgfile = tmp / "settings.json"
                 json.dump(cfg, open(cfgfile, "w", encoding="utf-8"), ensure_ascii=False)
                 p = subprocess.run([str(LAB_PY), str(HERE / "remaster_job.py"), str(d), str(tmp), str(cfgfile)],
-                                   capture_output=True, text=True, timeout=3600)
+                                   capture_output=True, text=True, timeout=3600, encoding="utf-8", errors="replace")
                 if p.returncode != 0:
                     raise RuntimeError("remaster failed: " + (p.stderr.strip().splitlines() or ["no output"])[-1][-300:])
                 r = json.loads(p.stdout.strip().splitlines()[-1])
@@ -2503,7 +2620,7 @@ def seconds_of(path):
         return None
     try:
         p = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(path)],
-                           capture_output=True, text=True, timeout=30)
+                           capture_output=True, text=True, timeout=30, encoding="utf-8", errors="replace")
         return round(float(p.stdout.strip()), 2)
     except (ValueError, OSError, subprocess.SubprocessError):
         return None
@@ -2557,7 +2674,7 @@ def import_track(filename, title, body, parent="", what="", realm="", workspace=
         shutil.rmtree(d, ignore_errors=True)
         raise
     p = subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(original), "-ac", "2", "-ar", "48000",
-                        "-c:a", "pcm_s24le", str(d / "audio.wav")], capture_output=True, text=True, timeout=600)
+                        "-c:a", "pcm_s24le", str(d / "audio.wav")], capture_output=True, text=True, timeout=600, encoding="utf-8", errors="replace")
     if p.returncode != 0:
         shutil.rmtree(d, ignore_errors=True)
         raise ValueError("ffmpeg could not read it: " + (p.stderr.strip().splitlines() or ["?"])[-1])
@@ -2752,21 +2869,21 @@ def upscale_async(name, mode, source="", variants=2, keep=True, ceiling=None):
         try:
             with turn(job):
                 job["status"] = "running"
-                gpu, free = free_gpu(11000)            # UniverSR on 20 s chunks peaks near 10 GB
+                gpu, free = card_or_processor(11000)   # UniverSR on 20 s chunks peaks near 10 GB; HERESY 2984: with no card here, the processor
                 job["gpu"] = gpu
                 tmp = d / "derived" / (did + ".part")
                 tmp.mkdir(parents=True, exist_ok=True)
-                env = dict(os.environ, CUDA_VISIBLE_DEVICES=str(gpu), CUDA_DEVICE_ORDER="PCI_BUS_ID", HF_HOME=str(HF_HOME))
+                env = dict(os.environ, CUDA_VISIBLE_DEVICES="" if gpu is None else str(gpu), CUDA_DEVICE_ORDER="PCI_BUS_ID", HF_HOME=str(HF_HOME))
                 seeds = ",".join(str(1000 + i) for i in range(max(1, min(int(variants), 4))))
                 p = subprocess.run([str(LAB_PY), str(HERE / "upscale_job.py"), str(audio), str(tmp), mode, seeds,
                                     "keep" if keep else "all"] + ([str(float(ceiling))] if ceiling is not None else []),
-                                   env=env, capture_output=True, text=True, timeout=7200)
+                                   env=env, capture_output=True, text=True, timeout=7200, encoding="utf-8", errors="replace")
                 if p.returncode != 0:
                     raise RuntimeError("upscale failed: " + (p.stderr.strip().splitlines() or ["no output"])[-1][-300:])
                 r = json.loads(p.stdout.strip().splitlines()[-1])
             manifest = {"id": did, "kind": "upscale", "parent": name, "mode": mode, "source": source or "the take",
                         "models": ["UniverSR (universr-audio)"], "input_sr": r["input_sr"], "cutoff_hz": r["cutoff_hz"],
-                        "keep_low": r["keep_low"], "gpu": gpu, **({"ceiling_db": r["ceiling_db"]} if r.get("ceiling_db") is not None else {}),
+                        "keep_low": r["keep_low"], "gpu": "processor" if gpu is None or r.get("device") == "cpu" else gpu, **({"ceiling_db": r["ceiling_db"]} if r.get("ceiling_db") is not None else {}),
                         "files": [dict(f, path=f"derived/{did}/{f['file']}") for f in r["files"]],
                         "took": r["took"], "created": time.strftime("%Y-%m-%d %H:%M")}
             json.dump(manifest, open(tmp / "manifest.json", "w", encoding="utf-8"), ensure_ascii=False, indent=2)
@@ -2878,7 +2995,7 @@ def plugin_async(name, pid, sid, source="", given=None, versions=None, history=N
             told["_history"] = {k: [str((d / v).resolve()) for v in vs if d.resolve() in (d / v).resolve().parents] for k, vs in (history or {}).items()}
         json.dump(told, open(pfile, "w", encoding="utf-8"))
         p = subprocess.run(plugin_kit.command(plugin, step, audio, tmp, pfile, LAB_PY), cwd=plugin["folder"], env=env,
-                           capture_output=True, text=True, timeout=4 * 3600)
+                           capture_output=True, text=True, timeout=4 * 3600, encoding="utf-8", errors="replace")
         if p.returncode != 0:
             raise RuntimeError(step["label"] + " failed: " + (p.stderr.strip().splitlines() or ["no output"])[-1][-300:])
         r = plugin_kit.result(p.stdout)
@@ -2944,7 +3061,7 @@ def debuzz_async(name, source="", strength=0.8, period=1920, rate=48000):
                 tmp.mkdir(parents=True, exist_ok=True)
                 p = subprocess.run([str(LAB_PY), str(HERE / "debuzz.py"), str(audio), str(tmp / "debuzz.flac"), str(strength),
                                     "2000", "50", "3", str(period), str(rate)],
-                                   capture_output=True, text=True, timeout=3600)
+                                   capture_output=True, text=True, timeout=3600, encoding="utf-8", errors="replace")
                 if p.returncode != 0:
                     raise RuntimeError("debuzz failed: " + (p.stderr.strip().splitlines() or ["no output"])[-1][-300:])
                 r = json.loads(p.stdout.strip().splitlines()[-1])
@@ -2994,7 +3111,7 @@ def gate_async(name, source="", params=None):
                 pf = tmp / "params.json"
                 json.dump(dict(params or {}), open(pf, "w", encoding="utf-8"))
                 r = subprocess.run([str(LAB_PY), str(HERE / "digital_gate.py"), str(audio), str(tmp / "gate.flac"), str(pf)],
-                                   capture_output=True, text=True, timeout=7200)
+                                   capture_output=True, text=True, timeout=7200, encoding="utf-8", errors="replace")
                 if r.returncode != 0:
                     raise RuntimeError("the gateway failed: " + (r.stderr.strip().splitlines() or ["no output"])[-1][-300:])
                 rep = json.loads(r.stdout.strip().splitlines()[-1])
@@ -3047,7 +3164,7 @@ def textend_async(name, force=False, cached_only=False):
                 except RuntimeError:
                     env, device = dict(os.environ, CUDA_VISIBLE_DEVICES=""), "cpu"
                 p = subprocess.run([str(LAB_PY), str(HERE / "textend_job.py"), str(d), device],
-                                   env=env, capture_output=True, text=True, timeout=3600)
+                                   env=env, capture_output=True, text=True, timeout=3600, encoding="utf-8", errors="replace")
                 if p.returncode != 0:
                     raise RuntimeError("textend failed: " + (p.stderr.strip().splitlines() or ["no output"])[-1][-300:])
                 r = json.loads(p.stdout.strip().splitlines()[-1])
@@ -3088,7 +3205,7 @@ def inspect_async(name, source="", force=False, cached_only=False):
             with cpu:
                 job["status"] = "running"
                 p = subprocess.run([str(LAB_PY), str(HERE / "inspect_job.py"), str(audio), str(out) + ".part"],
-                                   capture_output=True, text=True, timeout=1800)
+                                   capture_output=True, text=True, timeout=1800, encoding="utf-8", errors="replace")
                 if p.returncode != 0:
                     raise RuntimeError("inspect failed: " + (p.stderr.strip().splitlines() or ["no output"])[-1][-300:])
                 Path(str(out) + ".part").replace(out)
@@ -3717,7 +3834,7 @@ def art_async(name, again=False, seed=None, painter=None):
                     tmp = d / "artwork.part.jpg"
                     py = ART_PY                              # HERESY 1405: SDXL (the lab's own Python) gone
                     p = subprocess.run([str(py), str(HERE / "art_job.py"), str(d), str(tmp), str(seed if seed is not None else "")],
-                                       env=env, capture_output=True, text=True, timeout=1200)
+                                       env=env, capture_output=True, text=True, timeout=1200, encoding="utf-8", errors="replace")
                     if p.returncode != 0:
                         raise RuntimeError("no artwork: " + (p.stderr.strip().splitlines() or ["no output"])[-1][-300:])
                     r = json.loads(p.stdout.strip().splitlines()[-1])
@@ -4017,7 +4134,7 @@ def ab_report(sides, names, words):
                 shutil.rmtree(tmp, ignore_errors=True)
                 with access_log.took("first and second", " · ".join(str(f.relative_to(OUTPUTS)) if OUTPUTS in f.parents else f.name for f in files)):
                     r = subprocess.run(winx.nice(5) + [sys.executable, "-c", AB_RUN, json.dumps([[str(f) for f in files], names, str(tmp), words])],
-                                       cwd=str(HERE), capture_output=True, text=True, timeout=1800)
+                                       cwd=str(HERE), capture_output=True, text=True, timeout=1800, encoding="utf-8", errors="replace")
                 if r.returncode != 0 or not (tmp / "pair1" / "compare.json").is_file():
                     raise RuntimeError(((r.stderr or "").strip().splitlines() or ["ab_compare ended with " + str(r.returncode)])[-1])
                 (tmp / "many.json").write_text(json.dumps({"n": len(files), "names": names}, ensure_ascii=False), encoding="utf-8")
@@ -4654,6 +4771,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send_file(f, "video/mp4")
             if url.path == "/video/upscale":                # HERESY 1876b: a take's upscales on their way
                 return self.send(200, upscale_shots.status(KIT, q.get("name", "")))
+            if url.path == "/video/night":                  # HERESY 2982: the night queue, its orders and the ones finished
+                return self.send(200, vg_night.listing(KIT))
             if url.path == "/video/frames":                 # HERESY 1913: a plan's shots on their way through the Artist
                 return self.send(200, frames_job.status(KIT, q.get("name", "")))
             if url.path == "/video/shots":                  # HERESY 1868: a take's shots on their way to H3, and its workers
@@ -4970,6 +5089,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200, https_door.handoff_take(q.get("token", ""), self.headers.get("X-Remote-Addr", "")))   # 2177: by its peer
             if url.path == "/lineage":                      # HERESY 1988: a take's family: its parents, what came of it, what the Refiner made in each
                 return self.send(200, lineage.tree(KIT, q.get("name", ""), collection.load(config_dir()).get("regen_of") or {}))
+            if url.path == "/nam/captures":                 # HERESY 2987: the Amp (NAM) step's captures, the Studio's by kind and the user's own (user/nam/), read anew
+                return self.send(200, nam_amp.listing(KIT))
             if url.path == "/pianoteq/status":              # HERESY 1986: the Engine's Pianoteq tab: what is installed and activated here
                 return self.send(200, modartt.live(q.get("product")).status(KIT))   # HERESY 2036: ?product=organteq|airteq, none: Pianoteq
             if url.path == "/pianoteq/catalog":             # HERESY 1977: the Pianoteq here: its presets, small presets and parameters in its words
@@ -5117,6 +5238,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200, merges.merges(KIT))
             if url.path == "/models/migration":        # HERESY 2330: the move of 2.0.6's folders into models/<room>/, its last sums
                 return self.send(200, migrate_models.state(KIT))
+            if url.path == "/take/peaks":               # HERESY 2997
+                return self.send(200, take_peaks(q.get("name", "")))
             if url.path == "/take/wave":                # HERESY 2022
                 return self.send(200, take_wave(q.get("name", ""), int(q.get("n", "1200"))))
             if url.path == "/take/bands":               # HERESY 2044
@@ -5719,32 +5842,16 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(202, luts.fetch(KIT))
             if url.path == "/video/clip":                   # HERESY 1838: cut the take's clip from its shots' pictures
                 data = json.loads(body.decode("utf-8") or "{}")
-                between = str(data.get("between") or "cut")
-                if between not in videographer.BETWEEN:
-                    return self.send(400, {"error": "between the shots: a cut, through black, a flash, a dissolve, through white, a push or a zoom"})
-                shape = str(data.get("shape") or "16:9")      # HERESY 1917
-                if shape not in videographer.SHAPES:
-                    return self.send(400, {"error": "the clip's shape: 16:9, 9:16, 1:1, 4k or tg"})
-                reframe = str(data.get("reframe") or "hand")   # HERESY 2244
-                style = str(data.get("title_style") or "centre")   # HERESY 2246
-                if reframe not in videographer.REFRAME or style not in videographer.TITLE_STYLES:
-                    return self.send(400, {"error": "the crop: hand, centre or subject; the titles: centre, lower or corner"})
-                look = data.get("look") if isinstance(data.get("look"), dict) else {}   # HERESY 2010: {id, strength}
-                lid = str(look.get("id") or "none")
-                if lid != "none":
-                    luts.cube(KIT, lid)                     # a look not there is said now, not after minutes of cutting
-                film = [max(0.0, min(1.0, float(look.get(k) or 0))) for k in ("grain", "vignette", "halation", "jitter")]   # HERESY 2017: the film over it, 0–1; 2242
-                pr = look.get("primary") if isinstance(look.get("primary"), dict) else {}   # HERESY 2250: −1…1 each
-                pr = {k: max(-1.0, min(1.0, float(pr.get(k) or 0))) for k in ("lift", "gamma", "gain", "contrast", "saturation")}
-                up = str(data.get("upscale") or "lanczos")  # HERESY 2356: Lanczos (as H3 drew it) or SeedVR2's where made
-                if up not in videographer.UPSCALE:
-                    return self.send(400, {"error": "the upscale: lanczos or seedvr2"})
-                mt = data.get("match")                      # HERESY 2249: the reference shot, or none
-                mt = int(mt) if isinstance(mt, (int, float)) and not isinstance(mt, bool) and mt >= 0 else None
-                return self.send(202, clip_async(str(data.get("name", "")), data.get("labels") or {}, bool(data.get("lyrics")), between, shape,
-                                                 bool(data.get("titles")), lid, float(look.get("strength", 1) or 0), *film,
-                                                 every=bool(data.get("every")), reframe=reframe, draft=bool(data.get("draft")), title_style=style,   # HERESY 1916, 1948, 2010; 2243–2246
-                                                 words=bool(data.get("words")), match=mt, primary=pr if any(pr.values()) else None, upscale=up))   # HERESY 2248–2250; 2356
+                return self.send(202, clip_ask(str(data.get("name", "")), data))   # HERESY 2982: read as the night queue reads it
+            if url.path in ("/video/night", "/video/night-off"):   # HERESY 2982: a clip's whole render as one order {name, at, frames, shoot, upscale, clip}
+                data = json.loads(body.decode("utf-8") or "{}")
+                name = str(data.get("name", ""))
+                if url.path == "/video/night-off":
+                    return self.send(200, vg_night.drop(KIT, name))
+                out = vg_night.add(KIT, name, data, check_clip=lambda c: clip_ask(name, c, check=True))
+                act_say(f"{ACT_SAY['video']} · {name} · the night render: " + ", ".join(k for k in vg_night.STAGES if data.get(k))
+                        + (f" at {data['at']}" if data.get("at") else " now"))
+                return self.send(202, out)
             if url.path == "/video/frame":                  # HERESY 1838: a shot's picture from the Artist's runs {name, i, run, file}; {name, i, off} takes it off
                 data = json.loads(body.decode("utf-8") or "{}")
                 name, i = str(data.get("name", "")), data.get("i")
@@ -5752,6 +5859,11 @@ class Handler(BaseHTTPRequestHandler):
                     return self.send(200, videographer.frame_off(KIT, name, i))
                 run, file = str(data.get("run", "")), str(data.get("file", ""))
                 return self.send(200, videographer.frame_set(KIT, name, i, artist.picture(run, file)[0], {"run": run, "file": file}))
+            if url.path == "/nam/capture-add":              # HERESY 3012: a capture of the user's own (its bytes the body, ?name= its file's name)
+                try:
+                    return self.send(200, nam_amp.add(KIT, body, q.get("name", "")))
+                except nam_amp.Refused as e:
+                    return self.send(400, {"error": str(e)})
             if url.path == "/video/font-upload":            # HERESY 2394: a font from the system's (Local Font Access) or a file, its bytes the body
                 return self.send(200, video_fonts.save(KIT, body, q.get("hint", "")))
             if url.path == "/video/clip-view":              # HERESY 2395: make the light copy of a clip made before it was made by itself
@@ -5804,6 +5916,8 @@ class Handler(BaseHTTPRequestHandler):
                                               str(data.get("size") or "16:9")))
                     del sh
                 act_say(f"{ACT_SAY['video']} · {name} · H3 {data.get('mode') or 'draft'}: {len(out)} shot(s) queued")
+                for said in dict.fromkeys(q["said"] for q in out if q.get("said")):   # HERESY 2995: a plan that asked 2361's last frame, told so
+                    act_say(f"{ACT_SAY['video']} · {name} · {said}")
                 return self.send(202, {"queued": out, **h3_shots.status(KIT, name)})
             if url.path == "/video/cuts":                   # HERESY 1864: the timeline's edits {name, cuts, parents} or {name, undo: true}
                 data = json.loads(body.decode("utf-8") or "{}")
@@ -6168,4 +6282,6 @@ if __name__ == "__main__":
     threading.Thread(target=h3_shots.collector, args=(KIT,), daemon=True,   # HERESY 1868: the H3 workers' shots set into their plans; 2323: and a
                      kwargs={"cards": lambda most, exclude: more_gpus(h3_shots.NEED_MB, exclude=exclude, most=min(3, most), role="jobs")}).start()   # free card given a worker
     threading.Thread(target=upscale_shots.collector, args=(KIT,), daemon=True).start()   # HERESY 1876b: and the upscales
+    vg_night.start(KIT, {"more_gpus": lambda need, most, exclude: more_gpus(need, exclude=exclude, most=most, role="jobs"),   # HERESY 2982: the night queue
+                         "clip": clip_ask, "clip_job": clip_job, "say": act_say})
     ThreadingHTTPServer((os.environ.get("LAB_HOST", "127.0.0.1"), PORT), Handler).serve_forever()

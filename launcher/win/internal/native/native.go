@@ -92,6 +92,11 @@ func (l Layout) Version() string {
 // folder of 69), so a folder longer than this leaves .venv's deepest files past MAX_PATH and the install breaks halfway.
 const PathBudget = 260 - 166
 
+// PyEnv is what every Python the launcher starts (the lab, the engine's start.py, the install) gets beside the user's environment:
+// UTF-8 mode, its files, pipes and output in UTF-8 and never in the system's code page (HERESY 2998, Viktor 25.11.2026: «Эра KOI-866 и
+// cp1251 канула в лета. Веди всё в Виндоуз сборке легитимным UTF-8»), and its output unbuffered, line by line into its log.
+var PyEnv = []string{"PYTHONUTF8=1", "PYTHONIOENCODING=utf-8", "PYTHONUNBUFFERED=1"}
+
 // PathLength counts the folder as Windows does, in UTF-16 units.
 func PathLength(p string) int { return len(utf16.Encode([]rune(p))) }
 
@@ -174,10 +179,11 @@ func (s *Studio) say(format string, a ...any) {
 func (s *Studio) services() (*Service, *Service) {
 	s.once.Do(func() {
 		l := s.Cfg.Layout
-		env := []string{"PYTHONUTF8=1", "PYTHONUNBUFFERED=1", "RUACH_LAUNCHER=native"} // HERESY 2930: the lab's updater says the tray's way
+		env := append(append([]string{}, PyEnv...), "RUACH_LAUNCHER=native") // HERESY 2930: the lab's updater says the tray's way
 		if c := l.Certifi(); c != "" && isFile(c) {
 			env = append(env, "SSL_CERT_FILE="+c)
 		}
+		env = append(env, runtimeEnv(l, os.Getenv("PATH"))...) // HERESY 2989: the package's programs (ffmpeg, FluidSynth) first on PATH
 		labEnv, engEnv := append([]string{}, env...), append([]string{}, env...)
 		if s.Cfg.LabPort != 41870 {
 			labEnv = append(labEnv, fmt.Sprintf("LAB_PORT=%d", s.Cfg.LabPort))
@@ -216,7 +222,7 @@ func (s *Studio) Ensure(ctx context.Context) error {
 		}
 		s.UI.Status("installing (a console window shows how far)")
 		s.say("install: %s", l.Install())
-		code, err := s.P.RunInstall(l, []string{"PYTHONUTF8=1", "PYTHONUNBUFFERED=1"})
+		code, err := s.P.RunInstall(l, append([]string{}, PyEnv...))
 		s.say("install: exit %d %v", code, err)
 		if err == nil && code == 5 { // fetch_models.py: the models not downloaded, as asked
 			return errors.New("the models a song needs were not downloaded, and the Studio cannot sing without them. Start Ruach Studio again when you want them: it goes on from there")

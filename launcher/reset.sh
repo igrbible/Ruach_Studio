@@ -1,5 +1,5 @@
 #!/bin/bash
-# Ruach Studio under Pinokio (HERESY 1259): Reset takes away what Install makes and makes again, nothing else: the two Python
+# The launcher (HERESY 1259): Reset takes away what Install makes and makes again, nothing else: the two Python
 # environments (.venv, .venv-art) and the engine's build (build/build). The songs (outputs/), the models (models/, checkpoints/,
 # models/artist/, models/misc/whisper/, models/refiner/separation/, hf_cache/), the LoRAs and the settings (user/, settings.json) stay where they are.
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

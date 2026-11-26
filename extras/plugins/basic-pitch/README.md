@@ -44,8 +44,7 @@ touching the studio's code. This plugin adds one step, **To MIDI**.
 
 ## Install
 
-Requires Python 3.10+ and the Linux (or Windows-via-WSL2) setup Ruach Studio
-itself runs on.
+Requires Python 3.10+ and the setup Ruach Studio itself runs on.
 
 ```bash
 cd <ruach-studio>/user/plugins

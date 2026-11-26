@@ -149,10 +149,8 @@ RuachI18n.add("uk", {
 "Ends at %": "Кінець, %",
 "Curve": "Крива",
 "His AIO #4 second pass: 60 steps from step 20, no Lightning, Detailz 0.6 and Qwen Enhancer 0.7, the extra noise 1.0 (as his QWEN2_00075 was made; the saved graph has 0.6), the colours put back to the picture's; then on a picture Second pass… ×2": "Його другий прохід AIO #4: 60 кроків з 20-го, без Lightning, Detailz 0.6 і Qwen Enhancer 0.7, додатковий шум 1.0 (так створено його QWEN2_00075; у збереженому графі 0.6), кольори повернено до картинки; потім на картинці «Другий прохід…» ×2",
-// HERESY 2361: the Videographer's final at 1280 × 704, the hero as the last frame
+// HERESY 2361: the Videographer's final at 1280 × 704 (its «Hero as the last frame» removed by 2995)
 "Final · 28 steps, 1280 × 704": "Чистовик · 28 кроків, 1280 × 704",
-"Hero as the last frame": "Герой останнім кадром",
-"Pressed: in the hero's shots MiniMax H3 gets the hero's own picture as the last frame too (FL2VA), so his likeness holds through the motion; such a shot ends on that picture. Not pressed: the shot's picture as its first frame alone": "Натиснуто: у кадрах героя MiniMax H3 отримує ще й його власну картинку останнім кадром (FL2VA), щоб схожість трималася в русі; такий кадр закінчується на цій картинці. Не натиснуто: лише картинка кадру першим кадром",
 // HERESY 2347: a run of before 2.0.7 by its own step log
 "About: its logged steps at its measured speed; the time of its earlier sittings was not recorded (a run of before 2.0.7)": "Приблизно: його записані кроки на виміряній швидкості; час попередніх сеансів не записувався (прогін до 2.0.7)",
 // HERESY 2346: the Videographer animatic and clip unread said; the guard on a lab started before it
@@ -3697,7 +3695,7 @@ RuachI18n.add("uk", {
 "Restart the engine?": "Перезапустити рушій?",
 "It then lists what came; the page reconnects by itself. Nothing may be rendering.": "Потім він покаже, що прийшло; сторінка перепідключиться сама. Нічого не повинно рендеритися.",
 "The engine restarts…": "Рушій перезапускається…",
-"The Studio does not run as a service here (Pinokio, or ./start.sh by hand): stop it and start it again there, and the engine lists what came.": "Тут Студія не працює як сервіс (Pinokio або ./start.sh вручну): зупини її й запусти знову там, і рушій покаже, що прийшло.",
+"The Studio does not run as a service here (its icon, or ./start.sh by hand): stop it and start it again there, and the engine lists what came.": "Тут Студія не працює як сервіс (значком або ./start.sh вручну): зупини її й запусти знову там, і рушій покаже, що прийшло.",
 "Not restarted:": "Не перезапущено:",
 "Checkpoints for the extra decoders and the sliders, made into GGUF here": "Чекпойнти для додаткових декодерів і слайдерів, перетворені тут у GGUF",
 "LoRAs: the Kit's library and Ruach Studio's own": "LoRA: бібліотека Kit і власні Руах Студії",
@@ -3758,7 +3756,6 @@ RuachI18n.add("uk", {
 "Switching the link…": "Перемикаю посилання…",
 "Move {0} to another folder": "Перемістити {0} в іншу теку",
 "A folder that is there already; {0} goes into it as «{1}». On the same disk it is renamed at once; on another it is copied, checked file by file, then the link is switched, and the old copy stays, renamed, for you to remove after a look.": "Тека, що вже є; {0} ляже в неї як «{1}». На тому самому диску її одразу перейменують; на іншому — скопіюють, звірять файл за файлом, потім перемкнуть посилання, а стара копія лишиться, перейменована, щоб ти видалив її, коли подивишся.",
-"A Windows path works too: D:\\Music is /mnt/d/Music.": "Шлях Windows теж підійде: D:\\Music — це /mnt/d/Music.",
 "{0} cannot move there": "{0} не може переїхати туди",
 "The same disk: the folder is renamed there at once, nothing is copied.": "Той самий диск: теку там одразу перейменують, нічого не копіюється.",
 "Another disk: {0} copied (free there: {1}), checked file by file, then the link switched. The old copy stays, renamed, until you remove it.": "Інший диск: {0} копіюється (вільно там: {1}), звіряється файл за файлом, потім перемикається посилання. Стара копія лишається, перейменована, поки ти її не видалиш.",
@@ -3826,7 +3823,6 @@ RuachI18n.add("uk", {
 "/ {#0} tracks": { "one": "/ {#0} трек", "few": "/ {#0} треки", "many": "/ {#0} треків", "other": "/ {#0} треку" },
 "track": "трек",
 "tracks": "треків",
-"BF16 (7.2 GB) is not on this machine: Pinokio's «More models» fetches it, or heresy/fetch-heresy.sh --backbone BF16; the Studio offers it after its next start.": "BF16 (7.2 ГБ) немає на цій машині: її завантажить «More models» у Pinokio або heresy/fetch-heresy.sh --backbone BF16; Студія запропонує її після наступного запуску.",
 "Copy the style": "Скопіювати стиль",
 "Back into the form": "Назад у форму",
 "Back into the form (Esc)": "Назад у форму (Esc)",
@@ -5012,9 +5008,8 @@ RuachI18n.add("uk", {
 RuachI18n.add("uk", {
 "The take would not start: press ▶ again": "Семпл не запустився: натисни ▶ ще раз"
 });
-// HERESY 1169 · 1362: the updater under Pinokio and without systemd-run
+// HERESY 1169 · 1362: the updater without systemd-run
 RuachI18n.add("uk", {
-"this Studio runs under Pinokio: update it there, by Update in Pinokio's menu": "ця Студія запущена під Pinokio: оновлюй її там, через Update у меню Pinokio",
 "this machine has no systemd-run for the update to run in: update by hand (git fetch --tags, git checkout the release, ./build.sh)": "на цій машині немає systemd-run, у якому йшло б оновлення: онови вручну (git fetch --tags, git checkout на реліз, ./build.sh)"
 });
 // HERESY 1169 · 1364: TTA and the pictures picked upscaled in one run
@@ -8458,7 +8453,7 @@ RuachI18n.add("uk", {
 "RS-TW 2.0 ×0.75 was not fetched: {0}": "RS-TW 2.0 ×0.75 не завантажено: {0}",
 "RS-TW 2.0 ×0.75 did not come: Engine → Models and LoRAs says why and fetches it again.": "RS-TW 2.0 ×0.75 не прийшла: «Рушій → Моделі й LoRA» скаже чому і завантажить її знову.",
 "The engine restarts to list RS-TW 2.0 ×0.75…": "Рушій перезапускається, щоб побачити RS-TW 2.0 ×0.75…",
-"RS-TW 2.0 ×0.75 is here. The Studio does not run as a service here: start it again (Pinokio, or ./start.sh), and the page switches to it at its next start.": "RS-TW 2.0 ×0.75 уже тут. Тут Студія запущена не як сервіс: запусти її знову (Pinokio або ./start.sh), і сторінка перейде на неї під час наступного старту.",
+"RS-TW 2.0 ×0.75 is here. The Studio does not run as a service here: start it again (its icon, or ./start.sh), and the page switches to it at its next start.": "RS-TW 2.0 ×0.75 уже тут. Тут Студія запущена не як сервіс: запусти її знову (значком або ./start.sh), і сторінка перейде на неї під час наступного старту.",
 "The engine has not listed RS-TW 2.0 ×0.75 yet: the page switches to it at its next start.": "Рушій поки не бачить RS-TW 2.0 ×0.75: сторінка перейде на неї під час наступного старту.",
 "Not switched: {0}": "Не перемкнено: {0}",
 // HERESY 2078b: ⓘ's takes a frozen workspace or the archive holds, after the number
@@ -10296,10 +10291,11 @@ RuachI18n.add("uk", {
 "Refined needs SheetSage2-Refined, which this Studio does not have yet.": "Для Refined потрібен SheetSage2-Refined, а в цій Студії його ще немає.",
 "BF16 (7.2 GB) is not in this Studio yet: Engine → Models and LoRAs fetches it under Backbone, and the Studio offers it after its next start.": "BF16 (7.2 ГБ) у цій Студії ще немає: її завантажить «Рушій → Моделі й LoRA» у рядку «Основна модель», і Студія запропонує її після наступного запуску.",
 "The server keeps no library: songs made in this tab stay until it reloads.": "Сервер не веде бібліотеку: пісні, створені в цій вкладці, живуть до її перезавантаження.",
-"This engine keeps no settings file, so it answers this computer and private networks; started the Studio's way (its icon, Pinokio or start.sh), it lets you choose.": "Цей рушій не зберігає файлу налаштувань, тож відповідає цьому комп'ютеру й приватним мережам; якщо запустити його так, як запускається Студія (значком, через Pinokio або start.sh), можна вибрати.",
+"This engine keeps no settings file, so it answers this computer and private networks; started the Studio's way (its icon or start.sh), it lets you choose.": "Цей рушій не зберігає файлу налаштувань, тож відповідає цьому комп'ютеру й приватним мережам; якщо запустити його так, як запускається Студія (значком або start.sh), можна вибрати.",
 "it needs Whisper large-v3, which this Studio does not have yet: Engine → Models": "потрібен Whisper large-v3, а в цій Студії його ще немає: «Рушій → Моделі»",
 "The lyrics check and karaoke timing need Whisper large-v3, which this Studio does not have yet.": "Для перевірки тексту й таймінгу караоке потрібен Whisper large-v3, а в цій Студії його ще немає.",
 "Whisper large-v3 is not in this Studio yet: Engine → Models and LoRAs fetches it (3.1 GB)": "Whisper large-v3 у цій Студії ще немає: його завантажить «Рушій → Моделі й LoRA» (3.1 ГБ)",
+"The stems' models are not whole in this Studio yet: Engine → Models and LoRAs fetches them (1.0 GB)": "Моделей стемів у цій Студії ще немає цілком: їх завантажить «Рушій → Моделі й LoRA» (1.0 ГБ)",
 "{0}: not fetched.": "{0}: не завантажено.",
 "The check did not run.": "Перевірка не запустилася.",
 "On Windows the Weights panel downloads through the bash of Git for Windows, and none is installed here.": "На Windows «Моделі й LoRA» завантажують через bash із Git for Windows, а його тут немає.",
@@ -10372,5 +10368,62 @@ RuachI18n.add("uk", {
 "The clip's voice is taken off": "Голос кліпу знято",
 "No take of the Narrator in the library yet: read one in the Narrator first": "У бібліотеці поки немає семплу Читця: спершу начитай його в Читці",
 "The Narrator's voice over the clip": "Голос Читця поверх кліпу",
-"A take of the Narrator's world, by link: it stays home, the clip only names it.": "Семпл зі світу Читця, посиланням: він лишається вдома, кліп лише називає його."
+"A take of the Narrator's world, by link: it stays home, the clip only names it.": "Семпл зі світу Читця, посиланням: він лишається вдома, кліп лише називає його.",
+// HERESY 2987: the Refiner's Amp (NAM), its captures from the Studio's set and from user/nam/
+"Amp (NAM)": "Підсилювач (NAM)",
+"a stem through an amp's capture": "стем через знімок підсилювача",
+"A stem of the set played through a NAM capture (Neural Amp Modeler) of an amp, a pedal or a whole rig: the Studio's own set or your .nam files in user/nam/; the drive into it, its output and dry/wet, the result at the stem's loudness and length. A lane of its own in the DAW, or the stem's version.": "Стем набору, зіграний через знімок NAM (Neural Amp Modeler) підсилювача, педалі чи цілого ланцюга: набір Студії або твої файли .nam у user/nam/; драйв на вході, вихідний рівень і сухий/мокрий, підсумок на гучності й довжині стему. Окрема доріжка в DAW або версія стему.",
+"Which stem goes through the amp; a set without it gives the first it has of guitar, other, bass, instrumental (a bass capture: bass, other)": "Який стем іде через підсилювач; якщо в наборі його немає, береться перший із: guitar, other, bass, instrumental (для басового знімка: bass, other)",
+"Capture": "Знімок",
+"The capture the stem plays through: the Studio's set by its kind, then yours from user/nam/, read anew each time the step opens": "Знімок, через який грає стем: набір Студії за видами, далі твої з user/nam/, перечитані щоразу, як крок відкривається",
+"How hard the stem hits the capture: above zero it breaks up more, below zero it stays cleaner": "Наскільки сильно стем б'є в знімок: вище нуля звук рветься більше, нижче нуля лишається чистішим",
+"Output, dB": "Вихід, дБ",
+"The result's level against the stem's own loudness, at any dry/wet: 0 dB keeps the stem's place in the mix": "Рівень підсумку проти гучності самого стему за будь-якого співвідношення сухий/мокрий: 0 дБ лишає стем на його місці в міксі",
+"Dry/wet, %": "Сухий/мокрий, %",
+"How much of the amp: 100 is the amp alone, 0 the stem as it was; between them an equal-power blend, brought back to the stem's loudness": "Скільки підсилювача: 100 — лише підсилювач, 0 — стем, яким він був; між ними суміш рівної потужності, повернена до гучності стему",
+"Vocals": "Вокал",
+"Guitar amps": "Гітарні підсилювачі",
+"Bass amps": "Басові підсилювачі",
+"Pedals": "Педалі",
+"Full rigs": "Цілі ланцюги",
+"Outboard": "Студійні прилади",
+"Other captures": "Інші знімки",
+"Yours, from user/nam/": "Твої, з user/nam/",
+"No NAM capture here yet: put .nam files in user/nam/ (any folder under it) and open the step again": "Тут поки немає знімків NAM: поклади файли .nam у user/nam/ (у будь-яку теку всередині) і відкрий крок знову",
+"choose a capture": "обери знімок",
+"Reading the captures…": "Читаю знімки…",
+"The captures did not load: {0}": "Знімки не завантажилися: {0}",
+"captured by {0}": "зняв {0}",
+"licence: {0}": "ліцензія: {0}",
+"your own file, user/nam/{0}": "твій файл, user/nam/{0}",
+"The Studio cannot play it: {0}": "Студія не може його зіграти: {0}",
+"That capture is not here any more: choose another": "Цього знімка тут більше немає: обери інший",
+// HERESY 2994: the Amp (NAM) finished: its part in Engine → Models, the cabinet after it, dry/wet that keeps the stem's place
+"NAM amps: the captures the Refiner's Amp (NAM) plays a stem through (guitar amps, a bass amp, a pedal, a rig; MIT, by their authors)": "Підсилювачі NAM: знімки, крізь які «Підсилювач (NAM)» Огранювача грає стем (гітарні підсилювачі, басовий, педаль, цілий ланцюг; MIT, від їхніх авторів)",
+"Cabinet": "Кабінет",
+"Auto: after a guitar amp head": "Авто: після гітарної голови",
+"Generic cab": "Узагальнений кабінет",
+"No cabinet": "Без кабінету",
+"A cabinet after the amp. The generic cab is a filter, not a recorded cabinet: a guitar speaker's band (about 80 Hz to 5 kHz) and its mid curve. Auto puts it after the Studio's guitar amps captured without a cabinet (amp heads) and leaves pedals, bass amps, rigs and your own captures as they are": "Кабінет після підсилювача. Узагальнений кабінет — фільтр, а не записаний кабінет: смуга гітарного динаміка (приблизно від 80 Гц до 5 кГц) і його крива середини. «Авто» ставить його після гітарних підсилювачів Студії, знятих без кабінету (голів), і лишає педалі, басові підсилювачі, цілі ланцюги та твої знімки як є",
+"an amp head without a cabinet: on Auto the generic cab follows it": "голова підсилювача без кабінету: на «Авто» за нею йде узагальнений кабінет",
+"the NAM amps": "підсилювачі NAM",
+"The Studio's own captures are not here yet: Engine → Models brings them (NAM amps, 3 MB)": "Знімків Студії тут поки немає: їх приносить Рушій → Моделі (підсилювачі NAM, 3 MB)",
+// HERESY 2989, 2992, 3008 (the rc3 sweep, drafted by the OpenRouter apprentice, deepseek-chat, checked): the Windows programs' part and the two Windows tails
+"Windows programs: FFmpeg 9.0.2 (ffmpeg, ffprobe) and FluidSynth 2.5.7, pinned, into runtime/": "Програми Windows: FFmpeg 9.0.2 (ffmpeg, ffprobe) та FluidSynth 2.5.7, закріплені, у runtime/",
+"the Windows programs (FFmpeg, FluidSynth)": "програми Windows (FFmpeg, FluidSynth)",
+"Fish Audio Drama 3 at Q8_0 on a card of 24 GB or more, else Q4_K, with its licence files and the stresses; audio.cpp's server built after it on Linux, brought by the Windows package": "Fish Audio Drama 3 у Q8_0 на карті від 24 ГБ, інакше Q4_K, з файлами ліцензії та наголосами; сервер audio.cpp збирається після нього на Linux, приноситься пакетом Windows",
+"Qwen2.5-Omni-7B: hears the songs of a training set and writes each one's style tags; the GGUF ones run through llama.cpp (vendor/llama.cpp, built by you on Linux; the Windows package brings it)": "Qwen2.5-Omni-7B: слухає пісні навчального набору й пише теги стилю для кожної; GGUF-версії йдуть через llama.cpp (vendor/llama.cpp, зібраний тобою на Linux; пакет Windows приносить його)",
+"Add capture…": "Додати знімок…",
+"Adding {0}…": "Додається {0}…",
+"Added: {0}": "Додано: {0}",
+"Already here: {0}": "Вже тут: {0}",
+"Not added: {0}": "Не додано: {0}",
+"Not added: a capture is a .nam file": "Не додано: знімок — це файл .nam",
+"Not added: a NAM capture is at most 64 MB": "Не додано: знімок NAM — не більше 64 MB",
+"no file was sent": "файл не надіслано",
+"a NAM capture is at most 64 MB": "знімок NAM — не більше 64 MB",
+"too small to be a NAM capture": "занадто малий для знімку NAM",
+"not a NAM capture: a .nam file is JSON, and this is not": "це не знімок NAM: файл .nam — це JSON, а це не він",
+"not a NAM capture: it has no architecture or weights": "це не знімок NAM: у ньому немає архітектури чи ваг",
+"Add a capture of your own: a .nam file from your computer; the lab checks that the step can play it and keeps it in user/nam/": "Додай свій знімок: файл .nam з твого комп’ютера; лабораторія перевіряє, чи може крок його відтворити, і зберігає його в user/nam/"
 });

@@ -12,7 +12,7 @@ import (
 // handle it is not handed (STARTF_USESTDHANDLES), a new console window or not. So install.ps1, started by RuachStudio.exe in a console of its
 // own, printed into nothing (the window stood empty), the models' question «Download them now?» read end-of-file (fetch_models.py: exit 5),
 // and the «Press Enter to close this window» that should have kept its last lines up read end-of-file too: the window closed at once and the
-// launcher said «its window said why». The same held for WSL's console (the logs followed, the models' download). newConsole starts the
+// launcher said «its window said why». newConsole starts the
 // program with CreateProcess itself, in a console of its own and with no standard handles given, so its input and its output are that
 // console's, as a program started from Explorer or by `start` has them.
 func newConsole(dir string, env []string, name string, args ...string) (syscall.Handle, error) {

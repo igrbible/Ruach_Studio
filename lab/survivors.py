@@ -29,7 +29,7 @@ def unit_cgroup():
     if not os.environ.get("INVOCATION_ID"):
         return None
     try:
-        for line in Path("/proc/self/cgroup").read_text().splitlines():
+        for line in Path("/proc/self/cgroup").read_text(encoding="utf-8").splitlines():
             if line.startswith("0::") and line[3:].rstrip("/").endswith("/" + unit()):
                 return line[3:]
     except OSError:
@@ -39,14 +39,14 @@ def unit_cgroup():
 
 def procs(cg):
     try:
-        return [int(x) for x in Path("/sys/fs/cgroup" + cg + "/cgroup.procs").read_text().split()]
+        return [int(x) for x in Path("/sys/fs/cgroup" + cg + "/cgroup.procs").read_text(encoding="utf-8").split()]
     except (OSError, ValueError):
         return []
 
 
 def _ppid(pid):
     try:
-        s = Path(f"/proc/{pid}/stat").read_text()
+        s = Path(f"/proc/{pid}/stat").read_text(encoding="utf-8")
         return int(s[s.rindex(")") + 2:].split()[1])
     except (OSError, ValueError, IndexError):
         return None
@@ -94,7 +94,7 @@ def end(pids, grace=GRACE_S):
 
 def _alive(pid):
     try:
-        st = Path(f"/proc/{pid}/stat").read_text()
+        st = Path(f"/proc/{pid}/stat").read_text(encoding="utf-8")
         return st[st.rindex(")") + 2] != "Z"
     except (OSError, ValueError, IndexError):
         return False

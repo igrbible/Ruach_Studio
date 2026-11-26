@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """HERESY 1261: lab/places.py on a studio of its own in a temporary folder (never this Studio's folders): a move on the same disk, one
 to another disk (/dev/shm, when it is another device here), back to the Studio's folder, the link put back from the record, the
-lab's start, a Windows path under WSL and outside it, and the refusals (busy, a test page, no folder, no room). The page's keys in
+lab's start, a Windows path on Linux (refused) and on Windows (taken as typed, Cyrillic and spaces too), and the refusals (busy, a test page, no folder, no room). The page's keys in
 user/settings.json must outlive every write of "paths".
   .venv/bin/python lab/test_places.py"""
 import json
@@ -84,15 +84,28 @@ try:
         check("a test page moves nothing", False)
     except ValueError:
         check("a test page moves nothing", True)
+    for typed in ("D:\\Music\\Ruach", "e:/x/", "C:"):
+        try:
+            places.norm(typed)
+            check(f"a Windows path on Linux is refused ({typed})", False)
+        except ValueError as e:
+            check(f"a Windows path on Linux is refused ({typed}), in words", "Windows path" in str(e))
+    check("the page's data carries no WSL flag", "wsl" not in places.listing())
+    real_nt = places.winx.NT
+    places.winx.NT = True      # HERESY 2990: native Windows takes a Windows path as typed (ntpath, so this runs on Linux too)
     try:
-        places.norm("D:\\Music\\Ruach")
-        check("a Windows path outside WSL is refused", places._wsl())
-    except ValueError:
-        check("a Windows path outside WSL is refused", True)
-    real_wsl = places._wsl
-    places._wsl = lambda: True
-    check("under WSL D:\\Music\\Ruach is /mnt/d/Music/Ruach", places.norm("D:\\Music\\Ruach") == "/mnt/d/Music/Ruach" and places.norm("e:/x/") == "/mnt/e/x")
-    places._wsl = real_wsl
+        check("on Windows D:\\Music is D:\\Music", places.norm("D:\\Music") == "D:\\Music" and places.norm(" d:/Music/ ") == "d:\\Music")
+        check("on Windows a quoted Cyrillic folder with a space is taken as it is",
+              places.norm('"C:\\Users\\Тестер\\Music Folder"') == "C:\\Users\\Тестер\\Music Folder")
+        check("on Windows a share is a folder too", places.norm("\\\\server\\Песни\\Ruach") == "\\\\server\\Песни\\Ruach")
+        for bad in ("Music", "/mnt/d/Music", "C:Music"):
+            try:
+                places.norm(bad)
+                check(f"on Windows {bad!r} is refused", False)
+            except ValueError:
+                check(f"on Windows {bad!r} is refused", True)
+    finally:
+        places.winx.NT = real_nt
 
     print("a move on the same disk")
     (base / "same").mkdir()

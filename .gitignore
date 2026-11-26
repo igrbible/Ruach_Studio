@@ -48,6 +48,7 @@
 
 # ---- this machine only
 /tmp/*
+/runtime/
 /extras/plugins/*/.venv/
 !/tmp/.gitkeep
 /install-record/
@@ -64,12 +65,12 @@
 *.part
 *.bak
 .DS_Store
-# HERESY 1285, 1352: what Pinokio writes beside pinokio.js (its environment, its logs and caches, the notes it leaves for agents),
-# and the folder the launcher's scripts lived in until rc5, where Pinokio wrote them then
+# HERESY 1285 (2988: Pinokio's own lines out; 3001: its environment and temp back with its minimal Linux menu): the launchers' logs and
+# caches (logs\ is RuachStudio.exe's), what Pinokio writes beside pinokio.js, the notes agents leave
 /ENVIRONMENT
+/.pinokio-temp
 /logs/
 /cache/
-/.pinokio-temp
 /AGENTS.md
 /CLAUDE.md
 /GEMINI.md
@@ -78,7 +79,6 @@
 /.cursorrules
 /.geminiignore
 /.windsurfrules
-/pinokio/
 
 # ---- the user's settings (single-user studio: they live here, not in ~/.config)
 /user/*

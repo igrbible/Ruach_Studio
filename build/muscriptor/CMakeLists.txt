@@ -10,7 +10,10 @@ include(FetchContent)
 set(MUSCRIPTOR_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(MUSCRIPTOR_BUILD_BENCH OFF CACHE BOOL "" FORCE)
 set(MUSCRIPTOR_VULKAN OFF CACHE BOOL "" FORCE)
-set(MUSCRIPTOR_NATIVE ON CACHE BOOL "" FORCE)
+# HERESY 2992: RUACH_MSC_NATIVE=OFF (the Windows package's build, windows.yml) takes muscriptor.cpp's own portable x86 set instead of the
+# building machine's processor; build.sh keeps building for the machine it runs on
+option(RUACH_MSC_NATIVE "Build for this machine's processor (build.sh); OFF for a shipped build" ON)
+set(MUSCRIPTOR_NATIVE ${RUACH_MSC_NATIVE} CACHE BOOL "" FORCE)
 FetchContent_Declare(muscriptor
     GIT_REPOSITORY https://github.com/DamRsn/muscriptor.cpp.git
     GIT_TAG c8adc019677ed3479fa3c22c1a117d662382f347
@@ -18,3 +21,7 @@ FetchContent_Declare(muscriptor
 FetchContent_MakeAvailable(muscriptor)
 add_executable(ruach-muscriptor ruach_muscriptor.cpp)
 target_link_libraries(ruach-muscriptor PRIVATE muscriptor_ggml)
+# HERESY 2992: on Windows its process in UTF-8 (argv, fopen: a path in Cyrillic opens), with the engine's own manifest (HERESY 2649)
+if(WIN32)
+    target_sources(ruach-muscriptor PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../tools/utf8.manifest)
+endif()

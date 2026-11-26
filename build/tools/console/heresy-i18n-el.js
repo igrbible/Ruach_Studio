@@ -148,10 +148,8 @@ RuachI18n.add("el", {
 "Ends at %": "Τέλος, %",
 "Curve": "Καμπύλη",
 "His AIO #4 second pass: 60 steps from step 20, no Lightning, Detailz 0.6 and Qwen Enhancer 0.7, the extra noise 1.0 (as his QWEN2_00075 was made; the saved graph has 0.6), the colours put back to the picture's; then on a picture Second pass… ×2": "Το δεύτερο του πέρασμα AIO #4: 60 βήματα από το 20ό, χωρίς Lightning, Detailz 0.6 και Qwen Enhancer 0.7, επιπλέον θόρυβος 1.0 (έτσι φτιάχτηκε το QWEN2_00075 του· ο αποθηκευμένος γράφος έχει 0.6), τα χρώματα πίσω στης εικόνας· μετά σε μια εικόνα «Δεύτερο πέρασμα…» ×2",
-// HERESY 2361: the Videographer's final at 1280 × 704, the hero as the last frame
+// HERESY 2361: the Videographer's final at 1280 × 704 (its «Hero as the last frame» removed by 2995)
 "Final · 28 steps, 1280 × 704": "Τελικό · 28 βήματα, 1280 × 704",
-"Hero as the last frame": "Ο ήρωας ως τελευταίο καρέ",
-"Pressed: in the hero's shots MiniMax H3 gets the hero's own picture as the last frame too (FL2VA), so his likeness holds through the motion; such a shot ends on that picture. Not pressed: the shot's picture as its first frame alone": "Πατημένο: στα πλάνα του ήρωα το MiniMax H3 παίρνει και τη δική του εικόνα ως τελευταίο καρέ (FL2VA), ώστε η ομοιότητα να κρατιέται στην κίνηση· ένα τέτοιο πλάνο τελειώνει σε αυτή την εικόνα. Όχι πατημένο: μόνο η εικόνα του πλάνου ως πρώτο καρέ",
 // HERESY 2347: a run of before 2.0.7 by its own step log
 "About: its logged steps at its measured speed; the time of its earlier sittings was not recorded (a run of before 2.0.7)": "Περίπου: τα καταγεγραμμένα βήματά του με τη μετρημένη ταχύτητά του· ο χρόνος των προηγούμενων συνεδριών δεν καταγράφηκε (εκτέλεση πριν από το 2.0.7)",
 // HERESY 2346: the Videographer animatic and clip unread said; the guard on a lab started before it
@@ -3696,7 +3694,7 @@ RuachI18n.add("el", {
 "Restart the engine?": "Επανεκκίνηση της μηχανής;",
 "It then lists what came; the page reconnects by itself. Nothing may be rendering.": "Μετά εμφανίζει ό,τι ήρθε· η σελίδα ξανασυνδέεται μόνη της. Δεν πρέπει να αποδίδεται τίποτα.",
 "The engine restarts…": "Η μηχανή επανεκκινεί…",
-"The Studio does not run as a service here (Pinokio, or ./start.sh by hand): stop it and start it again there, and the engine lists what came.": "Το Στούντιο δεν τρέχει εδώ ως υπηρεσία (Pinokio, ή ./start.sh με το χέρι): σταμάτησέ το και ξεκίνα το ξανά εκεί, και η μηχανή εμφανίζει ό,τι ήρθε.",
+"The Studio does not run as a service here (its icon, or ./start.sh by hand): stop it and start it again there, and the engine lists what came.": "Το Στούντιο δεν τρέχει εδώ ως υπηρεσία (το εικονίδιό του, ή ./start.sh με το χέρι): σταμάτησέ το και ξεκίνα το ξανά εκεί, και η μηχανή εμφανίζει ό,τι ήρθε.",
 "Not restarted:": "Δεν έγινε επανεκκίνηση:",
 "Checkpoints for the extra decoders and the sliders, made into GGUF here": "Checkpoints για τους επιπλέον αποκωδικοποιητές και τα ρυθμιστικά, που γίνονται GGUF εδώ",
 "LoRAs: the Kit's library and Ruach Studio's own": "LoRA: η βιβλιοθήκη του Kit και τα δικά του Ροῦαχ Στούντιο",
@@ -3757,7 +3755,6 @@ RuachI18n.add("el", {
 "Switching the link…": "Αλλάζω τον σύνδεσμο…",
 "Move {0} to another folder": "Μετακίνηση του {0} σε άλλον φάκελο",
 "A folder that is there already; {0} goes into it as «{1}». On the same disk it is renamed at once; on another it is copied, checked file by file, then the link is switched, and the old copy stays, renamed, for you to remove after a look.": "Ένας φάκελος που υπάρχει ήδη· το {0} μπαίνει μέσα ως «{1}». Στον ίδιο δίσκο μετονομάζεται αμέσως· σε άλλον αντιγράφεται, ελέγχεται αρχείο προς αρχείο, μετά αλλάζει ο σύνδεσμος, και το παλιό αντίγραφο μένει, μετονομασμένο, για να το αφαιρέσεις αφού ρίξεις μια ματιά.",
-"A Windows path works too: D:\\Music is /mnt/d/Music.": "Λειτουργεί και διαδρομή Windows: το D:\\Music είναι το /mnt/d/Music.",
 "{0} cannot move there": "Το {0} δεν μπορεί να μετακινηθεί εκεί",
 "The same disk: the folder is renamed there at once, nothing is copied.": "Ο ίδιος δίσκος: ο φάκελος μετονομάζεται εκεί αμέσως, τίποτα δεν αντιγράφεται.",
 "Another disk: {0} copied (free there: {1}), checked file by file, then the link switched. The old copy stays, renamed, until you remove it.": "Άλλος δίσκος: αντιγράφονται {0} (ελεύθερα εκεί: {1}), ελέγχονται αρχείο προς αρχείο, μετά αλλάζει ο σύνδεσμος. Το παλιό αντίγραφο μένει, μετονομασμένο, ώσπου να το αφαιρέσεις.",
@@ -3825,7 +3822,6 @@ RuachI18n.add("el", {
 "/ {#0} tracks": { "one": "/ {#0} κομμάτι", "other": "/ {#0} κομμάτια" },
 "track": "κομμάτι",
 "tracks": "κομμάτια",
-"BF16 (7.2 GB) is not on this machine: Pinokio's «More models» fetches it, or heresy/fetch-heresy.sh --backbone BF16; the Studio offers it after its next start.": "Το BF16 (7.2 GB) δεν υπάρχει σε αυτό το μηχάνημα: το φέρνει το «More models» του Pinokio, ή το heresy/fetch-heresy.sh --backbone BF16· το Στούντιο το προσφέρει μετά την επόμενη εκκίνησή του.",
 "Copy the style": "Αντιγραφή του ύφους",
 "Back into the form": "Πίσω στη φόρμα",
 "Back into the form (Esc)": "Πίσω στη φόρμα (Esc)",
@@ -5011,9 +5007,8 @@ RuachI18n.add("el", {
 RuachI18n.add("el", {
 "The take would not start: press ▶ again": "Η λήψη δεν ξεκίνησε: πάτα ▶ ξανά"
 });
-// HERESY 1169 · 1362: the updater under Pinokio and without systemd-run
+// HERESY 1169 · 1362: the updater without systemd-run
 RuachI18n.add("el", {
-"this Studio runs under Pinokio: update it there, by Update in Pinokio's menu": "αυτό το Στούντιο τρέχει μέσα από το Pinokio: ενημέρωσέ το εκεί, με το Update στο μενού του Pinokio",
 "this machine has no systemd-run for the update to run in: update by hand (git fetch --tags, git checkout the release, ./build.sh)": "αυτό το μηχάνημα δεν έχει systemd-run για να τρέξει η ενημέρωση: ενημέρωσε με το χέρι (git fetch --tags, git checkout στην έκδοση, ./build.sh)"
 });
 // HERESY 1169 · 1364: TTA and the pictures picked upscaled in one run
@@ -8455,7 +8450,7 @@ RuachI18n.add("el", {
 "RS-TW 2.0 ×0.75 was not fetched: {0}": "Το RS-TW 2.0 ×0.75 δεν κατέβηκε: {0}",
 "RS-TW 2.0 ×0.75 did not come: Engine → Models and LoRAs says why and fetches it again.": "Το RS-TW 2.0 ×0.75 δεν ήρθε: το «Μηχανή → Μοντέλα και LoRA» λέει γιατί και το φέρνει ξανά.",
 "The engine restarts to list RS-TW 2.0 ×0.75…": "Η μηχανή επανεκκινεί για να εμφανίσει το RS-TW 2.0 ×0.75…",
-"RS-TW 2.0 ×0.75 is here. The Studio does not run as a service here: start it again (Pinokio, or ./start.sh), and the page switches to it at its next start.": "Το RS-TW 2.0 ×0.75 είναι εδώ. Το Στούντιο δεν τρέχει εδώ ως υπηρεσία: ξεκίνα το ξανά (Pinokio, ή ./start.sh), και η σελίδα θα περάσει σε αυτό στην επόμενη εκκίνηση.",
+"RS-TW 2.0 ×0.75 is here. The Studio does not run as a service here: start it again (its icon, or ./start.sh), and the page switches to it at its next start.": "Το RS-TW 2.0 ×0.75 είναι εδώ. Το Στούντιο δεν τρέχει εδώ ως υπηρεσία: ξεκίνα το ξανά (το εικονίδιό του, ή ./start.sh), και η σελίδα θα περάσει σε αυτό στην επόμενη εκκίνηση.",
 "The engine has not listed RS-TW 2.0 ×0.75 yet: the page switches to it at its next start.": "Η μηχανή δεν εμφανίζει ακόμη το RS-TW 2.0 ×0.75: η σελίδα θα περάσει σε αυτό στην επόμενη εκκίνηση.",
 "Not switched: {0}": "Δεν άλλαξε: {0}",
 // HERESY 2078b: ⓘ's takes a frozen workspace or the archive holds, after the number
@@ -10300,10 +10295,11 @@ RuachI18n.add("el", {
 "Refined needs SheetSage2-Refined, which this Studio does not have yet.": "Το Refined χρειάζεται το SheetSage2-Refined, που αυτό το Στούντιο δεν έχει ακόμη.",
 "BF16 (7.2 GB) is not in this Studio yet: Engine → Models and LoRAs fetches it under Backbone, and the Studio offers it after its next start.": "Το BF16 (7.2 GB) δεν υπάρχει ακόμη σε αυτό το Στούντιο: το φέρνει το «Μηχανή → Μοντέλα και LoRA» στη γραμμή «Βασικό μοντέλο», και το Στούντιο το προσφέρει μετά την επόμενη εκκίνησή του.",
 "The server keeps no library: songs made in this tab stay until it reloads.": "Ο διακομιστής δεν κρατά βιβλιοθήκη: τα τραγούδια που φτιάχτηκαν σε αυτή την καρτέλα μένουν ώσπου να ξαναφορτωθεί.",
-"This engine keeps no settings file, so it answers this computer and private networks; started the Studio's way (its icon, Pinokio or start.sh), it lets you choose.": "Αυτή η μηχανή δεν κρατά αρχείο ρυθμίσεων, οπότε απαντά σε αυτόν τον υπολογιστή και σε ιδιωτικά δίκτυα· αν ξεκινήσει όπως ξεκινά το Στούντιο (από το εικονίδιό του, το Pinokio ή το start.sh), σε αφήνει να διαλέξεις.",
+"This engine keeps no settings file, so it answers this computer and private networks; started the Studio's way (its icon or start.sh), it lets you choose.": "Αυτή η μηχανή δεν κρατά αρχείο ρυθμίσεων, οπότε απαντά σε αυτόν τον υπολογιστή και σε ιδιωτικά δίκτυα· αν ξεκινήσει όπως ξεκινά το Στούντιο (από το εικονίδιό του ή το start.sh), σε αφήνει να διαλέξεις.",
 "it needs Whisper large-v3, which this Studio does not have yet: Engine → Models": "χρειάζεται το Whisper large-v3, που αυτό το Στούντιο δεν έχει ακόμη: «Μηχανή → Μοντέλα»",
 "The lyrics check and karaoke timing need Whisper large-v3, which this Studio does not have yet.": "Ο έλεγχος στίχων και ο χρονισμός καραόκε χρειάζονται το Whisper large-v3, που αυτό το Στούντιο δεν έχει ακόμη.",
 "Whisper large-v3 is not in this Studio yet: Engine → Models and LoRAs fetches it (3.1 GB)": "Το Whisper large-v3 δεν υπάρχει ακόμη σε αυτό το Στούντιο: το φέρνει το «Μηχανή → Μοντέλα και LoRA» (3.1 GB)",
+"The stems' models are not whole in this Studio yet: Engine → Models and LoRAs fetches them (1.0 GB)": "Τα μοντέλα των stems δεν είναι ακόμη πλήρη σε αυτό το Στούντιο: τα φέρνει το «Μηχανή → Μοντέλα και LoRA» (1.0 GB)",
 "{0}: not fetched.": "{0}: δεν ήρθε.",
 "The check did not run.": "Ο έλεγχος δεν έτρεξε.",
 "On Windows the Weights panel downloads through the bash of Git for Windows, and none is installed here.": "Στα Windows το «Μοντέλα και LoRA» κατεβάζει μέσω του bash του Git for Windows, και εδώ δεν είναι εγκατεστημένο.",
@@ -10376,5 +10372,62 @@ RuachI18n.add("el", {
 "The clip's voice is taken off": "Η φωνή του κλιπ αφαιρέθηκε",
 "No take of the Narrator in the library yet: read one in the Narrator first": "Δεν υπάρχει ακόμα λήψη του Αναγνώστη στη βιβλιοθήκη: διάβασε πρώτα μία στον Αναγνώστη",
 "The Narrator's voice over the clip": "Η φωνή του Αναγνώστη πάνω από το κλιπ",
-"A take of the Narrator's world, by link: it stays home, the clip only names it.": "Μια λήψη από τον κόσμο του Αναγνώστη, με σύνδεσμο: μένει στο σπίτι της, το κλιπ μόνο την ονομάζει."
+"A take of the Narrator's world, by link: it stays home, the clip only names it.": "Μια λήψη από τον κόσμο του Αναγνώστη, με σύνδεσμο: μένει στο σπίτι της, το κλιπ μόνο την ονομάζει.",
+// HERESY 2987: the Refiner's Amp (NAM), its captures from the Studio's set and from user/nam/
+"Amp (NAM)": "Ενισχυτής (NAM)",
+"a stem through an amp's capture": "ένα stem μέσα από αποτύπωμα ενισχυτή",
+"A stem of the set played through a NAM capture (Neural Amp Modeler) of an amp, a pedal or a whole rig: the Studio's own set or your .nam files in user/nam/; the drive into it, its output and dry/wet, the result at the stem's loudness and length. A lane of its own in the DAW, or the stem's version.": "Ένα stem του σετ παιγμένο μέσα από ένα αποτύπωμα NAM (Neural Amp Modeler) ενισχυτή, πεταλιού ή ολόκληρης αλυσίδας: το σετ του Studio ή τα δικά σου αρχεία .nam στο user/nam/· η ώθηση στην είσοδο, η έξοδος και το dry/wet, το αποτέλεσμα στην ένταση και στη διάρκεια του stem. Δικό του κανάλι στο DAW ή εκδοχή του stem.",
+"Which stem goes through the amp; a set without it gives the first it has of guitar, other, bass, instrumental (a bass capture: bass, other)": "Ποιο stem περνά από τον ενισχυτή· ένα σετ χωρίς αυτό δίνει το πρώτο που έχει από guitar, other, bass, instrumental (ένα αποτύπωμα μπάσου: bass, other)",
+"Capture": "Αποτύπωμα",
+"The capture the stem plays through: the Studio's set by its kind, then yours from user/nam/, read anew each time the step opens": "Το αποτύπωμα από το οποίο περνά το stem: το σετ του Studio κατά είδος, μετά τα δικά σου από το user/nam/, διαβασμένα ξανά κάθε φορά που ανοίγει το βήμα",
+"How hard the stem hits the capture: above zero it breaks up more, below zero it stays cleaner": "Πόσο δυνατά χτυπά το stem το αποτύπωμα: πάνω από το μηδέν σπάει περισσότερο, κάτω από το μηδέν μένει πιο καθαρό",
+"Output, dB": "Έξοδος, dB",
+"The result's level against the stem's own loudness, at any dry/wet: 0 dB keeps the stem's place in the mix": "Η στάθμη του αποτελέσματος απέναντι στην ένταση του ίδιου του stem, σε κάθε dry/wet: 0 dB κρατά το stem στη θέση του στη μίξη",
+"Dry/wet, %": "Dry/wet, %",
+"How much of the amp: 100 is the amp alone, 0 the stem as it was; between them an equal-power blend, brought back to the stem's loudness": "Πόσος ενισχυτής: 100 είναι μόνο ο ενισχυτής, 0 το stem όπως ήταν· ανάμεσα, μια μείξη ίσης ισχύος, φερμένη πίσω στην ένταση του stem",
+"Vocals": "Φωνητικά",
+"Guitar amps": "Ενισχυτές κιθάρας",
+"Bass amps": "Ενισχυτές μπάσου",
+"Pedals": "Πετάλια",
+"Full rigs": "Ολόκληρες αλυσίδες",
+"Outboard": "Εξοπλισμός στούντιο",
+"Other captures": "Άλλα αποτυπώματα",
+"Yours, from user/nam/": "Δικά σου, από το user/nam/",
+"No NAM capture here yet: put .nam files in user/nam/ (any folder under it) and open the step again": "Δεν υπάρχει ακόμη αποτύπωμα NAM εδώ: βάλε αρχεία .nam στο user/nam/ (σε οποιονδήποτε φάκελο μέσα του) και άνοιξε ξανά το βήμα",
+"choose a capture": "διάλεξε αποτύπωμα",
+"Reading the captures…": "Διαβάζω τα αποτυπώματα…",
+"The captures did not load: {0}": "Τα αποτυπώματα δεν φορτώθηκαν: {0}",
+"captured by {0}": "αποτύπωσε ο/η {0}",
+"licence: {0}": "άδεια: {0}",
+"your own file, user/nam/{0}": "δικό σου αρχείο, user/nam/{0}",
+"The Studio cannot play it: {0}": "Το Studio δεν μπορεί να το παίξει: {0}",
+"That capture is not here any more: choose another": "Αυτό το αποτύπωμα δεν είναι πια εδώ: διάλεξε άλλο",
+// HERESY 2994: the Amp (NAM) finished: its part in Engine → Models, the cabinet after it, dry/wet that keeps the stem's place
+"NAM amps: the captures the Refiner's Amp (NAM) plays a stem through (guitar amps, a bass amp, a pedal, a rig; MIT, by their authors)": "Ενισχυτές NAM: τα αποτυπώματα μέσα από τα οποία ο «Ενισχυτής (NAM)» του Γυαλιστή παίζει ένα stem (ενισχυτές κιθάρας, ένας μπάσου, ένα πετάλι, μια αλυσίδα· MIT, από τους δημιουργούς τους)",
+"Cabinet": "Καμπίνα",
+"Auto: after a guitar amp head": "Αυτόματα: μετά από κεφαλή ενισχυτή κιθάρας",
+"Generic cab": "Γενική καμπίνα",
+"No cabinet": "Χωρίς καμπίνα",
+"A cabinet after the amp. The generic cab is a filter, not a recorded cabinet: a guitar speaker's band (about 80 Hz to 5 kHz) and its mid curve. Auto puts it after the Studio's guitar amps captured without a cabinet (amp heads) and leaves pedals, bass amps, rigs and your own captures as they are": "Μια καμπίνα μετά τον ενισχυτή. Η γενική καμπίνα είναι φίλτρο, όχι ηχογραφημένη καμπίνα: η ζώνη ενός μεγαφώνου κιθάρας (περίπου 80 Hz έως 5 kHz) και η καμπύλη των μεσαίων του. Το «Αυτόματα» τη βάζει μετά τους ενισχυτές κιθάρας του Studio που αποτυπώθηκαν χωρίς καμπίνα (κεφαλές) και αφήνει πετάλια, ενισχυτές μπάσου, αλυσίδες και τα δικά σου αποτυπώματα όπως είναι",
+"an amp head without a cabinet: on Auto the generic cab follows it": "κεφαλή ενισχυτή χωρίς καμπίνα: στο «Αυτόματα» την ακολουθεί η γενική καμπίνα",
+"the NAM amps": "οι ενισχυτές NAM",
+"The Studio's own captures are not here yet: Engine → Models brings them (NAM amps, 3 MB)": "Τα αποτυπώματα του Studio δεν είναι ακόμη εδώ: τα φέρνει η Μηχανή → Μοντέλα (ενισχυτές NAM, 3 MB)",
+// HERESY 2989, 2992, 3008 (the rc3 sweep, drafted by the OpenRouter apprentice, deepseek-chat, checked): the Windows programs' part and the two Windows tails
+"Windows programs: FFmpeg 9.0.2 (ffmpeg, ffprobe) and FluidSynth 2.5.7, pinned, into runtime/": "Προγράμματα Windows: FFmpeg 9.0.2 (ffmpeg, ffprobe) και FluidSynth 2.5.7, καρφωμένα, στο runtime/",
+"the Windows programs (FFmpeg, FluidSynth)": "τα προγράμματα Windows (FFmpeg, FluidSynth)",
+"Fish Audio Drama 3 at Q8_0 on a card of 24 GB or more, else Q4_K, with its licence files and the stresses; audio.cpp's server built after it on Linux, brought by the Windows package": "Το Fish Audio Drama 3 σε Q8_0 σε κάρτα 24 GB ή περισσότερο, αλλιώς Q4_K, με τα αρχεία της άδειάς του και τους τονισμούς· ο διακομιστής του audio.cpp χτίζεται μετά από αυτό στο Linux, φέρεται από το πακέτο Windows",
+"Qwen2.5-Omni-7B: hears the songs of a training set and writes each one's style tags; the GGUF ones run through llama.cpp (vendor/llama.cpp, built by you on Linux; the Windows package brings it)": "Qwen2.5-Omni-7B: ακούει τα τραγούδια ενός σετ εκπαίδευσης και γράφει τις ετικέτες ύφους του καθενός· τα GGUF τρέχουν μέσω του llama.cpp (vendor/llama.cpp, χτισμένο από σένα στο Linux· το πακέτο Windows το φέρνει)",
+"Add capture…": "Προσθήκη αποτυπώματος…",
+"Adding {0}…": "Προσθήκη {0}…",
+"Added: {0}": "Προστέθηκε: {0}",
+"Already here: {0}": "Ήδη εδώ: {0}",
+"Not added: {0}": "Δεν προστέθηκε: {0}",
+"Not added: a capture is a .nam file": "Δεν προστέθηκε: ένα αποτύπωμα είναι ένα αρχείο .nam",
+"Not added: a NAM capture is at most 64 MB": "Δεν προστέθηκε: ένα αποτύπωμα NAM είναι το πολύ 64 MB",
+"no file was sent": "δεν εστάλη αρχείο",
+"a NAM capture is at most 64 MB": "ένα αποτύπωμα NAM είναι το πολύ 64 MB",
+"too small to be a NAM capture": "πολύ μικρό για να είναι αποτύπωμα NAM",
+"not a NAM capture: a .nam file is JSON, and this is not": "δεν είναι αποτύπωμα NAM: ένα αρχείο .nam είναι JSON, και αυτό δεν είναι",
+"not a NAM capture: it has no architecture or weights": "δεν είναι αποτύπωμα NAM: δεν έχει αρχιτεκτονική ή βάρη",
+"Add a capture of your own: a .nam file from your computer; the lab checks that the step can play it and keeps it in user/nam/": "Πρόσθεσε ένα δικό σου αποτύπωμα: ένα αρχείο .nam από τον υπολογιστή σου· το εργαστήριο ελέγχει αν το βήμα μπορεί να το αναπαράγει και το αποθηκεύει στο user/nam/"
 });

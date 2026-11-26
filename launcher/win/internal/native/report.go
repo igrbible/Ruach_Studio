@@ -58,6 +58,9 @@ func (s *Studio) Summary(ctx context.Context) string {
 		eng = []string{"none in engine\\cuda or engine\\cpu"}
 	}
 	row("engines", strings.Join(eng, " · "))
+	for _, t := range BundledTools { // HERESY 3006: one row a program the package brings, its path and the first line it says of its version
+		row(t.Name, s.toolRow(l, t))
+	}
 	if out, err := s.P.Output(20*time.Second, "nvidia-smi", "--query-gpu=index,name,driver_version,memory.total,memory.used,compute_cap", "--format=csv,noheader"); err == nil && strings.TrimSpace(out) != "" {
 		for i, line := range strings.Split(strings.TrimSpace(out), "\n") {
 			k := ""
@@ -91,6 +94,65 @@ func (s *Studio) Summary(ctx context.Context) string {
 		}
 	}
 	return b.String()
+}
+
+// BundledTool is a program the Windows package brings beside the Studio (HERESY 3006, the Windows tools' critic of 25.11.2026: the report showed
+// none): 2989's runtime\<name>\ (FFmpeg, FluidSynth) and 2992's natives beside the engine (engine\cuda, then engine\cpu). Args make it say its
+// version and end; a program with none it is safe to start for that (a server, a tool that only prints its usage) is named by its size.
+type BundledTool struct {
+	Name string   // the program, without .exe
+	Dir  []string // under the Studio's folder; nil: beside the engine
+	Args []string // nil: not started for the report
+	What string   // what brings it when it is missing
+}
+
+var BundledTools = []BundledTool{
+	{"ffmpeg", []string{"runtime", "ffmpeg"}, []string{"-hide_banner", "-version"}, "Engine → Models → Windows programs brings it"},
+	{"ffprobe", []string{"runtime", "ffmpeg"}, []string{"-hide_banner", "-version"}, "Engine → Models → Windows programs brings it"},
+	{"fluidsynth", []string{"runtime", "fluidsynth"}, []string{"--version"}, "Engine → Models → Windows programs brings it"},
+	{"llama-server", nil, []string{"--version"}, "the Windows package brings it"},
+	{"llama-mtmd-cli", nil, []string{"--version"}, "the Windows package brings it"},
+	{"ruach-muscriptor", nil, nil, "the Windows package brings it"},
+	{"audiocpp_server", nil, nil, "the Windows package brings it"},
+}
+
+// toolRow: where t is (each copy, the first one asked) and what it says of its version; where it is missing, where it was looked for and what
+// brings it. A program that does not start says why, never an empty row.
+func (s *Studio) toolRow(l Layout, t BundledTool) string {
+	dirs := [][]string{t.Dir}
+	if t.Dir == nil {
+		dirs = [][]string{{"engine", "cuda"}, {"engine", "cpu"}}
+	}
+	var found, looked []string
+	for _, d := range dirs {
+		p := l.at(append(append([]string{}, d...), t.Name+".exe")...)
+		looked = append(looked, strings.Join(d, "\\"))
+		if isFile(p) {
+			found = append(found, p)
+		}
+	}
+	if len(found) == 0 {
+		return "not in " + strings.Join(looked, " or ") + ": " + t.What
+	}
+	where := make([]string, len(found))
+	for i, p := range found {
+		where[i] = rel(l, p)
+	}
+	var said string
+	if t.Args == nil {
+		st, _ := os.Stat(found[0])
+		said = fmt.Sprintf("%.1f MB (not started for the report: it has no version to say)", float64(st.Size())/(1<<20))
+	} else {
+		out, err := s.P.Output(15*time.Second, found[0], t.Args...)
+		switch said = firstLine(out); {
+		case said != "":
+		case err != nil:
+			said = "does not start: " + err.Error()
+		default:
+			said = "says nothing of its version"
+		}
+	}
+	return strings.Join(where, " + ") + " · " + said
 }
 
 func rel(l Layout, p string) string {

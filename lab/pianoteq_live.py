@@ -739,7 +739,7 @@ def render(kit, fxp_file, midi, wav, rate=48000):
     d, prefs = _prefs_copy(kit)
     try:
         r = subprocess.run([str(binary), "--headless", "--quiet", "--prefs", str(prefs), "--fxp", str(fxp_file), "--midi", str(midi),
-                            "--wav", str(wav), "--rate", str(rate)], capture_output=True, text=True, timeout=600)
+                            "--wav", str(wav), "--rate", str(rate)], capture_output=True, text=True, timeout=600, encoding="utf-8", errors="replace")
     finally:
         shutil.rmtree(d, ignore_errors=True)
     if not Path(wav).is_file():

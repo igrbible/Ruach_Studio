@@ -38,7 +38,11 @@ INPUT = {"subtle": 24000, "normal": 16000, "high": 12000, "extreme": 8000}[mode]
 CUT = INPUT / 2                      # what lies above is drawn anew
 CHUNK, OVERLAP = 20.0, 1.0           # seconds; 20 s keeps the peak near 10 GB on a 3090
 
-from universr import UniverSR  # noqa: E402
+try:
+    from universr import UniverSR  # noqa: E402
+except ImportError:                # HERESY 2986: Windows has no «pip install -e» of it (launcher/setup_win.py): its code where Engine → Models put it
+    sys.path.append(str(Path(__file__).resolve().parent.parent / "vendor" / "UniverSR"))
+    from universr import UniverSR  # noqa: E402
 
 t0 = time.time()
 outdir.mkdir(parents=True, exist_ok=True)
@@ -87,7 +91,9 @@ def own_universr():
     return OWN
 
 
-model = UniverSR.from_pretrained(str(own_universr()), device="cuda")
+# HERESY 2984: on the processor where torch sees no card (a machine without one; the CPU wheels a card below compute 7.5 is given, 2686)
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"   # HERESY 2986: and the answer says which, so the manifest names no card it did not use
+model = UniverSR.from_pretrained(str(own_universr()), device=DEVICE)
 load_s = time.time() - t0
 
 
@@ -160,4 +166,4 @@ for i, seed in enumerate(seeds):
                   "seconds": round(n / sr, 2), "seed": seed, "peak": round(peak, 4), **held})
     torch.cuda.empty_cache()
 print(json.dumps({"files": files, "mode": mode, "input_sr": INPUT, "cutoff_hz": CUT, "keep_low": keep_low, "ceiling_db": ceiling,
-                  "load_s": round(load_s, 1), "took": round(time.time() - t0, 1)}))
+                  "load_s": round(load_s, 1), "device": DEVICE, "took": round(time.time() - t0, 1)}))

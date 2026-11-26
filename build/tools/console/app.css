@@ -9406,8 +9406,9 @@ html.by-pointer .mode input:focus-visible + .mode-body { outline: none; }
 }
 /* HERESY 2094 (Viktor 05.11.2026: «…На 10px сделай выше компактную волну, а полную двойную высоту на 20px… градации по dB прорисовать слева от волны…»): the
    compare window's wave 10 px taller (20 twice as tall); its dB marks at its left, in the window's own margin, small and dim */
-.cmp-wave { height: 82px; }
-.cmp-box.is-tall .cmp-wave { height: 164px; }
+/* HERESY 2996 (Viktor 25.11.2026: «волна без x2 высоты слишком низкая»): 2094's ×2 height the default, ×2 twice that */
+.cmp-wave { height: 164px; }
+.cmp-box.is-tall .cmp-wave { height: 328px; }
 .cmp-db { position: absolute; top: 0; bottom: 0; right: 100%; width: 16px; margin-right: 2px; pointer-events: none; }
 .cmp-db i { position: absolute; right: 0; transform: translateY(-50%); font-style: normal; font-size: 8.5px; line-height: 1; color: var(--dim); white-space: nowrap; }
 
@@ -10684,3 +10685,13 @@ html body :is(.pl-play, .coll-play, .ln-play, .cmp-play):hover, html body .art-c
 .wse-none .wse-faint { width: 20px; height: 20px; opacity: .3; }
 .wse-none-say { font-size: 12px; color: var(--muted); }
 .wse-foot { margin-top: 9px; font-size: 11px; line-height: 1.35; color: var(--dim); }
+
+/* HERESY 3010 (Viktor 25.11.2026: «Прикрути дублем живую волну… шириной в пикселов 800»): the player's live spectrum again in the compare window's head,
+   in the room between the title and ×2 / +dB: up to 800 px, centred in what the title leaves, less in a narrower window, out of sight under 160 px */
+.cmp-head > .cmp-head-t { flex: 0 1 auto; }
+.cmp-live { flex: 1 1 0; min-width: 0; max-width: 800px; height: 44px; margin: 0 auto; align-self: center; pointer-events: none;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 40px, #000 calc(100% - 40px), transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 40px, #000 calc(100% - 40px), transparent); }
+.cmp-live[hidden] { display: none; }
+/* HERESY 3012: the Amp (NAM) step's «Add capture…» under its list */
+.nam-add-row { margin: 4px 0 0; }

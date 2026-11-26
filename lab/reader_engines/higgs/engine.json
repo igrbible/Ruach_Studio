@@ -160,12 +160,14 @@
    "all": [
     ".venv-read/bin/python"
    ],
-   "say": "its Python with transformers 5 is not set up yet (bash tools/narrator-higgs-setup.sh)"
+   "say": "its Python with transformers 5 is not set up yet (bash tools/narrator-higgs-setup.sh)",
+   "say_nt": "its Python with transformers 5 is not set up yet (Engine → Models and LoRAs → Narrator · Higgs TTS 3 makes it)"
   }
  ],
  "setup": {
   "tier": "",
   "command": "bash tools/narrator-higgs-setup.sh",
+  "command_nt": "Engine → Models and LoRAs → Narrator · Higgs TTS 3 (its Python and its model)",
   "size": "10.2 GB"
  },
  "first_run": "BF16 on a card takes about 11 GB of its memory; on the processor it reads several times slower than real time. The model loads at the first reading and stays loaded between runs on a card.",

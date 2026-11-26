@@ -437,13 +437,186 @@ def cover(img, w, h):
     return im.crop((x, y, x + w, y + h))
 
 
+# HERESY 2985 (the night of 10.11.2026 on HERESY 2322: «2.1 paints about 140 s a picture when three cards go at once… its text encoder (17 GB) and
+# transformer (14 GB) travel to the card in turn for each picture… Next: read every prompt in one pass and keep the transformer on the card for
+# the whole batch»; the plan's open row «Ключевые кадры на всех картах сразу; Художник не перезагружается на каждый кадр»): what 2.1's encoder
+# wants on the card beside its weights while it reads a prompt with its reference, and what a picture wants beside the transformer and the VAE
+# kept there (activations, the reference's keys and values cached for every block, the VAE's untiled decode), measured on a 3090 (see read21)
+READ21_WORK = int(float(os.environ.get("ART_READ21_WORK_GB") or 2.0) * 2 ** 30)
+PAINT21_WORK = int(float(os.environ.get("ART_PAINT21_WORK_GB") or 6.0) * 2 ** 30)
+# HERESY 2985 (its first proof on a 3090, 24.11 and again 25.11: out of the card's memory in the VAE's untiled decode of 1664 × 928, the transformer's
+# 13.9 GB beside it, 20.1 GB in use and 1.7 GB more asked): what that decode wants on the card (measured 25.11 on a 3090: 9.7 GB at its peak beyond
+# what was there, and a margin); with less room there the kept transformer steps off the card for the decode (its tensors in RAM kept, so stepping
+# off copies nothing) and comes back for the next picture (4.5 s on a 3090)
+DECODE21_WORK = int(float(os.environ.get("ART_DECODE21_WORK_GB") or 11.0) * 2 ** 30)
+
+
+class _Read(Exception):
+    """HERESY 2985: 2.1's call stopped where it asks for its prompt's words, what its encoder read in hand."""
+
+
+def kw21(x, ask, ref, gw, gh, steps, g):
+    """A 2.1 picture's call (HERESY 2322's, unchanged): its words (by the reference's style when asked), its size, steps and seed, its reference
+    covered to its size."""
+    prompt = str(x["prompt"])
+    kw = {"prompt": STYLE_ASK.format(prompt=prompt.rstrip(" .")) if ask.get("ref_as") == "style" and ref is not None else prompt,
+          "width": gw, "height": gh, "num_inference_steps": steps, "generator": g}
+    if ref is not None:
+        kw["image"] = cover(ref, gw, gh)
+    return kw
+
+
+def read21(pipe, items, kw_of, torch):
+    """HERESY 2985: every prompt of this card's share read by 2.1's text encoder in one pass, the encoder brought onto the card once and sent back
+    to RAM after. Each prompt is read as the pipeline itself prepares it: its own call (kw_of(item), the arguments the picture will be painted
+    with) made up to its encode_prompt and stopped there, so its reference goes through the pipeline's own resizing and the words the transformer
+    gets are the very ones the per-picture way gave it. {n: (embeds, mask, image mask)} in RAM; None when ART_STREAM asks the streamed way, the
+    switch ART_READ21=0 is set, or the room free on the card does not hold the encoder with READ21_WORK (the old way then: its parts in turn a
+    picture)."""
+    if os.environ.get("ART_STREAM") == "1" or os.environ.get("ART_READ21") == "0" or not items:
+        return None
+    te = pipe.text_encoder
+    if torch.cuda.mem_get_info()[0] < weights_bytes(te) + READ21_WORK:
+        return None
+    cuda = torch.device("cuda")
+    te.to(cuda)
+    own, out = pipe.encode_prompt, {}
+
+    def caught(**kw):
+        raise _Read(own(**dict(kw, device=cuda)))
+    pipe.encode_prompt = caught
+    try:
+        with torch.no_grad():
+            for x in items:
+                try:
+                    pipe(**kw_of(x))
+                except _Read as r:
+                    out[int(x["n"])] = tuple(t.to("cpu") if t is not None else None for t in r.args[0])
+                else:
+                    raise RuntimeError("Qwen-Image 2.1's call never asked for its prompt's words")
+    finally:
+        del pipe.encode_prompt                       # the pipeline's own again
+        te.to("cpu")
+        gc.collect()
+        torch.cuda.empty_cache()
+    return out
+
+
+HOME21 = {}                                          # HERESY 2985: the kept transformer's tensors in RAM (home21), its state on the card
+
+
+def home21(m):
+    """HERESY 2985: a module's own tensors as they are in RAM before it goes onto the card, kept: [(module, «p» or «b», name, tensor)]."""
+    out = []
+    for mod in m.modules():
+        out += [(mod, "p", k, p.data) for k, p in mod._parameters.items() if p is not None]
+        out += [(mod, "b", k, b) for k, b in mod._buffers.items() if b is not None]
+    return out
+
+
+def off21(pipe, torch):
+    """HERESY 2985: the kept transformer off the card: each of its tensors pointed back at its own copy in RAM (home21; its weights never change
+    while it paints), the card's copies let go, so stepping off copies nothing. Whether it was on the card."""
+    if not HOME21.get("on"):
+        return False
+    for mod, kind, k, t in HOME21["home"]:
+        if kind == "p":
+            mod._parameters[k].data = t
+        else:
+            mod._buffers[k] = t
+    HOME21["on"] = False
+    gc.collect()
+    torch.cuda.empty_cache()
+    return True
+
+
+def on21(pipe, torch):
+    """HERESY 2985: the kept transformer onto the card again (one copy from RAM), its seconds counted in HOME21["on_s"]."""
+    if HOME21.get("on") or "home" not in HOME21:
+        return False
+    t = time.time()
+    pipe.transformer.to("cuda")
+    torch.cuda.synchronize()
+    HOME21["on"] = True
+    HOME21["on_s"] = HOME21.get("on_s", 0.0) + time.time() - t
+    return True
+
+
+def room21(torch):
+    """The room on the card for this process now: free on the device and what its own allocator holds unused."""
+    return torch.cuda.mem_get_info()[0] + torch.cuda.memory_reserved() - torch.cuda.memory_allocated()
+
+
+def keep21(pipe, torch):
+    """HERESY 2985: the transformer and the VAE (untiled, as the per-picture way decoded) on the card for the whole share when the room free there
+    holds them with PAINT21_WORK (the transformer's tensors in RAM kept, home21, for its steps off the card at a decode without room and at an
+    aside); else their turns as place21's model offload, the encoder (its words read) never called again. What is said."""
+    tr, vae = pipe.transformer, pipe.vae
+    free, wb = torch.cuda.mem_get_info()[0], weights_bytes(tr) + weights_bytes(vae)
+    said = {"weights_gb": round(wb / 2 ** 30, 1), "free_gb": round(free / 2 ** 30, 1)}
+    if free >= wb + PAINT21_WORK:
+        HOME21.clear()
+        HOME21["home"] = home21(tr)
+        tr.to("cuda")
+        vae.to("cuda")
+        HOME21["on"] = True
+        return dict(said, resident=True)
+    pipe.enable_model_cpu_offload()
+    return dict(said, resident=False)
+
+
+def given21(pipe, got, kw, torch, held=None):
+    """HERESY 2985: one picture by 2.1 from the words read21 read for it: the pipeline's own call with the same arguments, its encode_prompt
+    answering from them on the card, so nothing else in the picture changes (the same seed, the same picture). A transformer kept on the card
+    (keep21) comes onto it first if it stepped off, and steps off for the VAE's decode when the room there is short of DECODE21_WORK (counted
+    in held: «decode_off» pictures, «decode_peak_gb» the decode's own peak beside what was on the card)."""
+    cuda = torch.device("cuda")
+    held = held if held is not None else {}
+    pipe.encode_prompt = lambda **_: tuple(t.to(cuda) if t is not None else None for t in got)
+    own = None
+    if held.get("resident"):
+        on21(pipe, torch)
+        own = pipe.vae.decode
+
+        def decode(*a, **k):
+            if room21(torch) < DECODE21_WORK and off21(pipe, torch):
+                held["decode_off"] = held.get("decode_off", 0) + 1
+            base = torch.cuda.memory_allocated()
+            HOME21["peak"] = max(HOME21.get("peak", 0), torch.cuda.max_memory_reserved())   # the run's own peak, kept past the reset
+            torch.cuda.reset_peak_memory_stats()
+            try:
+                return own(*a, **k)
+            finally:
+                held["decode_peak_gb"] = max(held.get("decode_peak_gb", 0), round((torch.cuda.max_memory_allocated() - base) / 2 ** 30, 1))
+        pipe.vae.decode = decode
+    try:
+        return pipe(**kw)
+    finally:
+        del pipe.encode_prompt
+        if own is not None:
+            del pipe.vae.decode                      # the VAE's own again
+
+
+def aside21(pipe, run, held, torch):
+    """HERESY 2985: between two pictures, while a reading has the lab's turn (2368's «aside»), a 2.1 transformer kept on the card (keep21) goes
+    back to RAM for the wait (off21: nothing copied), the card as free as the per-picture way left it between two pictures, and comes back
+    with the next picture; any other painter waits with its weights on its card as before. Whether it stepped off."""
+    if held.get("resident") and (Path(run) / "aside").exists():
+        off21(pipe, torch)
+        step_aside(run)
+        return True
+    step_aside(run)
+    return False
+
+
 def batch(run, ask, painter):
     """HERESY 2322 (Viktor 10.11.2026: «держать художника загруженным… максимальная оптимизация ресурсов, а не просто на одной карте все херачить
     и перезагружать модели»): a run of pictures each with its own words, seed and reference (ask «batch»: [{n, prompt, seed, ref}], the
     Videographer's key frames), 16:9 each, the painter loaded once on this card (or kept from the run before) for this card's share of them
     (ART_ONLY, the lab dealing the run over its cards). Qwen-Image 2.1 paints from its reference by its style (ref_as «style») or edits it by the
     words; 2512 paints from its reference at «strength» (the hero's picture gone over), from the words alone where an item has none, the prompts
-    read once before the painter comes. Its lines as main()'s: one a picture, then {"done"}."""
+    read once before the painter comes; HERESY 2985: 2.1's too (read21), its transformer then kept on the card for the share (keep21). Its lines
+    as main()'s: one a picture, then {"done"}."""
     import torch
     from PIL import Image
     import artist_job
@@ -473,11 +646,20 @@ def batch(run, ask, painter):
             refs[x["ref"]] = Image.open(run / x["ref"]).convert("RGB")
         return refs[x["ref"]]
     embeds, neg = {}, (None, None)
-    if is21(painter):
-        streamed = place21(pipe)
-        if streamed:
-            print(json.dumps(streamed), flush=True)
-            KEPT["streamed"] = True
+    read, held = None, {}
+    if is21(painter):                                 # HERESY 2985: the prompts read in one pass, the transformer kept on the card for the share
+        t_read = time.time()
+        torch.cuda.reset_peak_memory_stats()
+        read = read21(pipe, items, lambda x: kw21(x, ask, ref_of(x), gw, gh, steps, None), torch)
+        if read is None:                             # no room for the encoder here, or streamed: its parts in turn a picture, as before
+            streamed = place21(pipe)
+            if streamed:
+                print(json.dumps(streamed), flush=True)
+                KEPT["streamed"] = True
+        else:                                        # said on stderr: the lab reads a stdout line without «n» it does not know as a picture
+            held = dict(read=len(read), read_s=round(time.time() - t_read, 1), read_peak_gb=round(torch.cuda.max_memory_reserved() / 2 ** 30, 1))
+            held.update(keep21(pipe, torch))
+            print("Qwen-Image 2.1: " + json.dumps(held), file=sys.stderr, flush=True)
     else:
         dev = torch.device("cuda" if torch.cuda.mem_get_info()[0] >= ENC_ROOM else "cpu")
         pipe.text_encoder.to(dev)
@@ -507,12 +689,11 @@ def batch(run, ask, painter):
         if hasattr(pipe.scheduler, "heresy"):         # HERESY 1333: our samplers noise by the picture's seed
             pipe.scheduler.heresy = dict(pipe.scheduler.heresy, seed=sk)
         if is21(painter):
-            prompt = str(x["prompt"])
-            kw = {"prompt": STYLE_ASK.format(prompt=prompt.rstrip(" .")) if ask.get("ref_as") == "style" and ref is not None else prompt,
-                  "width": gw, "height": gh, "num_inference_steps": steps, "generator": g}
-            if ref is not None:
-                kw["image"] = cover(ref, gw, gh)
-            img = pipe(**kw).images[0]
+            kw = kw21(x, ask, ref, gw, gh, steps, g)
+            if read is not None:                     # HERESY 2985: the words read before, handed back where the pipeline asks for them
+                img = given21(pipe, read[n], kw, torch, held).images[0]
+            else:
+                img = pipe(**kw).images[0]
         else:
             e, m = embeds[n]
             kw = {"prompt_embeds": e.to("cuda"), "prompt_embeds_mask": m.to("cuda") if m is not None else None, "width": gw, "height": gh,
@@ -543,9 +724,13 @@ def batch(run, ask, painter):
             row.update(kept=True, file=name + ".png", thumb="thumbs/" + name + ".jpg")
         print(json.dumps(row), flush=True)
         if x is not items[-1]:
-            step_aside(run)                          # HERESY 2368: a reading has the lab's turn: wait here, the weights on the card
+            aside21(pipe, run, held, torch)          # HERESY 2368: a reading has the lab's turn: wait here (2985: 2.1's card given back meanwhile)
+    if HOME21.get("on_s"):
+        held["on_s"] = round(HOME21["on_s"], 1)      # HERESY 2985: the seconds the transformer took to come back onto the card
     print(json.dumps({"done": True, "painter": painter, "took": round(time.time() - t0, 1), "steps": steps, "cfg": cfg, "pictures": len(items),
-                      "peak_gb": round(torch.cuda.max_memory_reserved() / 2 ** 30, 1)}), flush=True)
+                      "peak_gb": round(max(HOME21.get("peak", 0), torch.cuda.max_memory_reserved()) / 2 ** 30, 1),
+                      **({"held21": held} if held else {})}), flush=True)
+    HOME21.clear()                                   # its RAM tensors let go with the share (a 2.1 process ends after its run anyway)
 
 
 def main(run, ask, painter):

@@ -15,7 +15,7 @@ LAB = Path(__file__).resolve().parent
 ROOT = LAB.parent
 sys.path.insert(0, str(LAB))
 LAUNCHER = ROOT / "launcher" if (ROOT / "launcher" / "start.py").is_file() else ROOT / "heresy" / "root" / "launcher"
-TOP = LAUNCHER.parent                                 # start.sh, pinokio files: the studio's root, or heresy/root in the dev tree
+TOP = LAUNCHER.parent                                 # start.sh: the studio's root, or heresy/root in the dev tree
 
 ok = 0
 
@@ -103,9 +103,6 @@ try:
     check('ThreadingHTTPServer((os.environ.get("LAB_HOST", "127.0.0.1"), PORT)' in lab, "the lab listens on 127.0.0.1 on every system (behind the engine)")
     sh = (TOP / "start.sh").read_text(encoding="utf-8")
     check(re.search(r"args=\(--host 0\.0\.0\.0 ", sh) is not None, "Linux: start.sh keeps every address, the engine's gate deciding (unchanged)")
-    pin = (TOP / "launcher" / "start.js").read_text(encoding="utf-8") + (TOP / "launcher" / "studio.sh").read_text(encoding="utf-8")
-    check("bash launcher/studio.sh" in pin and "start.sh" in pin and "http://127.0.0.1:" in pin,
-          "Pinokio runs launcher/studio.sh, start.sh's way (Linux), and opens the Studio on 127.0.0.1")
     go = (TOP / "launcher" / "win" / "internal" / "native" / "native.go").read_text(encoding="utf-8")
     check("0.0.0.0" not in go and "YUE2CPP_HOST" not in go and 'Sprintf("http://127.0.0.1:%d/", c.Port)' in go,
           "RuachStudio.exe names no address to listen on and asks the Studio on 127.0.0.1")

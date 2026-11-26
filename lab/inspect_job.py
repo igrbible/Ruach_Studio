@@ -205,7 +205,7 @@ R["framebuzz"] = {"hz": [25, 50, 75, 100, 125, 150], "windows": wins,
 
 # ---- loudness (ffmpeg ebur128)
 p = subprocess.run(["ffmpeg", "-hide_banner", "-nostats", "-i", src, "-af", "ebur128=peak=true:framelog=quiet", "-f", "null", "-"],
-                   capture_output=True, text=True, timeout=1800)
+                   capture_output=True, text=True, timeout=1800, encoding="utf-8", errors="replace")
 lo = {}
 for line in p.stderr.splitlines():
     s = line.strip()
@@ -217,5 +217,5 @@ for line in p.stderr.splitlines():
                 pass
 R["loudness"] = lo
 R["took"] = round(time.time() - t0, 1)
-json.dump(R, open(out, "w"), ensure_ascii=False)
+json.dump(R, open(out, "w", encoding="utf-8"), ensure_ascii=False)
 print(json.dumps({"ok": True, "took": R["took"]}))

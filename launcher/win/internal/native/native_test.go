@@ -53,6 +53,7 @@ type fakePlat struct {
 	stopped int
 	up      map[string]bool // health by service name while it lives
 	install func(l Layout) (int, error)
+	instEnv []string // HERESY 2998: what the install was started with
 	opened  []string
 	outside map[string]bool // answering before anything is started
 }
@@ -88,6 +89,7 @@ func (f *fakePlat) Spawn(s Spec, out *Log) (Proc, error) {
 }
 
 func (f *fakePlat) RunInstall(l Layout, env []string) (int, error) {
+	f.instEnv = env
 	if f.install == nil {
 		return -1, errors.New("no install")
 	}
@@ -111,6 +113,12 @@ func (f *fakePlat) Output(_ time.Duration, exe string, args ...string) (string, 
 		return "+---- the table ----+\n", nil
 	case strings.HasSuffix(exe, "python") || strings.HasSuffix(exe, "python.exe"):
 		return "Python 3.12.10\n", nil
+	case strings.HasSuffix(exe, "ffmpeg.exe") && strings.Join(args, " ") == "-hide_banner -version":
+		return "ffmpeg version 9.0.2-essentials_build-www.gyan.dev Copyright (c) 2000-2026 the FFmpeg developers\nbuilt with gcc 15.2.0\n", nil
+	case strings.HasSuffix(exe, "llama-server.exe") && strings.Join(args, " ") == "--version":
+		return "", errors.New("exit status 0xc0000135")
+	case strings.HasSuffix(exe, "audiocpp_server.exe") || strings.HasSuffix(exe, "ruach-muscriptor.exe"):
+		panic("a server or a usage-only tool started for the report: " + exe)
 	}
 	return "", errors.New("not found")
 }
@@ -197,7 +205,7 @@ func TestLayoutAndFound(t *testing.T) {
 }
 
 func TestPathLength(t *testing.T) {
-	if n := PathLength(`C:\Users\Миша\Downloads\RuachStudio`); n != 35 {
+	if n := PathLength(`C:\Users\Тест\Downloads\RuachStudio`); n != 35 {
 		t.Fatalf("UTF-16 units of a Cyrillic path: %d", n)
 	}
 	if n := PathLength("😀"); n != 2 {
@@ -515,5 +523,41 @@ func TestStoppedInstallGoesOn(t *testing.T) {
 	}
 	if err := s.Ensure(context.Background()); err != nil || len(ui.asked) != 2 || len(codes) != 0 {
 		t.Fatalf("asked again after the mark: %v, asked %v", err, ui.asked)
+	}
+}
+
+// HERESY 3006 (the Windows tools' critic of 25.11.2026): the report has one row a program the package brings: its path (each copy) and the first
+// line of its version, why it does not start, or where it was looked for and what brings it; a server is named by its size, never started.
+func TestReportToolRows(t *testing.T) {
+	f := newFake()
+	s := studio(t, f, &fakeUI{}, false)
+	l := s.Cfg.Layout
+	put := func(p ...string) {
+		full := filepath.Join(append([]string{l.Root}, p...)...)
+		_ = os.MkdirAll(filepath.Dir(full), 0o755)
+		_ = os.WriteFile(full, make([]byte, 3<<20), 0o644)
+	}
+	put("runtime", "ffmpeg", "ffmpeg.exe")
+	put("engine", "cuda", "llama-server.exe")
+	put("engine", "cpu", "llama-server.exe")
+	put("engine", "cuda", "audiocpp_server.exe")
+	put("engine", "cpu", "ruach-muscriptor.exe")
+	r := s.Summary(context.Background())
+	sep := string(filepath.Separator)
+	for _, want := range []string{
+		"ffmpeg       runtime" + sep + "ffmpeg" + sep + "ffmpeg.exe · ffmpeg version 9.0.2-essentials_build-www.gyan.dev Copyright (c) 2000-2026 the FFmpeg developers\n",
+		"ffprobe      not in runtime\\ffmpeg: Engine → Models → Windows programs brings it\n",
+		"fluidsynth   not in runtime\\fluidsynth: Engine → Models → Windows programs brings it\n",
+		"llama-server engine" + sep + "cuda" + sep + "llama-server.exe + engine" + sep + "cpu" + sep + "llama-server.exe · does not start: exit status 0xc0000135\n",
+		"llama-mtmd-cli not in engine\\cuda or engine\\cpu: the Windows package brings it\n",
+		"ruach-muscriptor engine" + sep + "cpu" + sep + "ruach-muscriptor.exe · 3.0 MB (not started for the report: it has no version to say)\n",
+		"audiocpp_server engine" + sep + "cuda" + sep + "audiocpp_server.exe · 3.0 MB (not started for the report: it has no version to say)\n",
+	} {
+		if !strings.Contains(r, want) {
+			t.Errorf("the report lacks %q:\n%s", want, r)
+		}
+	}
+	if len(BundledTools) != 7 {
+		t.Errorf("%d tools: ffmpeg, ffprobe, fluidsynth (2989), llama-server, llama-mtmd-cli, ruach-muscriptor, audiocpp_server (2992)", len(BundledTools))
 	}
 }

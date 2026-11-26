@@ -9,6 +9,10 @@ or more). A take made before 2007 was cut already: its flat top is counted as `f
 
     wave(path, n=1200) -> {"peaks": [0…1 × n], "seconds", "cut", "over", "places", "flat", "hot": [stretches over the level],
                            "flats": [stretches at full scale]}"""
+import json
+import os
+from pathlib import Path
+
 import numpy as np
 import soundfile as sf
 
@@ -121,3 +125,58 @@ def bands(path, n=600, edges=(250.0, 4000.0)):
     tot = acc.sum(axis=1, keepdims=True)
     share = np.divide(acc, tot, out=np.zeros_like(acc), where=tot > 0)
     return {"bands": [[round(float(x), 3) for x in r] for r in share], "seconds": round(frames / rate, 3)}
+
+
+def channels(path, n=900):
+    """HERESY 2997 (Viktor 25.11.2026: «Наша waveform в плеерах не похожа на стерео волну»): the player's peaks each channel apart, the left drawn
+    above the middle and the right below it. The stretches are the engine's (/library/peaks) and daw.file_peaks's: n of frames // n frames each,
+    read a block of whole stretches at a time; a file shorter than n frames gives one frame a stretch and zeros after. A one-channel file gives one
+    list, a file of more channels its first two.
+        channels(path, n=900) -> {"peaks": [the louder of the two × n], "channels": [[left × n], [right × n]] or [[mono × n]], "seconds"}"""
+    n = max(1, min(4000, int(n)))
+    with sf.SoundFile(str(path)) as f:
+        frames, rate, ch = f.frames, f.samplerate, min(2, max(1, f.channels))
+        size = max(1, frames // n)
+        out = np.zeros((ch, n), dtype=np.float32)
+        step = max(size, BLOCK // size * size)
+        at, end = 0, min(frames, size * n)
+        while at < end:
+            y = f.read(min(step, end - at), dtype="float32", always_2d=True)
+            if not len(y):
+                break
+            a = np.abs(y[:, :ch])
+            b0, k = at // size, len(a) // size
+            if k:
+                out[:, b0:b0 + k] = np.maximum(out[:, b0:b0 + k], a[:k * size].reshape(k, size, ch).max(axis=1).T)
+            if len(a) % size and b0 + k < n:          # a short read at the file's end
+                out[:, b0 + k] = np.maximum(out[:, b0 + k], a[k * size:].max(axis=0))
+            at += len(a)
+    return {"peaks": [round(float(v), 3) for v in out.max(axis=0)], "channels": [[round(float(v), 3) for v in row] for row in out],
+            "seconds": round(frames / rate, 3) if rate else 0.0}
+
+
+def take_peaks(d, n=900):
+    """HERESY 2997: a take's peaks.json (d, its folder) with each channel's peaks beside the engine's one list, which stays as it was for every
+    reader of "peaks". The page asks for it when the engine's file has no channels, so an old take gets them at its first draw and the Library is
+    never gone over at once; a take the engine has not drawn yet gets the whole file on the engine's n stretches. Written whole (a .part, then
+    renamed), so the engine never serves half of it.
+        take_peaks(d) -> {"peaks", "seconds", "channels"} as kept in d/peaks.json"""
+    cache = Path(d) / "peaks.json"
+    try:
+        old = json.loads(cache.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        old = {}
+    if not isinstance(old, dict) or not isinstance(old.get("peaks"), list) or not old["peaks"]:
+        old = {}
+    if old and isinstance(old.get("channels"), list) and old["channels"]:
+        return old
+    audio = next((Path(d) / f for f in ("audio.mp3", "audio.wav", "audio.flac") if (Path(d) / f).is_file()), None)   # the engine's pick (audio_file_of), then the FLAC
+    if audio is None:
+        raise FileNotFoundError("this take has no audio")
+    w = channels(audio, len(old.get("peaks") or ()) or n)
+    out = old or {"peaks": w["peaks"], "seconds": w["seconds"]}
+    out["channels"] = w["channels"]
+    part = cache.with_name(".peaks.json.part")
+    part.write_text(json.dumps(out, separators=(",", ":")), encoding="utf-8")
+    os.replace(part, cache)
+    return out

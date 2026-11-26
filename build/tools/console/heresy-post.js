@@ -2561,6 +2561,7 @@
     d.querySelector(".pl-run").addEventListener("click", function () { runPlugin(s, d); });
     d.querySelector(".pl-source").addEventListener("change", function () { this.dataset.touched = "1"; });   // HERESY 1465: his pick stays
     if (s.builtin && /^(pianoteq|organteq|airteq)$/.test(s.pstep) && window.HeresyPianoteq) window.HeresyPianoteq.mount(d, s.pstep);   // HERESY 1977, 2036: Modartt's own panel
+    if (s.builtin && s.pstep === "nam" && window.HeresyNam) window.HeresyNam.mount(d, s);   // HERESY 2987: the Amp (NAM) step's captures, read anew at each opening
     return d;
   }
   function paintPluginSources() {

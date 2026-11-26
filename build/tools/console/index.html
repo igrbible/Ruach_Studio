@@ -2741,8 +2741,7 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
         <div class="vd-look">   <!-- HERESY 2356: the places in a frame; the hero in his own words, and his skin -->
           <label class="field"><span class="label">Places in a frame</span><select id="vdPlaces" aria-label="Places in a frame" data-tip="How the pictures hold the clip's places: several in one frame, as slices side by side, or one place in each frame (the Writer is asked for one place then)"><option value="slices">Several places in a frame (slices)</option><option value="one">One place per frame</option></select></label>
           <div class="field" id="vdHeroWordsBox" hidden><span class="label">The hero in words</span><textarea id="vdHeroWords" rows="2" translate="no" data-tip="The hero picture's own words: the one line about him in every prompt, Qwen-Image 2.1's, 2512's and MiniMax H3's"></textarea>
-            <button type="button" class="btn ghost small" id="vdHeroSkin" data-vdheroskin="1" aria-pressed="true" data-tip="Pressed: the hero has a person's skin, and 2512 lays its Skin Detailer over him; not pressed: wood, clay, a puppet or a creature, no Skin Detailer">Human skin</button>
-            <button type="button" class="btn ghost small" id="vdHeroLast" data-vdherolast="1" aria-pressed="false" data-tip="Pressed: in the hero's shots MiniMax H3 gets the hero's own picture as the last frame too (FL2VA), so his likeness holds through the motion; such a shot ends on that picture. Not pressed: the shot's picture as its first frame alone">Hero as the last frame</button></div>   <!-- HERESY 2361 -->
+            <button type="button" class="btn ghost small" id="vdHeroSkin" data-vdheroskin="1" aria-pressed="true" data-tip="Pressed: the hero has a person's skin, and 2512 lays its Skin Detailer over him; not pressed: wood, clay, a puppet or a creature, no Skin Detailer">Human skin</button></div>   <!-- HERESY 2995: 2361's «Hero as the last frame» removed -->
         </div>
       </section>
       <section class="vd-pane" data-vdpane="films" role="tabpanel">
@@ -3253,6 +3252,7 @@ try { (function (v, f) { if (v !== "off" && v !== "rooms" && !(window.matchMedia
 <script src="heresy-post.js"></script>
 <script src="heresy-pianoteq.js"></script>
 <script src="heresy-ptq-engine.js"></script>   <!-- HERESY 1986: Engine → Pianoteq -->
+<script src="heresy-nam.js"></script>   <!-- HERESY 2987: the Refiner's Amp (NAM), its list of captures -->
 <script src="heresy-lineage.js"></script>
 <script src="heresy-https.js"></script>   <!-- HERESY 1985: the Studio over https -->   <!-- HERESY 1988: a take's family tree -->   <!-- HERESY 1977: the Pianoteq step's own panel -->
 <script src="heresy-gate.js"></script>   <!-- HERESY 1547: the Digital Gateway's panel -->

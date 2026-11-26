@@ -6036,7 +6036,7 @@
       });
     }, function (e) {
       if (/rendering/.test(e.message)) return again();
-      toast(/as a service/.test(e.message) ? tr("RS-TW 2.0 ×0.75 is here. The Studio does not run as a service here: start it again (Pinokio, or ./start.sh), and the page switches to it at its next start.") : tr("Not restarted:") + " " + e.message, "bad");
+      toast(/as a service/.test(e.message) ? tr("RS-TW 2.0 ×0.75 is here. The Studio does not run as a service here: start it again (its icon, or ./start.sh), and the page switches to it at its next start.") : tr("Not restarted:") + " " + e.message, "bad");
       return o;
     });
   }
@@ -6159,7 +6159,7 @@
     $("accForm").innerHTML = accessFormHtml(a, "accMode");
     var notes = [];
     if (a.public) notes.push(tr("RUACH_ALLOW_PUBLIC=1 is set: the Studio answers anyone, whatever is chosen here."));
-    if (!a.kept) notes.push(tr("This engine keeps no settings file, so it answers this computer and private networks; started the Studio's way (its icon, Pinokio or start.sh), it lets you choose."));   // HERESY 2955
+    if (!a.kept) notes.push(tr("This engine keeps no settings file, so it answers this computer and private networks; started the Studio's way (its icon or start.sh), it lets you choose."));   // HERESY 2955
     if (accessStill(a)) notes.push(accessStill(a));   // HERESY 2936
     why.hidden = !notes.length;
     why.textContent = notes.join(" ");
@@ -10713,6 +10713,92 @@
   $("wave").addEventListener("contextmenu", playerTakeMenu);
   document.querySelector("#playbar .playbar-id").addEventListener("contextmenu", playerTakeMenu);
 
+  // HERESY 2997 (Viktor 25.11.2026: «Наша waveform в плеерах не похожа на стерео волну»): a take's peaks carry its channels, peaks.ch: [left,
+  // right], or [mono] for a one-channel file; the players draw the left above their middle and the right below it, each from the middle, so a wide
+  // or a one-sided mix shows; one channel, or none known, stays mirrored as before. The engine's peaks.json has the one list; the lab adds the
+  // channels to it (/lab/take/peaks) the first time a take is drawn, asked once a take and a tab; with no lab the wave stays mirrored
+  var CH_ASK = {};
+  function chanList(c, n) {
+    return Array.isArray(c) && (c.length === 1 || c.length === 2) && c.every(function (a) { return Array.isArray(a) && a.length === n; }) ? c : null;
+  }
+  function peakChannels(name, data) {
+    if (!name || !data || !Array.isArray(data.peaks) || !data.peaks.length || chanList(data.channels, data.peaks.length)) return Promise.resolve(data);
+    if (!CH_ASK[name]) CH_ASK[name] = fetch("/lab/take/peaks?name=" + encodeURIComponent(name)).then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) { return d && Array.isArray(d.channels) ? d.channels : null; }, function () { return null; });
+    return CH_ASK[name].then(function (c) { return chanList(c, data.peaks.length) ? Object.assign({}, data, { channels: c }) : data; });
+  }
+  window.ruachPeakChannels = peakChannels;            // the Refiner's tree and the compare window ask through it too
+  // HERESY 3011 (Viktor 25.11.2026: «прикольно было бы панораму подрисовывать градиентными перекатами»): over the stereo wave (2997) each stretch
+  // tinted by its pan, the left channel's peak against the right's in dB: under 0.5 dB the wave's own colour, toward the left one hue, toward the
+  // right another, full at 4.5 dB (a real mix lies within ±2 dB nine stretches in ten and ±5 dB at its widest: a take of 25.11 measured), quiet
+  // stretches (under 0.02) saying no side, smoothed along time so one stretch rolls into the next. The two hues stand a third of the circle either
+  // side of the theme's accent (the played colour), the cooler one the left, lighter by night and deeper by day, so they never read as the accent
+  // or as each other in any theme. The width (side against mid) is not in the peaks and is not drawn. One painter for the player's cloud, the
+  // compare window's bars and the Refiner's tree; a mono take (one channel) stays as it was
+  var PAN_DEAD = 0.5, PAN_FULL = 4.5, PAN_MOST = 0.8, PAN_SIDES = { of: null, v: null }, PAN_MEMO = {};
+  function panOf(two, n, holder) {                    // a value a column, −1 (the left) to 1 (the right); kept on holder while its channels stay
+    if (!two || !(n > 0)) return null;
+    if (holder && holder._pan && holder._pan.two === two && holder._pan.n === n) return holder._pan.a;
+    var L = two[0], R = two[1], len = Math.min(L.length, R.length), raw = new Float32Array(n), wt = new Float32Array(n), i, k;
+    for (i = 0; i < n; i++) {
+      var a = Math.floor(i * len / n), b = Math.max(a + 1, Math.floor((i + 1) * len / n)), l = 0, r = 0;
+      for (k = a; k < b && k < len; k++) { if (L[k] > l) l = L[k]; if (R[k] > r) r = R[k]; }
+      if (Math.max(l, r) < 0.02) continue;            // too quiet to say a side
+      var db = 20 * Math.log10((r + 1e-4) / (l + 1e-4)), s = Math.min(1, Math.max(0, Math.abs(db) - PAN_DEAD) / (PAN_FULL - PAN_DEAD));
+      raw[i] = db < 0 ? -s : s; wt[i] = 1;
+    }
+    var out = new Float32Array(n), sig = Math.max(1.5, n / 160), reach = Math.ceil(sig * 2.5), g = [];
+    for (k = -reach; k <= reach; k++) g.push(Math.exp(-(k * k) / (2 * sig * sig)));
+    for (i = 0; i < n; i++) {                         // a gaussian along time, the quiet columns weighing nothing: soft rolls, never a step
+      var v = 0, ws = 0;
+      for (k = -reach; k <= reach; k++) { var q = i + k; if (q < 0 || q >= n || !wt[q]) continue; v += raw[q] * g[k + reach]; ws += g[k + reach]; }
+      out[i] = ws > 0 ? v / (ws + g[reach] * 0.25) : 0;   // a lone loud column among quiet ones says less than a stretch of them
+    }
+    if (holder) holder._pan = { two: two, n: n, a: out };
+    return out;
+  }
+  function panHsl(h, s, l) {
+    var c = (1 - Math.abs(2 * l - 1)) * s, x = c * (1 - Math.abs((h / 60) % 2 - 1)), m = l - c / 2, f = [[c, x, 0], [x, c, 0], [0, c, x], [0, x, c], [x, 0, c], [c, 0, x]][Math.floor(h / 60) % 6];
+    return f.map(function (v) { return Math.round((v + m) * 255); });
+  }
+  function panSides() {                               // [the left's rgb, the right's], by the theme in force
+    if (PAN_SIDES.of === themeCache && PAN_SIDES.v) return PAN_SIDES.v;
+    var a = themeRGB("amber"), r = a[0] / 255, gg = a[1] / 255, b = a[2] / 255, mx = Math.max(r, gg, b), d = mx - Math.min(r, gg, b), hue = 0;
+    if (d > 0.001) hue = mx === r ? ((gg - b) / d) % 6 : mx === gg ? (b - r) / d + 2 : (r - gg) / d + 4;
+    hue = (hue * 60 + 360) % 360;
+    var dark = document.documentElement.dataset.tone === "dark", h1 = (hue + 120) % 360, h2 = (hue + 240) % 360;
+    var cool = function (x) { var q = Math.abs(x - 210) % 360; return Math.min(q, 360 - q); }, left = cool(h1) <= cool(h2) ? h1 : h2;
+    PAN_SIDES = { of: themeCache, v: [left, left === h1 ? h2 : h1].map(function (h) { return panHsl(h, dark ? 0.72 : 0.68, dark ? 0.64 : 0.44); }) };
+    PAN_MEMO = {};
+    return PAN_SIDES.v;
+  }
+  function panMix(ctx, css, s) {                      // a bar's colour (any CSS colour, its alpha kept) moved toward its side's hue
+    var sides = panSides(), key = css + "|" + Math.round(s * 40), hit = PAN_MEMO[key];
+    if (hit) return hit;
+    var keep = ctx.fillStyle, n, m, rgb = [128, 128, 128], al = 1;
+    ctx.fillStyle = "#000"; ctx.fillStyle = css; n = String(ctx.fillStyle); ctx.fillStyle = keep;
+    if ((m = /^#([0-9a-f]{6})$/i.exec(n))) rgb = [0, 2, 4].map(function (i) { return parseInt(m[1].substr(i, 2), 16); });
+    else if ((m = /rgba?\(([^)]+)\)/.exec(n))) { var p = m[1].split(","); rgb = p.slice(0, 3).map(function (x) { return Math.round(+x) || 0; }); if (p[3] != null) al = +p[3]; }
+    var side = sides[s < 0 ? 0 : 1], t = Math.min(1, Math.abs(s)) * PAN_MOST;
+    return (PAN_MEMO[key] = "rgba(" + rgb.map(function (v, i) { return Math.round(v + (side[i] - v) * t); }).join(",") + "," + al + ")");
+  }
+  function panTint(c, two, w, h, dpr) {             // the player's cloud: its sprite washed by a gradient of the stretches' sides, where it has ink
+    var n = Math.max(16, Math.round(w / 6)), a = panOf(two, n), sides = panSides(), any = false, i;
+    for (i = 0; i < n && !any; i++) any = a[i] > 0.02 || a[i] < -0.02;
+    if (!any) return false;
+    var x = c.getContext("2d"), g = x.createLinearGradient(0, 0, w, 0);
+    for (i = 0; i < n; i++) { var s = a[i]; g.addColorStop((i + 0.5) / n, "rgba(" + sides[s < 0 ? 0 : 1].join(",") + "," + (Math.min(1, Math.abs(s)) * PAN_MOST).toFixed(3) + ")"); }
+    x.save(); x.setTransform(dpr, 0, 0, dpr, 0, 0); x.globalCompositeOperation = "source-atop"; x.fillStyle = g; x.fillRect(0, 0, w, h); x.restore();
+    return true;
+  }
+  window.ruachPan = { of: panOf, mix: panMix, sides: panSides, tint: panTint };
+  function peaksOf(data) {                            // the one list as the player keeps it, its channels on it when they are known
+    var pk = Float32Array.from(data.peaks), c = chanList(data.channels, pk.length);
+    if (c) pk.ch = c.map(function (a) { return Float32Array.from(a); });
+    return pk;
+  }
+  function stereoOf(pk) { var c = pk && pk.ch; return c && c.length === 2 && c[0].length === pk.length ? c : null; }   // the two drawn apart, or null: mirrored
+
   // The server reads the audio once and caches 900 peak values per take. The
   // browser decode below is only the fallback: a take kept in this tab, or a
   // server without the peaks route.
@@ -10727,7 +10813,14 @@
     var fromServer = take.session ? Promise.reject(new Error("kept in this tab"))
       : api("/library/peaks?name=" + encodeURIComponent(take.name)).then(function (data) {
           if (!data || !Array.isArray(data.peaks) || !data.peaks.length) throw new Error("no peaks");
-          return Float32Array.from(data.peaks);
+          var pk = peaksOf(data);
+          if (!pk.ch) peakChannels(take.name, data).then(function (d) {   // HERESY 2997: the lab's channels come after it: the wave drawn again with them
+            var two = peaksOf(d), had = STATE.peakCache[url];
+            if (!two.ch || (had && had.ch)) return;
+            STATE.peakCache[url] = two;
+            if (STATE.playerTake && takeAudioUrl(STATE.playerTake) === url) { STATE.peaks = two; drawWave(); }
+          });
+          return pk;
         });
     fromServer.catch(function () {
       return fetch(url).then(function (r) {
@@ -10768,15 +10861,17 @@
     var context = new Offline(2, 1, 48000);
     return context.decodeAudioData(buffer).then(function (decoded) {
       var left = decoded.getChannelData(0), right = decoded.numberOfChannels > 1 ? decoded.getChannelData(1) : left;
-      var buckets = 900, size = Math.max(1, Math.floor(left.length / buckets)), peaks = new Float32Array(buckets);
+      var buckets = 900, size = Math.max(1, Math.floor(left.length / buckets)), peaks = new Float32Array(buckets), pl = new Float32Array(buckets), pr = new Float32Array(buckets);
       for (var i = 0; i < buckets; i++) {
-        var max = 0, start = i * size, end = Math.min(left.length, start + size);
+        var ml = 0, mr = 0, start = i * size, end = Math.min(left.length, start + size);
         for (var j = start; j < end; j += 2) {
-          var value = Math.max(Math.abs(left[j]), Math.abs(right[j]));
-          if (value > max) max = value;
+          var a = Math.abs(left[j]), b = Math.abs(right[j]);
+          if (a > ml) ml = a;
+          if (b > mr) mr = b;
         }
-        peaks[i] = max;
+        pl[i] = ml; pr[i] = mr; peaks[i] = Math.max(ml, mr);
       }
+      peaks.ch = decoded.numberOfChannels > 1 ? [pl, pr] : [pl];   // HERESY 2997: each channel, as the lab gives them
       return peaks;
     });
   }
@@ -10797,26 +10892,34 @@
     set: function (o) { ["rest", "restNight", "played", "bars"].forEach(function (k) { if (o && isFinite(o[k])) WAVE[k] = Math.max(0, Math.min(1, +o[k])); });
       WAVE.epoch++; drawWave(); return this.get(); }
   };
-  function cloudEnvelope(peaks, n) {
-    var raw = new Float32Array(n), step = peaks.length / n, i, j;
-    for (i = 0; i < n; i++) {                     // the loudest in each column, so no peak falls between two
-      var a = Math.floor(i * step), b = Math.max(a + 1, Math.floor((i + 1) * step)), m = 0;
-      for (j = a; j < b && j < peaks.length; j++) if (peaks[j] > m) m = peaks[j];
-      raw[i] = m;
-    }
-    var out = new Float32Array(n), R = 4, w = [];
+  function cloudEnvelopes(list, n) {                 // HERESY 2997: an envelope for each channel drawn (one for a mirrored wave), all on one gain
+    var R = 4, w = [], j;
     for (j = -R; j <= R; j++) { w.push(Math.exp(-(j * j) / (2 * 2.2 * 2.2))); }
-    for (i = 0; i < n; i++) {                     // a soft blur along time: neighbours lend each other their air
-      var v = 0, ws = 0;
-      for (j = -R; j <= R; j++) { var k = i + j; if (k < 0 || k >= n) continue; v += raw[k] * w[j + R]; ws += w[j + R]; }
-      out[i] = Math.max(v / ws, raw[i] * 0.7);    // the blur rounds a peak, but never flattens it away
-    }
-    // the song's own shape fills the room: its loud (not its one loudest spike) reaches the edge, a quiet song too
-    var s = Array.prototype.slice.call(out).sort(function (a, b) { return a - b; }), top = s[Math.floor(n * 0.98)] || 0;
-    if (top > 0.01) { var gain = Math.min(3, 0.92 / top); for (i = 0; i < n; i++) out[i] = Math.pow(Math.min(1, out[i] * gain), 0.75); }   // and heard, not metered: the quiet lifted a little
-    return out;
+    var outs = list.map(function (peaks) {
+      var raw = new Float32Array(n), step = peaks.length / n, i, k;
+      for (i = 0; i < n; i++) {                   // the loudest in each column, so no peak falls between two
+        var a = Math.floor(i * step), b = Math.max(a + 1, Math.floor((i + 1) * step)), m = 0;
+        for (k = a; k < b && k < peaks.length; k++) if (peaks[k] > m) m = peaks[k];
+        raw[i] = m;
+      }
+      var out = new Float32Array(n);
+      for (i = 0; i < n; i++) {                   // a soft blur along time: neighbours lend each other their air
+        var v = 0, ws = 0;
+        for (k = -R; k <= R; k++) { var q = i + k; if (q < 0 || q >= n) continue; v += raw[q] * w[k + R]; ws += w[k + R]; }
+        out[i] = Math.max(v / ws, raw[i] * 0.7);  // the blur rounds a peak, but never flattens it away
+      }
+      return out;
+    });
+    // the song's own shape fills the room: its loud (not its one loudest spike) reaches the edge, a quiet song too; HERESY 2997: the loud of both
+    // channels together, so a quieter side stays quieter
+    var s = [];
+    outs.forEach(function (o) { for (var i = 0; i < n; i++) s.push(o[i]); });
+    s.sort(function (a, b) { return a - b; });
+    var top = s[Math.floor(s.length * 0.98)] || 0;
+    if (top > 0.01) { var gain = Math.min(3, 0.92 / top); outs.forEach(function (o) { for (var i = 0; i < n; i++) o[i] = Math.pow(Math.min(1, o[i] * gain), 0.75); }); }   // and heard, not metered: the quiet lifted a little
+    return outs;
   }
-  function cloudSprite(env, w, h, dpr, paint) {
+  function cloudSprite(env, low, w, h, dpr, paint) {  // HERESY 2997: env above the middle, low below it (the same env: mirrored)
     var c = document.createElement("canvas");
     c.width = Math.floor(w * dpr); c.height = Math.floor(h * dpr);
     var x = c.getContext("2d"), mid = h / 2, room = (h - 6) / 2, n = env.length;
@@ -10828,7 +10931,7 @@
       x.beginPath();
       x.moveTo(0, mid);
       for (var i = 0; i < n; i++) x.lineTo(i * w / (n - 1), mid - Math.max(0.6, env[i] * room * layer[0]));
-      for (var k = n - 1; k >= 0; k--) x.lineTo(k * w / (n - 1), mid + Math.max(0.6, env[k] * room * layer[0]));
+      for (var k = n - 1; k >= 0; k--) x.lineTo(k * w / (n - 1), mid + Math.max(0.6, low[k] * room * layer[0]));
       x.closePath();
       x.fill();
     });
@@ -10837,17 +10940,19 @@
   }
   function cloudSprites(peaks, w, h, dpr) {
     if (cloud.peaks !== peaks || cloud.w !== w || cloud.h !== h || cloud.dpr !== dpr || cloud.theme !== themeCache || cloud.epoch !== WAVE.epoch) {
-      var env = cloudEnvelope(peaks, Math.max(32, Math.floor(w / 2)));
+      var envs = cloudEnvelopes(stereoOf(peaks) || [peaks], Math.max(32, Math.floor(w / 2))), env = envs[0], low = envs[1] || env;   // HERESY 2997
       cloud = { peaks: peaks, w: w, h: h, dpr: dpr, theme: themeCache, epoch: WAVE.epoch,
-        played: cloudSprite(env, w, h, dpr, function (x, hh) {     // the accent, brighter at the crests
+        played: cloudSprite(env, low, w, h, dpr, function (x, hh) {     // the accent, brighter at the crests
           var g = x.createLinearGradient(0, 0, 0, hh);
           g.addColorStop(0, themeRGBA("amber-hi", WAVE.played)); g.addColorStop(0.5, themeRGBA("amber", WAVE.played)); g.addColorStop(1, themeRGBA("amber-hi", WAVE.played));
           return g;
         }),
-        rest: cloudSprite(env, w, h, dpr, function () {             // the waiting part: a light grey by day (Viktor: "much lighter,
+        rest: cloudSprite(env, low, w, h, dpr, function () {             // the waiting part: a light grey by day (Viktor: "much lighter,
           var g = themeRGB("ground");                                 // it looks dirty"), as it was by night
           return themeRGBA("ink", (0.2126 * g[0] + 0.7152 * g[1] + 0.0722 * g[2]) / 255 > 0.5 ? WAVE.rest : WAVE.restNight);
         }) };
+      var twoP = stereoOf(peaks);                      // HERESY 3011: each stretch tinted by its pan, both parts
+      cloud.panned = !!twoP && panTint(cloud.played, twoP, w, h, dpr) && panTint(cloud.rest, twoP, w, h, dpr);
     }
     return cloud;
   }
@@ -10961,10 +11066,12 @@
         var accent = ctx.createLinearGradient(0, 0, 0, height);
         accent.addColorStop(0, themeRGBA("amber-hi", WAVE.bars)); accent.addColorStop(0.5, themeRGBA("amber", WAVE.bars)); accent.addColorStop(1, themeRGBA("amber-hi", WAVE.bars));
         var grey = themeRGBA("ink", WAVE.bars);
+        var two = stereoOf(peaks);                     // HERESY 2997: the left's bar above the middle, the right's below
         for (var bi = 0; bi < bars; bi++) {
-          var bh = Math.max(1.5, peaks[Math.floor(bi * step)] * (height - 10)), bx = bi * (width / bars);
+          var pi = Math.floor(bi * step), bx = bi * (width / bars);
+          var bu = Math.max(0.75, (two ? two[0][pi] : peaks[pi]) * (height - 10) / 2), bd = Math.max(0.75, (two ? two[1][pi] : peaks[pi]) * (height - 10) / 2);
           ctx.fillStyle = (bi / bars) <= progress ? accent : grey;
-          ctx.fillRect(bx, middle - bh / 2, Math.max(1, width / bars - 1), bh);
+          ctx.fillRect(bx, middle - bu, Math.max(1, width / bars - 1), bu + bd);
         }
       }
     }

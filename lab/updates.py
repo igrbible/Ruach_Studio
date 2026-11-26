@@ -53,24 +53,18 @@ def _save(config_dir, state):
 
 
 def _git(root, *args):
-    r = subprocess.run(["git", "-C", str(root), *args], capture_output=True, text=True, timeout=30)
+    r = subprocess.run(["git", "-C", str(root), *args], capture_output=True, text=True, timeout=30, encoding="utf-8", errors="replace")
     return r.returncode, r.stdout.strip(), r.stderr.strip()
 
 
 def can_run(root):
     """(True, "") where an update can run; else (False, why), said as it is."""
     root = Path(root)
-    # HERESY 1362: Pinokio keeps the clone on main and pulls it (its Update, launcher/update.sh): a tag checked out here would leave its
-    # pull on a detached head, and the Studio there is Pinokio's to start (launcher/lab.sh says it runs there)
-    if os.environ.get("RUACH_LAUNCHER") == "pinokio":
-        return False, "this Studio runs under Pinokio: update it there, by Update in Pinokio's menu"
     # packaged (Claude, 07.11.2026, the WSL2 and AppImage trials): the Studio is not a clone there; its launcher brings the next version
     if os.environ.get("RUACH_LAUNCHER") == "appimage":
         return False, "this Studio is an AppImage: download the new RuachStudio AppImage and start it in place of this one (models, songs and settings stay in " + str(Path(root)) + ")"
     if os.environ.get("RUACH_LAUNCHER") == "native":    # HERESY 2930: RuachStudio.exe on Windows and macOS, from the release's zip
         return False, "this Studio runs from RuachStudio.exe: the tray menu's Check for updates opens the new release's page to download it"
-    if os.environ.get("RUACH_LAUNCHER") == "wsl":
-        return False, "this Studio runs in WSL from RuachStudio.exe: the tray menu's Check for updates brings the new version"
     if not shutil.which("systemd-run"):
         return False, "this machine has no systemd-run for the update to run in: update by hand (git fetch --tags, git checkout the release, ./build.sh)"
     if not (root / ".git").exists():

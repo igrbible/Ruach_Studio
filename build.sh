@@ -28,7 +28,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 HPY="$ROOT/.venv/bin/python"; [ -x "$HPY" ] || HPY=python3   # HERESY 1080: the Studio's one environment
 export TMPDIR="$ROOT/tmp"
 mkdir -p "$TMPDIR"
-export CUDA_HOME="${RUACH_CUDA_HOME:-/usr/local/cuda-12.8}"   # HERESY 1259: the toolkit launcher/env.sh found (Pinokio's own where the machine has none)
+export CUDA_HOME="${RUACH_CUDA_HOME:-/usr/local/cuda-12.8}"   # HERESY 1259: the toolkit launcher/env.sh found (a conda prefix's where the machine has none)
 export PATH="$CUDA_HOME/bin:$PATH"
 PORT="${YUE2CPP_PORT:-7777}"
 G="\e[1;32m"; R="\e[1;31m"; Y="\e[1;33m"; D="\e[2m"; X="\e[0m"

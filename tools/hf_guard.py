@@ -39,6 +39,7 @@ import argparse
 import errno
 import fnmatch
 import hashlib
+import ntpath
 import os
 import re
 import shutil
@@ -60,6 +61,24 @@ OURS = ("goldhub/",)
 PIN = re.compile(r"[0-9a-f]{40}")
 PART = ".ruach-part"
 RECORDS = os.path.join(".cache", "huggingface", "download")   # where the pinned downloader keeps a file's record beside a --local-dir
+NT = os.name == "nt"
+
+
+def L(path, nt=NT, force=False):
+    """HERESY 2983 (the Windows VM, 25.11.2026: a folder of 215 characters, the part's path 263, «the download did not complete (hf exit 0)»): on
+    Windows a path of 248 characters and more as \\?\…, the one form that reaches past 260 while long paths are off (Windows' default); hf writes
+    there so (huggingface_hub's _local_folder.py), and this checked and moved the plain path, which Windows would not open. Its slashes made
+    backslashes, which that form needs. force: a folder to walk, whose files may reach past it. Elsewhere, and on a shorter path, the path itself."""
+    s = os.fspath(path)
+    if not nt or s.startswith("\\\\?\\") or (len(s) < 248 and not force):
+        return s
+    s = ntpath.normpath(ntpath.abspath(s) if NT else s)
+    return "\\\\?\\UNC\\" + s[2:] if s.startswith("\\\\") else "\\\\?\\" + s
+
+
+def hf_env():
+    """HERESY 2983: hf's words in UTF-8 on Windows, read as UTF-8 (the system's code page made a Cyrillic folder «���» in a failure's reason)"""
+    return dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUTF8="1") if NT else None
 
 
 def ours(repo):
@@ -68,7 +87,7 @@ def ours(repo):
 
 def sha256(path):
     h = hashlib.sha256()
-    with open(path, "rb") as f:
+    with open(L(path), "rb") as f:
         for block in iter(lambda: f.read(1 << 22), b""):
             h.update(block)
     return h.hexdigest()
@@ -141,18 +160,18 @@ def record_says(record, sha, local):
     """The downloader's record beside a file (line 2 its etag, the LFS SHA-256; line 3 when it was written) names this SHA-256 and the
     file was not touched since: trusted as the downloader itself trusts it, so a pack of files here is not hashed again on every run."""
     try:
-        with open(record, encoding="utf-8") as f:
+        with open(L(record), encoding="utf-8") as f:
             lines = f.read().splitlines()
-        return len(lines) >= 3 and lines[1].strip().strip('"') == sha and float(lines[2]) >= os.path.getmtime(local) - 1
+        return len(lines) >= 3 and lines[1].strip().strip('"') == sha and float(lines[2]) >= os.path.getmtime(L(local)) - 1
     except (OSError, ValueError):
         return False
 
 
 def check_file(local, exp, record=None):
     """None when LOCAL is what EXP says; else what is wrong with it."""
-    if not os.path.isfile(local):
+    if not os.path.isfile(L(local)):
         return "missing"
-    size = os.path.getsize(local)
+    size = os.path.getsize(L(local))
     if size != exp["size"]:
         return f"{size} bytes, the pinned size is {exp['size']}"
     if exp["sha"] and not (record and record_says(record, exp["sha"], local)):
@@ -165,31 +184,32 @@ def check_file(local, exp, record=None):
 def place(src, target, exp):
     """SRC (checked) into TARGET: a rename on the same disk; across disks a copy beside TARGET, checked again, then renamed over it.
     Either way TARGET is the old file or the whole new one, never a half."""
-    os.makedirs(os.path.dirname(target), exist_ok=True)
+    os.makedirs(L(os.path.dirname(target)), exist_ok=True)
     try:
-        os.replace(src, target)
+        os.replace(L(src), L(target))
         return
     except OSError as e:
         if e.errno != errno.EXDEV:
             raise
     tmp = target + PART
     try:
-        shutil.copyfile(src, tmp)
-        with open(tmp, "rb+") as f:
+        shutil.copyfile(L(src), L(tmp))
+        with open(L(tmp), "rb+") as f:
             os.fsync(f.fileno())
         bad = check_file(tmp, exp)
         if bad:
             raise OSError(f"the copy across disks came out wrong: {bad}")
-        os.replace(tmp, target)
+        os.replace(L(tmp), L(target))
     finally:
-        if os.path.exists(tmp):
-            os.unlink(tmp)
-    os.unlink(src)
+        if os.path.exists(L(tmp)):
+            os.unlink(L(tmp))
+    os.unlink(L(src))
 
 
 def prune(folder):
     """The part folder gone when nothing unfinished is left in it (the downloader's own .gitignore and locks with it); else its empty
     folders only, bottom up, so a download cut halfway goes on from its part next time."""
+    folder = L(folder, force=True)
     if not any(n.endswith(".incomplete") for _, _, fs in os.walk(folder) for n in fs):
         shutil.rmtree(folder, ignore_errors=True)
         return
@@ -233,7 +253,11 @@ def cmd_download(a, verify_only=False):
             print(f"{R}refused{X}   {rel}: {why}")
             failed += 1
             continue
-        target = os.path.realpath(os.path.join(top, rel))   # a bridge (a link at an old path) leads to the file itself
+        target = os.path.join(top, rel)
+        try:
+            target = os.path.realpath(target)                # a bridge (a link at an old path) leads to the file itself
+        except OSError:                                      # (Windows, a path past 260 with long paths off: as it is, reached through L())
+            target = os.path.normpath(target)
         bad = check_file(target, exp, None if verify_only else os.path.join(top, RECORDS, rel + ".metadata"))
         if bad is None:
             if not a.quiet or verify_only:
@@ -249,12 +273,13 @@ def cmd_download(a, verify_only=False):
         return 1 if failed else 0
 
     part = os.path.join(top, PART)
-    os.makedirs(part, exist_ok=True)
+    os.makedirs(L(part), exist_ok=True)
     cmd = [hf_program(), "download", repo, *need, "--revision", rev, "--local-dir", part]
     if a.quiet:
         cmd.append("--quiet")
     try:
-        p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL, text=True, errors="replace")
+        p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL, text=True, errors="replace",
+                           env=hf_env(), encoding="utf-8" if NT else None)
         said, rc = p.stdout or "", p.returncode
     except OSError as e:
         said, rc = str(e), 127
@@ -265,19 +290,19 @@ def cmd_download(a, verify_only=False):
         got = os.path.join(part, path)
         rec = os.path.join(part, RECORDS, path + ".metadata")
         why = via = None
-        if not os.path.isfile(got):
-            unfinished = any(n.endswith(".incomplete") for _, _, fs in os.walk(os.path.join(part, RECORDS)) for n in fs)
+        if not os.path.isfile(L(got)):
+            unfinished = any(n.endswith(".incomplete") for _, _, fs in os.walk(L(os.path.join(part, RECORDS), force=True)) for n in fs)
             why = (f"the download did not complete (hf exit {rc}{': ' + last if last else ''})"
                    + (f"; its unfinished part stays in {os.path.relpath(part, top)}/ for the next run to go on from" if unfinished else ""))
-            tail = "; what was here stays as it was" if os.path.exists(target) else ""
+            tail = "; what was here stays as it was" if os.path.exists(L(target)) else ""
         else:
             bad = check_file(got, exp)
             if bad:
                 for f in (got, rec):
-                    if os.path.exists(f):
-                        os.unlink(f)
+                    if os.path.exists(L(f)):
+                        os.unlink(L(f))
                 why = f"{bad}; the download is removed"
-                tail = "; what was here stays as it was" if os.path.exists(target) else "; nothing was put in its place"
+                tail = "; what was here stays as it was" if os.path.exists(L(target)) else "; nothing was put in its place"
         tried = []
         if why and chans and exp["sha"]:             # the second channel (Viktor 21.11.2026): only for a file whose SHA-256 is known before it comes
             via, delivered = hf_channels.deliver(repo, rev, path, exp["size"], exp["sha"], part, hf_program())
@@ -300,11 +325,11 @@ def cmd_download(a, verify_only=False):
             print(f"{G}via{X}       {rel}  {D}(delivered by {via}, checked: {exp['size']} bytes, SHA-256: {exp['by']}; "
                   f"Hugging Face: {why[:120]}){X}")
             continue
-        if os.path.isfile(rec):                      # its record beside it, as the downloader leaves one (models_plan.py reads it)
+        if os.path.isfile(L(rec)):                   # its record beside it, as the downloader leaves one (models_plan.py reads it)
             dst = os.path.join(top, RECORDS, rel + ".metadata")
             try:
-                os.makedirs(os.path.dirname(dst), exist_ok=True)
-                os.replace(rec, dst)
+                os.makedirs(L(os.path.dirname(dst)), exist_ok=True)
+                os.replace(L(rec), L(dst))
             except OSError:
                 pass
         if not a.quiet:
@@ -327,7 +352,7 @@ def cmd_manifest(a):
     if small:
         os.makedirs(where, exist_ok=True)
         r = subprocess.run([hf_program(), "download", a.repo, *small, "--revision", a.revision, "--local-dir", where, "--quiet"],
-                           stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+                           stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True, encoding="utf-8", errors="replace")
         for p in small:
             f = os.path.join(where, p)
             if not os.path.isfile(f) or os.path.getsize(f) != remote[p]["size"]:

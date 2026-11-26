@@ -595,6 +595,7 @@ static std::string  g_vae_path;
 static std::string  g_transcriber_path;
 static std::string  g_transcriber_refined_path;  // HERESY 2328: SheetSage2-Refined's overlay
 static std::string  g_transcriber_small_path;    // HERESY 2625: SheetSage2 with MERT in Q8_0, asked with precision=q8
+static std::string  g_transcriber_refined_prec = "unknown";   // HERESY 2986: what Refined's own file holds its weights in, read at the start
 static std::string  g_tokenizer_path;
 
 // Local additions: named decoders, the slider catalog and the song library
@@ -2535,6 +2536,35 @@ static const char * transcriber_mode(bool refined, int rope) {
                                                                        "Standard (SheetSage2, exact angles: the sheets before 2.0.7)";
 }
 
+// HERESY 2986 (the check of 2984, 25.11.2026: Refined's answer said «precision: F32» for its F16 file): a model file's precision as its own
+// tensors say, the most common type other than F32 (which norms and biases keep); "" when the file cannot be read
+static std::string gguf_precision(const std::string & path) {
+    gguf_init_params gp = { true, nullptr };
+    gguf_context *   g  = gguf_init_from_file(path.c_str(), gp);
+    if (!g) {
+        return "";
+    }
+    std::vector<int64_t> n(GGML_TYPE_COUNT, 0);
+    for (int64_t i = 0; i < gguf_get_n_tensors(g); i++) {
+        int t = (int) gguf_get_tensor_type(g, i);
+        if (t >= 0 && t < GGML_TYPE_COUNT && t != GGML_TYPE_F32) {
+            n[t]++;
+        }
+    }
+    gguf_free(g);
+    int best = GGML_TYPE_F32;
+    for (int t = 0; t < GGML_TYPE_COUNT; t++) {
+        if (n[t] > 0 && (best == GGML_TYPE_F32 || n[t] > n[best])) {
+            best = t;
+        }
+    }
+    std::string s = ggml_type_name((ggml_type) best);
+    for (char & c : s) {
+        c = (char) toupper((unsigned char) c);
+    }
+    return s;
+}
+
 static void run_transcribe(std::shared_ptr<Job> job, std::vector<float> audio, bool melody_only, bool refined, bool key_mode, int rope,
                            bool q8) {   // HERESY 2649: not «small» (Windows defines it as char)
     job->started.store(true);
@@ -2542,7 +2572,7 @@ static void run_transcribe(std::shared_ptr<Job> job, std::vector<float> audio, b
     fprintf(stderr, "[Server] Transcribe job %s: %.1f s of audio, %s, %s%s, %s\n", job->id.c_str(),
             (double) audio.size() / MERT_SAMPLE_RATE, melody_only ? "melody only" : "full score",
             transcriber_mode(refined, rope),
-            refined && key_mode ? " with modes" : "", q8 ? "Q8_0" : "F32 (or as started)");
+            refined && key_mode ? " with modes" : "", q8 ? "Q8_0" : refined ? g_transcriber_refined_prec.c_str() : "F32 (or as started)");
     std::string abc, error;
     bool ok = pipeline_transcribe(&g_pipeline, audio.data(), (int) audio.size(), melody_only, &abc, &error, refined, key_mode, rope, q8);
     active_job_set(nullptr);
@@ -2554,7 +2584,8 @@ static void run_transcribe(std::shared_ptr<Job> job, std::vector<float> audio, b
     // HERESY 2328: the answer says which transcriber wrote the score; HERESY 2359: and with which angles SheetSage2 wrote it
     std::string body = json_string("abc", abc);
     body.insert(body.size() - 1, std::string(",\"transcriber\":\"") + transcriber_name(refined, rope) + "\"");
-    body.insert(body.size() - 1, std::string(",\"precision\":\"") + (q8 ? "Q8_0" : "F32") + "\"");   // HERESY 2625
+    body.insert(body.size() - 1, std::string(",\"precision\":\"") + (q8 ? std::string("Q8_0") : refined ? g_transcriber_refined_prec : std::string("F32")) +
+                                     "\"");   // HERESY 2625; 2986: Refined's from its own file (F16 as the Studio fetches it)
     job->result_body = body;
     job->result_mime = "application/json";
     job->status.store(JobStatus::DONE);
@@ -3122,6 +3153,12 @@ int main(int argc, char ** argv) {
     g_pipeline.store            = store_create(g_keep_loaded ? EVICT_NEVER : EVICT_STRICT);
     g_pipeline.transcriber_path = g_transcriber_path;
     g_pipeline.transcriber_refined_path = g_transcriber_refined_path;
+    if (!g_transcriber_refined_path.empty()) {
+        std::string prec = gguf_precision(g_transcriber_refined_path);   // HERESY 2986
+        if (!prec.empty()) {
+            g_transcriber_refined_prec = prec;
+        }
+    }
     g_pipeline.transcriber_small_path   = g_transcriber_small_path;   // HERESY 2625
     g_pipeline.vaes             = g_vaes;
     for (const auto & v : g_vaes) {

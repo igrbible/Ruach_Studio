@@ -98,7 +98,7 @@ def say_progress(w, **kv):
 
 
 def seconds_of(p):
-    r = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(p)], capture_output=True, text=True)
+    r = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(p)], capture_output=True, text=True, encoding="utf-8", errors="replace")
     try:
         return float(r.stdout.strip())
     except ValueError:
@@ -316,8 +316,12 @@ class Listener:
         m = paths.at(paths.LISTENER, self.kit) / "Qwen2.5-Omni-7B-GGUF"
         model, proj = m / "Qwen2.5-Omni-7B-Q8_0.gguf", m / "mmproj-Qwen2.5-Omni-7B-f16.gguf"
         srv = self.kit / "vendor" / "llama.cpp" / "build" / "bin" / "llama-server"
+        if winx.NT:                                     # HERESY 2992: the Windows package's, beside the engine
+            srv = winx.native_exe(self.kit, "llama-server") or self.kit / "engine" / "cpu" / "llama-server.exe"
         if not (model.is_file() and proj.is_file() and srv.is_file()):
-            raise FileNotFoundError("the Listener needs " + paths.LISTENER + "/Qwen2.5-Omni-7B-GGUF (Q8_0 and its mmproj) and vendor/llama.cpp's llama-server")
+            raise FileNotFoundError("the Listener needs " + paths.LISTENER + "/Qwen2.5-Omni-7B-GGUF (Q8_0 and its mmproj) and "
+                                    + ("llama-server.exe beside the engine (engine\\cuda or engine\\cpu), which the Windows package brings" if winx.NT
+                                       else "vendor/llama.cpp's llama-server"))
         with socket.socket() as s:
             s.bind(("127.0.0.1", 0))
             port = s.getsockname()[1]
@@ -396,7 +400,7 @@ def claim(fd):
         return True
     except FileExistsError:
         try:
-            host, pid = p.read_text().split()
+            host, pid = p.read_text(encoding="utf-8").split()
             if host == socket.gethostname() and (pid == str(os.getpid()) or not winx.alive(pid)):   # HERESY 2934: /proc/PID on Linux alone
                 p.unlink(missing_ok=True)
                 return claim(fd) if pid != str(os.getpid()) else True
@@ -1060,6 +1064,7 @@ def start(kit, spec, gpu_picker):
         raise ValueError("the step is clean, notes or build")
     if not bank:
         raise ValueError("the bank needs a name")
+    winx.need("ffmpeg", "ffprobe")                # HERESY 2989: every step decodes by ffmpeg and measures by ffprobe: their absence said in words
     key = slug(bank)
     w = work_dir(kit, bank)
     job = JOBS.get(key)
@@ -1103,7 +1108,7 @@ def start(kit, spec, gpu_picker):
 
     def work():
         try:
-            p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1, env=env, cwd=str(kit))
+            p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1, env=env, cwd=str(kit), encoding="utf-8", errors="replace")
             job["proc"] = p
             for line in p.stdout:
                 line = line.rstrip()

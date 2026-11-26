@@ -3,7 +3,7 @@ shots made alive by MiniMax H3. A shot asked for goes as a job into a card's spo
 Artist's environment, on the Studio's own runtime lab/h3rt since 1870) takes it, keeps H3 loaded while shots come and leaves the card when none has come for ten minutes. Both modes are H3 FL2VA with
 the shot's picture as its first frame: «draft» at 8 steps and 832×480 (measured 29.10 on a 3090: 102 s, a peak of 15 GB, a clean picture), «final» at
 28 steps and H3's own 768p; so one worker a card serves both. (HERESY 2356: the draft at 1280 × 704, the old one «fast»; HERESY 2361: the final at
-1280 × 704 too, and a hero's shot may get the hero's own picture as its last frame.) What a worker made is set into the shot by collect() (the lab's thread and every
+1280 × 704 too; the hero's own picture as a shot's last frame it brought was removed by HERESY 2995.) What a worker made is set into the shot by collect() (the lab's thread and every
 status): the video in NAME.shots/, its first frame beside it for the timeline, the one before put off (kept). A shot whose times changed since it was
 asked for keeps its video aside, not set."""
 import json
@@ -106,32 +106,21 @@ def _spawn(kit, gpu, mode):
     (sp / "worker.json").write_text(json.dumps({"status": "loading", "pid": 0, "gpu": gpu, "at": time.time(), "spawned": True}), encoding="utf-8")
 
 
-def hero_shot(s):
-    """HERESY 2361: whether the hero is in shot s: its picture drawn from the hero (frame_from's hero), else chosen so (hero true)."""
-    fr = s.get("frame_from")
-    if isinstance(fr, dict) and isinstance(fr.get("hero"), bool):
-        return fr["hero"]
-    return s.get("hero") is True
+HERO_LAST_GONE = ("this plan asked «Hero as the last frame» (HERESY 2361), removed by HERESY 2995: its shots are made without it, "
+                  "the shot's picture as the first frame alone")
 
 
-def hero_last(kit, plan, s):
-    """HERESY 2361 (the night report of 10→11.11: «в движении H3 в некоторых кадрах укорачивает нос даже со словами героя»; its first idea, taken
-    on Viktor's «делай как советуешь»): the hero's own picture as the last frame of his shot (H3 FL2VA's «last» keyframe), when the plan's hero
-    asks it (hero.last). (the picture's path or "", why there is none when it was asked): a picture asked and not found is said, never taken for
-    «not asked»."""
+def hero_last_gone(plan):
+    """HERESY 2995 (the video-quality lane of 25.11.2026: with the hero's own picture as the last frame all 8 shots of «Буратино» collapsed
+    within 1.5–3 s into the same portrait and the slices broke; no plan used it): 2361's «Hero as the last frame» removed. A plan of before that
+    asked it (hero.last) is read as it is and shot without it; this says so (its words, or "" when the plan never asked it)."""
     h = plan.get("hero")
-    if not isinstance(h, dict) or not h.get("last") or not hero_shot(s):
-        return "", ""
-    try:
-        import artist
-        return str(artist.picture(str(h.get("run") or ""), str(h.get("file") or ""))[0]), ""
-    except (OSError, ValueError, KeyError, TypeError) as e:
-        return "", f"the hero's picture is not here: {e}"
+    return HERO_LAST_GONE if isinstance(h, dict) and h.get("last") else ""
 
 
 def shoot(kit, name, i, prompt, mode="draft", free_cards=(), seed=None, first=True, size="16:9"):
     """A shot into a card's queue: the card already running a worker of this mode's kind with the shortest queue, else a free card (its worker started).
-    HERESY 2361: a hero's shot takes the hero's picture as its last frame when the plan asks it (hero_last)."""
+    HERESY 2995: a plan that asked the hero's picture as the last frame (2361's hero.last) is shot without it, the job saying so (said)."""
     if mode not in MODES:
         raise ValueError("draft, fast or final")
     r = ready(kit)
@@ -170,11 +159,9 @@ def shoot(kit, name, i, prompt, mode="draft", free_cards=(), seed=None, first=Tr
         job = {"name": name, "i": i, "t0": s["t0"], "t1": s["t1"], "prompt": prompt, "seconds": round(max(4.0, min(15.0, s["t1"] - s["t0"])), 2),
                "width": w, "height": h, "steps": MODES[mode]["steps"], "seed": int(seed or random.randint(1000, 999999999)), "first": pic, "out": str(out),
                "mode": mode, "gpu": gpu, "queued": now}
-        last, why = hero_last(kit, plan, s) if not MODES[mode]["fast"] else ("", "")   # HERESY 2361
-        if last:
-            job["last"] = last
-        elif why:
-            job["last_missing"] = why
+        said = hero_last_gone(plan)                     # HERESY 2995: 2361's last frame no more, a plan that asked it told so
+        if said:
+            job["said"] = said
         pf, want = pass_frames(w, h), int(round(job["seconds"] * 24))   # HERESY 2356: a little past one pass: one pass, no seam (the clip stretches it)
         if pf < want <= pf * STRETCH:
             job["frames"] = pf
@@ -228,9 +215,7 @@ def status(kit, name):
                 continue
             job = {"i": j.get("i"), "state": {".json": "queued", ".run": "running", ".failed": "failed"}[f.suffix], "mode": j.get("mode"),
                    "gpu": j.get("gpu"), "since": round(time.time() - (f.stat().st_mtime if f.suffix == ".run" else j.get("queued", time.time()))),
-                   "error": j.get("error", ""), "file": f.name, "last": bool(j.get("last"))}
-            if j.get("last_missing"):                       # HERESY 2361: the hero's last frame asked and not found, said
-                job["last_missing"] = j["last_missing"]
+                   "error": j.get("error", ""), "file": f.name}
             if f.suffix == ".run" and w.get("job") == f.stem and w.get("steps"):      # HERESY 1870: the step it is at
                 job.update(step=w.get("step"), steps=w.get("steps"))
             jobs.append(job)

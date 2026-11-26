@@ -101,7 +101,7 @@ def _resolve(module):
 def _sidecar(path):
     cfg = Path(path).parent / "adapter_config.json"
     try:
-        c = json.loads(cfg.read_text())
+        c = json.loads(cfg.read_text(encoding="utf-8"))
         a, r = c.get("lora_alpha", c.get("alpha")), c.get("r", c.get("rank"))
         if a is not None and r:
             return (a / math.sqrt(r)) if c.get("use_rslora") else a / r
@@ -198,7 +198,7 @@ def profile(rel):
     cf = CACHE / f"{_cache_key(path)}.json"
     if cf.is_file():
         try:
-            return json.loads(cf.read_text())
+            return json.loads(cf.read_text(encoding="utf-8"))
         except ValueError:
             pass
     head, base, pairs, full = plan(path)
@@ -225,7 +225,7 @@ def profile(rel):
         h["total"] = math.sqrt(sum(h["bins"].values()))
         h["bins"] = {k: math.sqrt(v) for k, v in h["bins"].items()}
     out = {"halves": halves, "full": out_full, "rank": max(ranks) if ranks else 0, "pairs": len(pairs)}
-    cf.write_text(json.dumps(out))
+    cf.write_text(json.dumps(out), encoding="utf-8")
     return out
 
 
@@ -299,7 +299,7 @@ def base_norms():
         return None
     if cf.is_file():
         try:
-            return json.loads(cf.read_text())
+            return json.loads(cf.read_text(encoding="utf-8"))
         except ValueError:
             pass
     with _base_lock:
@@ -336,7 +336,7 @@ def _measure_base(p, cf):
             for k in h:
                 h[k] = math.sqrt(h[k])
         CACHE.mkdir(parents=True, exist_ok=True)
-        cf.write_text(json.dumps(out))
+        cf.write_text(json.dumps(out), encoding="utf-8")
         _base_state.update(error="", failed=None)
     except Exception as e:  # noqa: BLE001   HERESY 2934 (the Windows soak: «No module named 'gguf'» killed this thread unsaid): kept, said to the page
         _base_state.update(error=f"{type(e).__name__}: {e}", failed=str(cf))

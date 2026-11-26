@@ -46,6 +46,7 @@ import urllib.error
 import urllib.request
 import sys
 from pathlib import Path
+NT = os.name == "nt"                # HERESY 2992: the Windows package's server, beside the engine
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # lab/
 import paths  # noqa: E402   HERESY 2330: where the weights live
@@ -66,10 +67,10 @@ ERR_RE = re.compile(r"GGML_ASSERT|what\(\)|terminate called|std::terminate|excep
 FRAME_RE = re.compile(r"^\s*(/\S+|\S+\.so[.\d]*)\(\+0x[0-9a-f]+\)|^\s*#\d+\s+0x[0-9a-f]+")
 # HERESY 2374: the release's own build first (build/audio.cpp, vendored at its pin and built by tools/narrator-setup.sh), then the kitchen's
 BIN = {"cuda": ["build/audio.cpp/build/linux-cuda-release/bin/audiocpp_server", "heresy/MISC/audio.cpp/build/linux-cuda-release/bin/audiocpp_server",
-                "engines/audio.cpp/cuda/audiocpp_server"],
+                "engines/audio.cpp/cuda/audiocpp_server", "engine/cuda/audiocpp_server.exe"],   # HERESY 2992: the Windows package's
        "cpu": ["build/audio.cpp/build/linux-cpu-release/bin/audiocpp_server", "heresy/MISC/audio.cpp/build/linux-cpu-release/bin/audiocpp_server",
                "engines/audio.cpp/cpu/audiocpp_server", "build/audio.cpp/build/linux-cuda-release/bin/audiocpp_server",
-               "heresy/MISC/audio.cpp/build/linux-cuda-release/bin/audiocpp_server"],
+               "heresy/MISC/audio.cpp/build/linux-cuda-release/bin/audiocpp_server", "engine/cpu/audiocpp_server.exe"],
        # HERESY 2426: the Intel card through audio.cpp's Vulkan build (it has no SYCL); never a CUDA or processor build in its place
        "xpu": ["build/audio.cpp/build/linux-vulkan-release/bin/audiocpp_server", "heresy/MISC/audio.cpp/build/linux-vulkan-release/bin/audiocpp_server",
                "engines/audio.cpp/vulkan/audiocpp_server"]}
@@ -108,6 +109,11 @@ def server_bin(kit, device):
         p = Path(kit) / rel
         if p.is_file() and os.access(p, os.X_OK):
             return p
+    if NT:                                               # HERESY 2992: the Windows package brings it beside the engine; its Vulkan build is Linux's
+        raise RuntimeError("Drama 3 on an Intel card reads on Linux for now: audio.cpp's Vulkan build is not in the Windows package" if device == "xpu"
+                           else "audiocpp_server.exe (the Narrator's Drama 3) is not in this Studio's engine\\" + ("cuda" if device == "cuda" else "cpu")
+                           + ": the Windows package brings it beside the engine, and a package made without it (an earlier one, or one whose build "
+                           "of it failed) does not carry it")
     if device == "xpu":
         raise RuntimeError("no Vulkan build of audio.cpp here (build/audio.cpp/build/linux-vulkan-release/bin/audiocpp_server): Drama 3 reads on an "
                            "Intel card only through it: bash tools/narrator-setup.sh --build --vulkan (HERESY 2436, 2520)")
@@ -278,14 +284,14 @@ def _serve(h):
     _stop(h)
     port = _port()
     cfg = h["refs"].parent / f"drama3-server-{os.getpid()}.json"
-    cfg.write_text(json.dumps(config(h, port), indent=1))
+    cfg.write_text(json.dumps(config(h, port), indent=1), encoding="utf-8")
     cmd = [str(h["bin"]), "--config", str(cfg), "--no-ui", "--busy-timeout-ms", "0"]
     try:                                                 # HERESY 2374: one old copy kept, the rest let go
         if h["log"].stat().st_size > LOG_MAX:
             h["log"].replace(h["log"].with_suffix(".log.1"))
     except OSError:
         pass
-    log = open(h["log"], "a")
+    log = open(h["log"], "a", encoding="utf-8")
     log.write(f"\n==== {time.strftime('%F %T')} tier {h['tier'] or '?'} · {h['model'].name} · cpu_expert_layers={h['cel']}"
               f"{''.join(f' · {k}={v}' for k, v in h.get('opts', {}).items())} · {' '.join(cmd)}\n")
     log.flush()

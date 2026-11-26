@@ -110,9 +110,10 @@ try:
     r = subprocess.run([sys.executable, "-c", "import sys; sys.path.insert(0, sys.argv[1]); import winx; winx.utf8_console(); print(sys.argv[2])",
                         str(LAB), WORDS], env=env, capture_output=True)
     check(r.returncode == 0 and r.stdout.decode("utf-8").strip() == WORDS, "a Python whose output is cp1251 (PYTHONIOENCODING) writes UTF-8 after utf8_console")
-    ps = (launcher / "install.ps1").read_text(encoding="utf-8")
-    check("[Console]::OutputEncoding = New-Object System.Text.UTF8Encoding $false" in ps and all(ord(c) < 128 for c in ps),
-          "install.ps1 puts its console in UTF-8, and stays ASCII (Windows PowerShell reads a .ps1 with no BOM in the ANSI code page)")
+    raw = (launcher / "install.ps1").read_bytes()
+    ps = raw.decode("utf-8-sig")
+    check("[Console]::OutputEncoding = New-Object System.Text.UTF8Encoding $false" in ps and all(ord(c) < 128 for c in ps) and raw.startswith(b"\xef\xbb\xbf"),
+          "install.ps1 puts its console in UTF-8, and stays ASCII after its UTF-8 BOM (HERESY 2998: Windows PowerShell reads a .ps1 with no BOM in the ANSI code page)")
 finally:
     sys.stdout, sys.stderr, winx.NT, sys.platform, subprocess.run = real_out, real_err, real_nt, real_platform, real_run
 print(f"{ok} passed")

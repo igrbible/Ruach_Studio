@@ -1149,6 +1149,127 @@
    ]
   },
   {
+   "id": "nam",
+   "label": "Amp (NAM)",
+   "say": "a stem through an amp's capture",
+   "tip": "A stem of the set played through a NAM capture (Neural Amp Modeler) of an amp, a pedal or a whole rig: the Studio's own set or your .nam files in user/nam/; the drive into it, its output and dry/wet, the result at the stem's loudness and length. A lane of its own in the DAW, or the stem's version.",
+   "script": "nam.py",
+   "input": "stems",
+   "rate": 0.5,
+   "group": "mend",
+   "after": "pl-ruach-airteqPanel",
+   "params": [
+    {
+     "key": "stem",
+     "label": "Stem",
+     "type": "select",
+     "default": "guitar",
+     "options": [
+      [
+       "guitar",
+       "Guitar"
+      ],
+      [
+       "bass",
+       "Bass"
+      ],
+      [
+       "other",
+       "Other"
+      ],
+      [
+       "instrumental",
+       "Instrumental"
+      ],
+      [
+       "piano",
+       "Piano"
+      ],
+      [
+       "vocals",
+       "Vocals"
+      ]
+     ],
+     "tip": "Which stem goes through the amp; a set without it gives the first it has of guitar, other, bass, instrumental (a bass capture: bass, other)"
+    },
+    {
+     "key": "capture",
+     "type": "text",
+     "label": "Capture",
+     "default": "",
+     "tip": "The capture the stem plays through: the Studio's set by its kind, then yours from user/nam/, read anew each time the step opens"
+    },
+    {
+     "key": "cab",
+     "label": "Cabinet",
+     "type": "select",
+     "default": "auto",
+     "options": [
+      [
+       "auto",
+       "Auto: after a guitar amp head"
+      ],
+      [
+       "generic",
+       "Generic cab"
+      ],
+      [
+       "off",
+       "No cabinet"
+      ]
+     ],
+     "tip": "A cabinet after the amp. The generic cab is a filter, not a recorded cabinet: a guitar speaker's band (about 80 Hz to 5 kHz) and its mid curve. Auto puts it after the Studio's guitar amps captured without a cabinet (amp heads) and leaves pedals, bass amps, rigs and your own captures as they are"
+    },
+    {
+     "key": "drive",
+     "label": "Drive, dB",
+     "type": "number",
+     "min": -12,
+     "max": 24,
+     "step": 1,
+     "default": 0,
+     "tip": "How hard the stem hits the capture: above zero it breaks up more, below zero it stays cleaner"
+    },
+    {
+     "key": "level",
+     "label": "Output, dB",
+     "type": "number",
+     "min": -24,
+     "max": 12,
+     "step": 1,
+     "default": 0,
+     "tip": "The result's level against the stem's own loudness, at any dry/wet: 0 dB keeps the stem's place in the mix"
+    },
+    {
+     "key": "mix",
+     "label": "Dry/wet, %",
+     "type": "number",
+     "min": 0,
+     "max": 100,
+     "step": 5,
+     "default": 100,
+     "tip": "How much of the amp: 100 is the amp alone, 0 the stem as it was; between them an equal-power blend, brought back to the stem's loudness"
+    },
+    {
+     "key": "lay",
+     "label": "In the DAW",
+     "type": "select",
+     "default": "lane",
+     "options": [
+      [
+       "lane",
+       "A lane of its own"
+      ],
+      [
+       "version",
+       "The stem's version"
+      ]
+     ],
+     "tip": "A lane of its own plays beside the stem; the stem's version plays in its place (the lane's version button)"
+    }
+   ]
+  },
+  {
    "id": "vupscale",
    "label": "Voice upscale",
    "say": "the voices' top redrawn",

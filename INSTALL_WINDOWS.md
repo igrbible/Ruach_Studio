@@ -1,101 +1,44 @@
 # Ruach Studio on Windows 11
 
-Ruach Studio is a Linux program: its engine, its lab (Python), its scripts and its two services. On Windows 11 it runs inside **WSL2**, Windows' own Linux: Ubuntu 24.04 in a light virtual machine, the NVIDIA card reached through the Windows driver, the Studio opened in your Windows browser. Everything else is as in [INSTALL.md](INSTALL.md).
-
-> **Where the Studio stands** (Viktor, 01.11.2026): «Нейро-ересь вселенская изначально под UNIX/BSD/Linux, и портирование под Виндоуз — это сломанный костыль и имитация жизни» (the universal neuro-heresy was born for UNIX, BSD and Linux, and a port to Windows is a broken crutch and an imitation of life). So Windows gets the Studio through WSL2, nothing else; a native Windows build is not our initiative, and comes in only as a fork or a pull request made whole, turnkey.
-
-> **Said plainly:** we make and test the Studio on Ubuntu 24.04 itself and have not yet run it under WSL2. The steps below are WSL2's and NVIDIA's documented way for CUDA programs; if a step differs on your machine, open an issue and the guide is corrected.
+Ruach Studio runs on Windows 11 natively, from one zip: `RuachStudio.exe` beside the Studio's own folders, nothing to build. It is a beta and not signed; the rooms come to Windows one by one, and Engine → Models says plainly which of them are not here yet.
 
 ## What it needs
 
 | | |
 |---|---|
-| Windows | **Windows 11** (22H2 or newer), virtualization on in the BIOS/UEFI (it usually is) |
-| GPU | NVIDIA, as on Linux: **24 GB** for everything at full precision, **16 GB** with the Q8_0 model, **12 GB** with Q6_K or Q5_K_M |
-| driver | the current NVIDIA driver **for Windows** (Game Ready or Studio). It carries CUDA into WSL2: **never install a Linux NVIDIA driver inside WSL** |
-| disk | on the Windows drive that holds WSL: **29.3 to 36.0 GB** for the program, its two Pythons and the models (69 to 79 GB with the Artist's; [README › What It Downloads](README.md#what-it-downloads) says each part), and room for your songs |
+| Windows | **Windows 11**, x64 |
+| GPU | NVIDIA from Pascal to Blackwell, with the current NVIDIA driver for Windows: **24 GB** for everything at full precision, **16 GB** with the Q8_0 model, **12 GB** with Q6_K or Q5_K_M. Without a card the processor's engine (AVX2) sings, slowly |
+| disk | room for the Studio's Python, the models ([README › What It Downloads](README.md#what-it-downloads) says each part) and your songs |
 
-## 1 · WSL2 and Ubuntu 24.04
+## Install
 
-In **PowerShell as administrator**:
+1. Download `RuachStudio-<version>-windows-x64-<commit>.zip` from the [releases](https://github.com/igrbible/Ruach_Studio/releases).
+2. Unpack the whole zip (right-click it, *Extract All…*) into a short folder, for example `C:\RuachStudio`. Windows' 260-character paths reach into the Studio's Python, so a deep folder can stop the install.
+3. Double-click `RuachStudio.exe` in the unpacked folder. SmartScreen asks once: *More info → Run anyway*.
 
-```powershell
-wsl --install -d Ubuntu-24.04
-```
+The first start installs into that folder only: a console window brings Python 3.12, the lab's packages and the models a song needs, each step shown. Then the lab and the engine run in the background and the Studio opens in its own window (Edge's app window, else your browser) at **http://localhost:7777**. The zip carries two engines, CUDA 12.8 and the processor's, and the start picks by what `nvidia-smi` sees.
 
-Restart Windows when asked, open **Ubuntu 24.04** from the Start menu, and choose a Linux user name and password. Then, in that Ubuntu window, the card must be seen:
+## Every day
 
-```bash
-nvidia-smi
-```
+`RuachStudio.exe` keeps an icon in the notification area. Its menu: **Open Ruach Studio**, **Logs** (the `logs\` folder: launcher.log, lab.log, engine.log), **Tester's report…** (the logs and this computer's card, memory and Windows in one .zip on the Desktop; nothing is sent), **Check for updates**, **Restart the Studio**, **Stop the Studio** and **Quit**. Starting `RuachStudio.exe` again while it runs only opens the page.
 
-It lists your card (the tool comes from the Windows driver). If it does not: update the Windows driver, and in PowerShell `wsl --update`, then `wsl --shutdown` and open Ubuntu again.
+The Studio answers this computer only, so the firewall asks nothing. Engine → Security opens it to your home network from the next start; then Windows Firewall asks once.
 
-**systemd** (the Studio's two services use it) is on by default in Ubuntu 24.04 under WSL. Check:
+## Updates
 
-```bash
-cat /etc/wsl.conf
-```
+**Check for updates** opens the newest release's page. Quit the Studio from its icon, then unpack the new zip over the old folder: the songs, the settings and the models stay, the new version's packages come at its first start, and a model its install set gained since comes from Engine → Models.
 
-If it has no `[boot]` with `systemd=true`, add those two lines (`sudo nano /etc/wsl.conf`), run `wsl --shutdown` in PowerShell, and open Ubuntu again.
+## Removing it
 
-## 2 · The tools and CUDA 12.8, inside Ubuntu
-
-```bash
-sudo apt update
-sudo apt install git cmake ninja-build build-essential python3.12-venv ffmpeg curl
-```
-
-CUDA: NVIDIA's repository **for WSL-Ubuntu** (developer.nvidia.com → CUDA Toolkit 12.8 → Linux → x86_64 → **WSL-Ubuntu** → 2.0), the `cuda-toolkit-12-8` package. That one brings the compiler and libraries without a driver, which is what WSL needs. Then:
-
-```bash
-echo 'export PATH=/usr/local/cuda-12.8/bin:$PATH' >> ~/.bashrc && source ~/.bashrc
-nvcc --version
-```
-
-## 3 · The Studio
-
-Into Ubuntu's own home folder, **not** under `/mnt/c`: Windows folders reached from WSL are many times slower, and the models are large.
-
-```bash
-cd ~
-git clone https://github.com/igrbible/Ruach_Studio.git Ruach_Studio && cd Ruach_Studio
-
-./lab/install-venv.sh      # Python: torch for CUDA 12.8 and the Studio's packages, in .venv (about 8 GB, a few minutes)
-./fetch-models.sh          # every model the Studio uses, pinned and checked (asks before the big ones)
-./build.sh --server        # the page and the engine (the first build of the engine: a few minutes)
-./systemd/install-units.sh # the two services
-systemctl --user enable --now heresy-lab ruach-studio
-sudo loginctl enable-linger $USER    # once: the services start with Ubuntu, not only with a login
-```
-
-Without the services: `./lab/start-lab.sh` and then `./start.sh` (it stays in that window).
-
-## 4 · Open it
-
-In your Windows browser: **http://localhost:7777**. WSL2 hands `localhost` over to Ubuntu.
-
-WSL stops Ubuntu some time after its last window closes, and the Studio with it. Keep one Ubuntu window open while you make songs; opening Ubuntu again starts the two services again by themselves (they are enabled, and lingering).
-
-**From another machine of your home network:** WSL2 sits behind its own small network by default, so the Studio is seen by this computer only. Windows 11 can share its own network with WSL instead: in your Windows user folder, the file `.wslconfig`:
-
-```ini
-[wsl2]
-networkingMode=mirrored
-```
-
-Then `wsl --shutdown`, open Ubuntu again, and the Studio answers at **http://THIS-PC'S-ADDRESS:7777**. Windows Firewall may ask once whether to let it through on private networks. The Studio itself answers private networks only, never the internet.
+Quit the Studio from its icon and delete its folder. Copy your songs out of `outputs\` first.
 
 ## When something is wrong
 
-| what you see | why | what to do |
-|---|---|---|
-| `nvidia-smi` not found or no card | the Windows driver is old, or WSL is | update the NVIDIA driver for Windows; `wsl --update`; `wsl --shutdown` |
-| `build.sh` stops at cmake, *nvcc not found* | CUDA is not on the PATH | the `export PATH=/usr/local/cuda-12.8/bin:$PATH` line above |
-| `systemctl --user` says it cannot connect | systemd is off in this WSL | the `[boot]` `systemd=true` lines in `/etc/wsl.conf`, then `wsl --shutdown` |
-| everything is slow, the model loads for minutes | the Studio is under `/mnt/c` | clone it again into `~` (Ubuntu's home) and move your `outputs/` across |
-| the browser on Windows cannot reach it | the services are not running | in Ubuntu: `systemctl --user status ruach-studio`; or `./start.sh` in a window |
+| what you see | what to do |
+|---|---|
+| «Ruach Studio does not find its folder beside RuachStudio.exe» | unpack the whole zip first, then start `RuachStudio.exe` inside the unpacked folder |
+| the install or Engine → Models stops on a path that is too long | a shorter folder (`C:\RuachStudio`), or Windows' long paths turned on (`LongPathsEnabled`) |
+| the songs are slow, the engine runs on the processor | update the NVIDIA driver for Windows; `nvidia-smi` in a console must list your card |
+| anything else | the icon's **Tester's report…**, attached to an issue at [github.com/igrbible/Ruach_Studio/issues](https://github.com/igrbible/Ruach_Studio/issues) |
 
-The rest (the rooms, updates, the tests, the API) is the same as on Linux: [INSTALL.md](INSTALL.md), and the guide inside the Studio (the **?** in the bar).
-
-**Native Windows, without WSL:** the engine itself (yue2.cpp, by ServeurpersoCom) builds on Windows with Visual Studio 2026 and Ninja; the Studio around it (the lab, its scripts and services) is Linux for now.
+The rooms, the guide inside the Studio (the **?** in the bar) and the API are as on Linux: [INSTALL.md](INSTALL.md).

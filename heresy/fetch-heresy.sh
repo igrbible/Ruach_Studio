@@ -95,6 +95,10 @@ done
 # HERESY 2934: a Python environment made on Windows keeps its programs in Scripts\ with .exe (as tools/hf-env.sh reads it, 2924)
 venv_exe() { if [ -x "$ROOT/$1/bin/$2" ] || [ ! -e "$ROOT/$1/Scripts/$2.exe" ]; then echo "$ROOT/$1/bin/$2"; else echo "$ROOT/$1/Scripts/$2.exe"; fi; }
 case "$(uname -s 2>/dev/null)" in MINGW*|MSYS*|CYGWIN*) ON_WIN=1 ;; *) ON_WIN=0 ;; esac
+# HERESY 2992: the native programs the Windows package builds beside the engine (windows.yml's natives job), as the twin says them
+BESIDE="(beside the engine, engine\\cuda and engine\\cpu)"
+NO_NATIVE="(the Windows package brings it beside the engine, engine\\cuda and engine\\cpu; one made without it does not carry it"
+native_here() { local n="$1" k; shift; for k in "$@"; do [ -f "$ROOT/engine/$k/$n.exe" ] && return 0; done; return 1; }
 ART_ENV_HOW="lab/install-venv.sh --art"; [ $ON_WIN = 1 ] && ART_ENV_HOW="which the Windows install does not make yet: the Artist paints on Linux for now"
 SEP="$(venv_exe .venv audio-separator)"
 PINS="$ROOT/heresy/hf-revisions.txt"
@@ -287,7 +291,7 @@ sep_model() {
   if [ $ok = 1 ]; then say_here "$dir" "(audio-separator: $model)"; return; fi
   if [ $MODE = check ]; then say_miss "$dir" "(audio-separator: $model)"; return; fi
   # 08.11.2026 (Viktor's AppImage ended «failed 2» for stems he never chose): no audio-separator is no failure but a step not taken:
-  # the stems need the full lab (its torch), which an AppImage or a WSL Studio does not carry
+  # the stems need the full lab (its torch), which an AppImage does not carry
   [ -x "$SEP" ] || { say_miss "$dir" "(needs audio-separator, which comes with the full lab: bash lab/install-venv.sh)"; return; }
   mkdir -p "$dir"
   again "$SEP" --download_model_only -m "$model" --model_file_dir "$dir"
@@ -316,6 +320,16 @@ WORK=(--include "*.safetensors" "*.bin" "*.json" "*.yaml" "*.py" "*.txt")
 # HERESY 2329 (Viktor 10.11.2026: «Из Студии к хуям выбрасываем Legacy и 0.666 микс. В HF репо пусть остаются»): the part is our decoders
 # now, YuE2-VAE-RS x3 v1 (the Studio's default, 2306; fetch-models.sh brings it with every install) and v2, float32, from goldhub/YuE2-VAE-RS;
 # HERESY 2330 (11.11.2026): public now, in goldhub/YuE2-RS-Finetunes under VAE-RS/ (the private goldhub/YuE2-VAE-RS no more)
+# HERESY 2989 (Viktor 25.11.2026: «В Windows сборку включи самый стабильный ffmpeg.exe, чтобы не иметь лишней зависимости»): on Windows (Git
+# for Windows' bash) the programs the Windows package brings beside the Studio, for an install made without them: launcher/win_tools.py holds
+# each pinned archive to its size and SHA-256 and unpacks it into runtime/<name>; the same part and words as launcher/fetch_heresy.py's
+if [ $ON_WIN = 1 ] && want programs; then
+  part programs "Windows programs: FFmpeg 9.0.2 (ffmpeg, ffprobe) and FluidSynth 2.5.7, pinned, into runtime/"
+  while IFS=$'\t' read -r v w d; do
+    case "$v" in here) say_here "$w" "$d" ;; missing) say_miss "$w" "$d" ;; fetched) say_got "$w" "$d" ;; failed) say_fail "$w" "$d" ;; esac
+  done < <("$(venv_exe .venv python)" "$ROOT/launcher/win_tools.py" --studio "$ROOT" $([ "$MODE" = check ] && echo --check) --verdicts ffmpeg fluidsynth 2>&1)
+fi
+
 if want extras; then
   # HERESY 1449: the sliders no more (Viktor 15.10.2026: «Нахер убирай это слайдерное говно из нашей Студии»)
   part extras "Our decoders: YuE2-VAE-RS x3 v1, the Studio's default, and v2 (goldhub/YuE2-RS-Finetunes, VAE-RS/)"
@@ -376,6 +390,17 @@ if want upscale; then
   hf_into "Apollo-vocal (baicai1145/Apollo-vocal-msst)" goldhub/Ruach_Studio_Models_v2 "models/upbundle/apollo/*"   # paths: repo
 fi
 
+# HERESY 2994 (the finish of 2987; Viktor 25.11.2026: «И если веса этих моделей можно распространять, оформляй их в наш Models_v2 HF репо»): the
+# Refiner's Amp (NAM), ten captures by their authors (MIT; README.md carries each one's source and licence text) with captures.json, the list the step
+# reads, from v2 under nam/ at its own pin (the repo's other files keep theirs) into models/refiner/nam/; 3 MB, so it comes with every install
+if want nam; then
+  part nam "NAM amps: the captures the Refiner's Amp (NAM) plays a stem through (guitar amps, a bass amp, a pedal, a rig; MIT, by their authors)"
+  NREV=$(awk -v k="goldhub/Ruach_Studio_Models_v2#nam" '$1 == k {print $2; exit}' "$PINS" 2>/dev/null)   # its own pin
+  if [ -z "$NREV" ]; then say_fail "NAM amps" "(heresy/hf-revisions.txt pins no goldhub/Ruach_Studio_Models_v2#nam)"
+  else PIN_AS="$NREV" hf_into "${RS_REFINER_NAM#"$ROOT"/} (the Amp's captures with captures.json and README.md)" goldhub/Ruach_Studio_Models_v2 "nam/*"   # paths: repo
+  fi
+fi
+
 # HERESY 1079: the style listener, only when asked for, and asked again with its size: a download of 7 to 22 GB
 # is never a surprise (Viktor: a user may be on a metered link). Peaks measured 02.10.2026 on a 120 s excerpt.
 if [ -n "$LISTENER" ]; then
@@ -411,8 +436,10 @@ if [ -n "$LISTENER" ]; then
     else hf_repo "$L_REPO" "$L_DIR" "${L_INC[@]}"; fi
   fi
   if [ "$LISTENER" != bf16 ]; then
-    clone https://github.com/ggml-org/llama.cpp.git "$ROOT/vendor/llama.cpp"
+    [ $ON_WIN = 1 ] || clone https://github.com/ggml-org/llama.cpp.git "$ROOT/vendor/llama.cpp"   # HERESY 2992: Windows' comes with its package
     if [ -x "$ROOT/vendor/llama.cpp/build/bin/llama-mtmd-cli" ]; then say_here "llama-mtmd-cli" "(vendor/llama.cpp/build)"
+    elif [ $ON_WIN = 1 ] && native_here llama-mtmd-cli cuda cpu; then say_here "llama-mtmd-cli" "$BESIDE"
+    elif [ $ON_WIN = 1 ]; then say_miss "llama-mtmd-cli" "$NO_NATIVE: bf16 hears in .venv)"
     else say_miss "llama-mtmd-cli" "→ cd vendor/llama.cpp && cmake -B build -DGGML_CUDA=ON -DCMAKE_CUDA_COMPILER=\$(which nvcc) && cmake --build build -j --target llama-mtmd-cli"; fi
   fi
 fi
@@ -433,9 +460,10 @@ if [ -n "$WRITER" ]; then
     read -r answer; case "$answer" in y|Y|yes|да|Да) ;; *) go=0; echo "${D}          not downloaded${X}" ;; esac
   fi
   [ $go = 1 ] && hf_into "${RS_WRITER#"$ROOT"/}/Qwopus3.5-9B-GGUF ($WRITER and its licence)" "$V2" "$W_FILE" "$O/LICENSE"
-  clone https://github.com/ggml-org/llama.cpp.git "$ROOT/vendor/llama.cpp"
+  [ $ON_WIN = 1 ] || clone https://github.com/ggml-org/llama.cpp.git "$ROOT/vendor/llama.cpp"   # HERESY 2992: Windows' comes with its package
   if [ -x "$ROOT/vendor/llama.cpp/build/bin/llama-server" ]; then say_here "llama-server" "(vendor/llama.cpp/build)"
-  elif [ $ON_WIN = 1 ]; then say_miss "llama-server" "(the Studio's own writer runs on Linux for now: Engine → Writer and Artwork takes LM Studio, Ollama, vLLM or OpenRouter)"
+  elif [ $ON_WIN = 1 ] && native_here llama-server cuda cpu; then say_here "llama-server" "$BESIDE"
+  elif [ $ON_WIN = 1 ]; then say_miss "llama-server" "$NO_NATIVE: Engine → Writer and Artwork takes LM Studio, Ollama, vLLM or OpenRouter)"
   else say_miss "llama-server" "→ bash launcher/extras.sh builds it (or: cd vendor/llama.cpp && cmake -B build -DGGML_CUDA=ON && cmake --build build -j --target llama-server)"; fi
 fi
 
@@ -469,7 +497,9 @@ if [ -n "$NARRATOR" ]; then
   BEREV=$(awk -v k="$V2#narrator-be" '$1 == k {print $2; exit}' "$PINS" 2>/dev/null)
   PIN_AS="$BEREV" hf_into "the Narrator's Belarusian stresses: narrator/dicts/be (GrammarDB of the Belarusian NLP community, CC BY-SA 4.0)" "$V2" \
           "$BED/forms.sqlite" "$BED/NOTICE" "$BED/LICENSE"
-  if bash "$ROOT/tools/narrator-setup.sh" --check >/dev/null 2>&1; then say_here "audio.cpp's server" "($(bash "$ROOT/tools/narrator-setup.sh" --where 2>/dev/null))"
+  if [ $ON_WIN = 1 ]; then   # HERESY 2992: the Windows package brings it beside the engine; tools/narrator-setup.sh builds Linux's
+    if native_here audiocpp_server cuda cpu; then say_here "audio.cpp's server" "$BESIDE"; else say_miss "audio.cpp's server" "$NO_NATIVE)"; fi
+  elif bash "$ROOT/tools/narrator-setup.sh" --check >/dev/null 2>&1; then say_here "audio.cpp's server" "($(bash "$ROOT/tools/narrator-setup.sh" --where 2>/dev/null))"
   elif [ $MODE = check ]; then say_miss "audio.cpp's server" "→ bash tools/narrator-setup.sh builds it from build/audio.cpp"
   elif again bash "$ROOT/tools/narrator-setup.sh" --build; then say_got "audio.cpp's server" "($(bash "$ROOT/tools/narrator-setup.sh" --where 2>/dev/null))"
   else say_fail "audio.cpp's server" "(tools/narrator-setup.sh: $(why))"; fi
@@ -505,6 +535,8 @@ if [ -n "$MUSC" ]; then
   fi
   [ $go = 1 ] && hf_into_at "${RS_REFINER_MIDI#"$ROOT"/}/muscriptor ($MUSC, its notice and licence)" "$M_REPO" "$RS_REFINER_MIDI/muscriptor" "v1/muscriptor-$MUSC-f16.gguf" "NOTICE.md" "LICENSE"
   if [ -x "$ROOT/build/build-muscriptor/ruach-muscriptor" ]; then say_here "ruach-muscriptor" "(build/build-muscriptor)"
+  elif [ $ON_WIN = 1 ] && native_here ruach-muscriptor cpu; then say_here "ruach-muscriptor" "(beside the engine, engine\\cpu)"   # HERESY 2992
+  elif [ $ON_WIN = 1 ]; then say_miss "ruach-muscriptor" "(the Windows package brings it beside the engine, engine\\cpu; one made without it does not carry it)"
   else say_miss "ruach-muscriptor" "→ ./build.sh builds it"; fi
 fi
 

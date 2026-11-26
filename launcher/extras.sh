@@ -1,5 +1,5 @@
 #!/bin/bash
-# Ruach Studio under Pinokio (HERESY 1259): the models the Studio starts without, each asked first with its size by
+# The launcher (HERESY 1259): the models the Studio starts without, each asked first with its size by
 # heresy/fetch-heresy.sh (answer y or n in this terminal), chosen by the biggest card here: the Artist's painter (Qwen-Image 2512:
 # Q6 on 24 GB, Q4 below, streamed from RAM on a card under 16 GB; HERESY 1428: Krea 2 gone), the style listener (Qwen2.5-Omni, Q8_0 from 12 GB, else Q4_K_M)
 # and the base the LoRA trainer trains on (bf16 on 24 GB, else int8); HERESY 1285: and the BF16 backbone where the install took

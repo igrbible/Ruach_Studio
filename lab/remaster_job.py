@@ -17,9 +17,15 @@ Prints one line of JSON: the files, the loudness in and out, the log.
 import contextlib, io, json, os, shutil, sys, time
 from pathlib import Path
 
-take, outdir, cfg = Path(sys.argv[1]), Path(sys.argv[2]), json.load(open(sys.argv[3]))
+take, outdir, cfg = Path(sys.argv[1]), Path(sys.argv[2]), json.load(open(sys.argv[3], encoding="utf-8"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import debunker as db  # noqa: E402
+import winx  # noqa: E402
+
+try:
+    winx.need("ffmpeg", "ffprobe")               # HERESY 2989: the Remaster is ffmpeg's filters and ffprobe's measures: their absence said first
+except winx.ProgramMissing as e:
+    raise SystemExit(f"the Remaster stopped: {e}")
 
 t0 = time.time()
 outdir.mkdir(parents=True, exist_ok=True)

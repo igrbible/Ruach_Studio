@@ -94,13 +94,13 @@ def main():
         x, sr = sf.read(src, dtype="float64", always_2d=True)
         with tempfile.TemporaryDirectory(dir=outdir) as tmp:
             r = subprocess.run([sys.executable, str(LAB / "upscale_job.py"), src, tmp, mode, "1000", "keep"], env=env,
-                               capture_output=True, text=True, timeout=7200)
+                               capture_output=True, text=True, timeout=7200, encoding="utf-8", errors="replace")
             if r.returncode != 0:
                 raise SystemExit(f"{n}: the upscale failed: " + (r.stderr.strip().splitlines() or ["no output"])[-1][-300:])
             made = json.loads(r.stdout.strip().splitlines()[-1])["files"][0]
             y, ysr = sf.read(str(Path(tmp) / made["file"]), dtype="float64", always_2d=True)
             if how != "universr":                            # HERESY 1583: the other two, joined below the cut, then the bundle
-                b = subprocess.run([sys.executable, str(LAB / "upbundle_job.py"), src, tmp], env=env, capture_output=True, text=True, timeout=7200)
+                b = subprocess.run([sys.executable, str(LAB / "upbundle_job.py"), src, tmp], env=env, capture_output=True, text=True, timeout=7200, encoding="utf-8", errors="replace")
                 if b.returncode != 0:
                     raise SystemExit(f"{n}: the bundle failed: " + (b.stderr.strip().splitlines() or ["no output"])[-1][-300:])
                 x48 = x if sr == ysr else resample_poly(x, int(ysr) // math.gcd(int(sr), int(ysr)), int(sr) // math.gcd(int(sr), int(ysr)), axis=0)

@@ -23,6 +23,10 @@ HERESY 2934 (the rest, after 2.1.0-rc1's Windows soak):
     lower_priority(n)      os.nice(n); below-normal or idle priority on Windows
     said(e)                an exception in words for the page, no [WinError N] nor [Errno N]
     utf8_console()         HERESY 2935: the console (Windows) and this process's stdout and stderr in UTF-8
+    utf8_env(env)          HERESY 2998: every Python started from here in UTF-8 mode on Windows (PYTHONUTF8=1, PYTHONIOENCODING=utf-8)
+HERESY 2989 (the programs the Windows package brings, launcher/win_tools.py):
+    runtime_dirs(root) · runtime_path(root)   runtime/<name> of each, put first on PATH once on Windows (nothing elsewhere)
+    no_program(name) · need(*names)           the plain words for a program that is not here and where it comes from; ProgramMissing
 """
 import os
 import re
@@ -100,7 +104,7 @@ def cpu_times():
     """{"cpu": (busy, total, iowait), "cpu0": …}: from /proc/stat on Linux; psutil's times on Windows and macOS (no iowait there: 0)."""
     if PROC:
         out = {}
-        with open("/proc/stat") as f:
+        with open("/proc/stat", encoding="utf-8") as f:
             for line in f:
                 if not line.startswith("cpu"):
                     break
@@ -126,7 +130,7 @@ def meminfo_mb():
     """(used, total, cache, swap used, swap total) in MB: /proc/meminfo on Linux, psutil on Windows and macOS (no page cache there: 0)."""
     if PROC:
         m = {}
-        with open("/proc/meminfo") as f:
+        with open("/proc/meminfo", encoding="utf-8") as f:
             for line in f:
                 k, _, rest = line.partition(":")
                 try:
@@ -310,12 +314,25 @@ def said(e):
     return re.sub(r"\[(?:WinError|Errno) -?\d+\] ?", "", str(e))
 
 
+def utf8_env(env=None, nt=NT):
+    """HERESY 2998 (Viktor 25.11.2026: «Эра KOI-866 и cp1251 канула в лета. Веди всё в Виндоуз сборке легитимным UTF-8»): on Windows every
+    Python this process starts (a job, a worker, an install step) runs in UTF-8 mode, its files, pipes and output in UTF-8 and never in the
+    system's code page, whoever started this one (the launcher sets both for the lab and the engine; a lab started by hand gets them here).
+    env is os.environ unless given; on Linux and macOS it is left as it is."""
+    env = os.environ if env is None else env
+    if nt:
+        env["PYTHONUTF8"] = "1"
+        env["PYTHONIOENCODING"] = "utf-8"
+    return env
+
+
 def utf8_console():
     """HERESY 2935 (a tester's Windows console showed Cyrillic as gibberish, code page 866): this process's text in UTF-8 wherever it goes.
     On Windows its console, when it has one, is switched to UTF-8 (SetConsoleOutputCP and SetConsoleCP 65001), so what a program started in it
     prints in UTF-8 (yue-server, ffmpeg) reads right there; its own stdout and stderr, when they go to a pipe or a file in the system's code
     page (cp1251, with no PYTHONUTF8), are made UTF-8 with what cannot be said replaced: never a UnicodeEncodeError on «» or ──. On Linux and
     macOS the streams are UTF-8 already and nothing changes."""
+    utf8_env()                                           # HERESY 2998: and every child Python in UTF-8 mode
     if NT:
         try:
             import ctypes
@@ -330,3 +347,113 @@ def utf8_console():
                 s.reconfigure(encoding="utf-8", errors="replace")
         except (AttributeError, ValueError, OSError):
             pass
+
+
+# ── HERESY 2989 (Viktor 25.11.2026: «В Windows сборку включи самый стабильный ffmpeg.exe, чтобы не иметь лишней зависимости. И другие тулзы
+#    так же»): the programs the Windows package brings beside the Studio (launcher/win_tools.py: runtime/ffmpeg, runtime/fluidsynth), found the
+#    way Linux finds its own, by name on PATH; and a program that is not here said in words with where it comes from, never as «[WinError 2]»
+#    (on Windows a program that does not start leaves no name in the error, and the room said «a file or program it needs is not here»).
+
+def runtime_dirs(root, nt=NT):
+    """runtime/<name> of every program the Windows package brings (each holds its .exe), by name; none on Linux and macOS."""
+    if not nt:
+        return []
+    try:
+        return [str(d) for d in sorted(Path(root, "runtime").iterdir())
+                if d.is_dir() and not d.name.endswith(".part") and any(f.suffix.lower() == ".exe" for f in d.iterdir())]
+    except OSError:
+        return []
+
+
+def runtime_path(root, env=None, nt=NT):
+    """runtime_dirs(root) first on ENV's PATH (os.environ: this process and everything it starts), each once; an older mention of one
+    further down taken out, so the package's ffmpeg comes before any other on the machine. The folders put first; [] when nothing changed."""
+    env = os.environ if env is None else env
+    dirs = runtime_dirs(root, nt)
+    if not dirs:
+        return []
+    import ntpath
+    sep, norm = (";", lambda p: ntpath.normcase(p.rstrip("\\/"))) if nt else (os.pathsep, lambda p: p.rstrip("/"))
+    key = next((k for k in env if k.upper() == "PATH"), "PATH")   # a plain dict may say «Path», as Windows writes it
+    old = [p for p in str(env.get(key, "")).split(sep) if p]
+    mine = {norm(d) for d in dirs}
+    new = dirs + [p for p in old if norm(p) not in mine]
+    if new == old:
+        return []
+    env[key] = sep.join(new)
+    return dirs
+
+
+class ProgramMissing(FileNotFoundError):
+    """A program the Studio runs is not on this machine; its words say which and where it comes from (said() gives them as they are)."""
+
+
+_PROGRAM_PACKAGE = {"ffprobe": "ffmpeg", "fluidsynth": "fluidsynth"}
+
+
+def no_program(name, nt=NT):
+    """The words for NAME (ffmpeg, ffprobe, fluidsynth) not being here: on Windows the package brings it and Engine → Models fetches it
+    into an install made without it; on Linux and macOS it is the system's."""
+    if nt:
+        return (f"{name} is not in this Studio: the Windows package brings it in runtime\\, and Engine → Models and LoRAs → "
+                f"«Windows programs» fetches it into an install that has none (about 0.2 GB)")
+    return f"{name} is not on this machine: the Studio runs the system's (on Ubuntu: sudo apt install {_PROGRAM_PACKAGE.get(name, name)})"
+
+
+def need(*names, nt=NT):
+    """ProgramMissing with no_program's words for the first of NAMES not found on PATH; nothing when all are here."""
+    import shutil
+    for n in names:
+        if not shutil.which(n):
+            raise ProgramMissing(no_program(n, nt))
+
+
+# HERESY 2992 (Viktor 25.11.2026: «По всем моделям и по не ASCII путям с пробелами всё зафикси в Windows порте»): the native programs the
+#    Windows package builds beside the engine (windows.yml's natives job): llama-server and llama-mtmd-cli (llama.cpp), audiocpp_server
+#    (audio.cpp, the Narrator's Drama 3) and ruach-muscriptor (sound to MIDI), in engine\cuda (CUDA 12.8) and engine\cpu (AVX2) as the engine
+#    is, ruach-muscriptor in engine\cpu alone (the processor's, as on Linux). A CUDA build loads the NVIDIA driver's nvcuda.dll, so where no
+#    card answers only engine\cpu runs.
+
+_CARD = []
+
+
+def nvidia_card():
+    """Whether nvidia-smi (on PATH, or in System32 on Windows) lists a card, asked once. False when it cannot be asked: the processor's build
+    is then taken, which runs on any machine (a choice of build, not a word about the machine)."""
+    if not _CARD:
+        import shutil
+        s = shutil.which("nvidia-smi")
+        if not s and NT:
+            c = Path(os.environ.get("SystemRoot", r"C:\Windows"), "System32", "nvidia-smi.exe")
+            s = str(c) if c.is_file() else None
+        ok = False
+        if s:
+            try:
+                r = subprocess.run([s, "-L"], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=20)
+                ok = r.returncode == 0 and "GPU " in r.stdout
+            except (OSError, subprocess.SubprocessError):
+                ok = False
+        _CARD.append(ok)
+    return _CARD[0]
+
+
+def native_exe(root, name, kinds=None, nt=None, env=None):
+    """NAME.exe as the Windows package brings it: the first of engine\\<kind> for KINDS; by default engine\\cuda then engine\\cpu where a card
+    answers and engine\\cpu alone where none does, or the one YUE2_ENGINE names (cpu, cuda), as launcher/start.py picks the engine. None on
+    Linux and macOS, and when it is in none of them."""
+    if not (NT if nt is None else nt):
+        return None
+    if kinds is None:
+        want = str((os.environ if env is None else env).get("YUE2_ENGINE", "")).strip().lower()
+        kinds = (want,) if want in ("cpu", "cuda") else ("cuda", "cpu") if nvidia_card() else ("cpu",)
+    for k in kinds:
+        p = Path(root, "engine", k, name + ".exe")
+        if p.is_file():
+            return p
+    return None
+
+
+def no_native(name, what):
+    """The words for the Windows package's NAME.exe (WHAT: whose it is) not being in this Studio."""
+    return (f"{name}.exe ({what}) is not in this Studio's engine\\cuda or engine\\cpu: the Windows package brings it beside the engine, "
+            "and a package made without it (an earlier one, or one whose build of it failed) does not carry it")

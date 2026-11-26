@@ -83,6 +83,7 @@
   // while it is asked for; a model of the engine's whose files are here says the engine takes it in at its next start. Whisper is the lab's own: its
   // /health says whether it is here (has), asked as the page starts and after each fetch, and said with the window's «ruach-packs»
   var PACKS = {
+    nam: { part: "nam", label: "NAM amps: the captures the Refiner's Amp (NAM) plays a stem through (guitar amps, a bass amp, a pedal, a rig; MIT, by their authors)" },   // HERESY 2994
     transcriber: { part: "transcriber", label: "The transcriber: covers from a recording, a backing read (SheetSage2 with MERT-v2-FullSong)", engine: true },
     whisper: { part: "whisper", label: "Whisper large-v3: the lyrics check, karaoke timing, sections by ear, a recording's words" },
     refined: { extra: "refined", engine: true },
@@ -486,7 +487,7 @@
           })();
         });
       }).catch(function (e) {
-        toast(/as a service/.test(e.message) ? tr("The Studio does not run as a service here (Pinokio, or ./start.sh by hand): stop it and start it again there, and the engine lists what came.")
+        toast(/as a service/.test(e.message) ? tr("The Studio does not run as a service here (its icon, or ./start.sh by hand): stop it and start it again there, and the engine lists what came.")
           : tr("Not restarted:") + " " + e.message, "bad");
       });
   }

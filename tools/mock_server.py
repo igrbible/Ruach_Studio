@@ -114,7 +114,7 @@ def write_atomic(path, text):
     """The whole file or none of it: written beside it, then renamed over it, so a reader never sees half."""
     part = path.with_name("%s.%d-%d.part" % (path.name, os.getpid(), threading.get_ident()))
     try:
-        part.write_text(text)
+        part.write_text(text, encoding="utf-8")
         os.replace(part, path)
     except BaseException:
         try:
@@ -624,7 +624,7 @@ class Mock:
             folder.mkdir()
             ext = "mp3" if req["output_format"] == "mp3" else "wav"   # the mock writes WAV data either way
             (folder / ("audio." + ext)).write_bytes(wav)
-            (folder / "request.json").write_text(json.dumps(req, indent=2, ensure_ascii=False))
+            (folder / "request.json").write_text(json.dumps(req, indent=2, ensure_ascii=False), encoding="utf-8")
             meta = {"title": req["title"], "created": int(when), "seconds": round(seconds, 3),
                     "format": req["output_format"], "favorite": False, "truncated": False,
                     "render_seconds": round(render_seconds, 2), "song": song, "variation": variation,
@@ -637,8 +637,8 @@ class Mock:
     def entry(self, name):
         folder = self.outputs / name
         try:
-            meta = json.loads((folder / "meta.json").read_text())
-            req = json.loads((folder / "request.json").read_text())
+            meta = json.loads((folder / "meta.json").read_text(encoding="utf-8"))
+            req = json.loads((folder / "request.json").read_text(encoding="utf-8"))
         except (OSError, ValueError):
             return None
         e = dict(meta, name=name)
@@ -1442,7 +1442,7 @@ def make_handler(mock):
                     change = json.loads(self.body() or b"{}")
                 except ValueError:
                     return self.error(400, "invalid JSON")
-                meta = json.loads((folder / "meta.json").read_text())
+                meta = json.loads((folder / "meta.json").read_text(encoding="utf-8"))
                 if isinstance(change.get("title"), str):
                     meta["title"] = change["title"]
                 if isinstance(change.get("favorite"), bool):

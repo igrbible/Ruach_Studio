@@ -13,4 +13,4 @@ labels: bug
 
 **The server log** (the log above the player → Copy) or the lab's lines, from around the moment.
 
-**The Studio**: its version (☰ → About, or the VERSION file), how it was installed (Pinokio or by hand), the system, the card and its memory.
+**The Studio**: its version (☰ → About, or the VERSION file), how it was installed (the Windows or macOS package, the AppImage, or a clone on Linux), the system, the card and its memory.

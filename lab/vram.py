@@ -17,7 +17,7 @@ ENGINE_URL = "http://127.0.0.1:" + os.environ.get("YUE2CPP_PORT", "7777")   # HE
 def _cuda():
     """{pid: MiB} of the CUDA processes; {} when nvidia-smi does not answer (the cards then counted as unknown, 0)"""
     try:
-        p = subprocess.run(["nvidia-smi", "--query-compute-apps=pid,used_memory", "--format=csv,noheader,nounits"], capture_output=True, text=True, timeout=10)
+        p = subprocess.run(["nvidia-smi", "--query-compute-apps=pid,used_memory", "--format=csv,noheader,nounits"], capture_output=True, text=True, timeout=10, encoding="utf-8", errors="replace")
     except (OSError, subprocess.SubprocessError):
         return {}
     out = {}

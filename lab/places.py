@@ -14,9 +14,11 @@ migrate. A move runs only while nothing renders or runs: on the same disk a rena
 file, a pass for anything written meanwhile, then the link switched. The old copy is never deleted here: it stays, renamed
 <name>.moved-<stamp>, and the page says where, so its owner removes it after a look. Where each folder went is written into
 user/settings.json under "paths", beside the page's keys (its saves and its Reset leave "paths" alone), so a fresh clone given the old
-user/ links back by itself. Under WSL a Windows path (D:\\Music) is read as the drive's /mnt/d/Music.
+user/ links back by itself. On Windows a folder is typed as Windows writes it (D:\\Music, C:\\Users\\…\\Music Folder); on Linux and
+macOS from / (HERESY 2990: the WSL reading of D:\\ as /mnt/d is gone with the WSL package).
 """
 import json
+import ntpath     # os.path on Windows, named so that its test runs on Linux too
 import os
 import re
 import winx   # HERESY 2649: native Windows takes its own paths
@@ -48,28 +50,18 @@ def setup(kit, busy, settings_lock, settings_file, studio_port="7777", say=print
     H.update(kit=Path(kit), busy=busy, settings_lock=settings_lock, settings_file=Path(settings_file), studio_port=str(studio_port), say=say)
 
 
-def _wsl():
-    try:
-        return "microsoft" in Path("/proc/version").read_text(encoding="utf-8", errors="replace").lower()
-    except OSError:
-        return False
-
-
 def norm(raw):
-    """A folder as typed: quotes and spaces off, ~ and $VARS expanded; under WSL a Windows path is its drive's /mnt/x. Absolute only."""
+    """A folder as typed: quotes and spaces off, ~ and $VARS expanded; on Windows a Windows path as it is. Absolute only."""
     s = str(raw or "").strip().strip('"').strip("'").strip()
     if not s:
         return ""
     if winx.NT:                                       # HERESY 2649: on Windows itself a C:\ path is the folder, ~ and %VARS% too
-        s = os.path.expandvars(os.path.expanduser(s))
-        if not os.path.isabs(s) or not re.match(r"^([A-Za-z]:[\\/]|\\\\)", s):
+        s = ntpath.expandvars(ntpath.expanduser(s))
+        if not ntpath.isabs(s) or not re.match(r"^([A-Za-z]:[\\/]|\\\\)", s):
             raise ValueError("a full path, from a drive (C:\\…) or a share (\\\\server\\…), or ~ for your home")
-        return os.path.normpath(s)
-    m = re.match(r"^([A-Za-z]):(?:[\\/](.*))?$", s)
-    if m:
-        if not _wsl():
-            raise ValueError(f"{s} is a Windows path: it means something only under WSL (D:\\ is /mnt/d there)")
-        s = "/mnt/" + m.group(1).lower() + "/" + (m.group(2) or "").replace("\\", "/")
+        return ntpath.normpath(s)
+    if re.match(r"^[A-Za-z]:(?:[\\/]|$)", s):
+        raise ValueError(f"{s} is a Windows path: here a folder starts with / (or ~ for your home)")
     s = os.path.expandvars(os.path.expanduser(s))
     if not s.startswith("/"):
         raise ValueError("a full path, from / (or ~ for your home)")
@@ -174,7 +166,7 @@ def listing(refresh=False):
         rows.append(row)
     with LOCK:
         job = dict(JOB) if JOB else None
-    return {"places": rows, "job": job, "wsl": _wsl(), "home": str(kit)}
+    return {"places": rows, "job": job, "home": str(kit)}
 
 
 def _studio_busy():

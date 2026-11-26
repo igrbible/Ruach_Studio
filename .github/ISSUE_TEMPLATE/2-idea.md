@@ -11,4 +11,4 @@ labels: idea
 
 **Elsewhere**: a studio, a DAW or a model that does it already, if you know one.
 
-**The Studio**: its version (☰ → About, or the VERSION file), how it was installed (Pinokio or by hand), the system, the card and its memory.
+**The Studio**: its version (☰ → About, or the VERSION file), how it was installed (the Windows or macOS package, the AppImage, or a clone on Linux), the system, the card and its memory.

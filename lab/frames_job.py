@@ -116,10 +116,7 @@ def hero_set(kit, name, run, file):
     if not plan.get("exists"):
         raise ValueError("no plan for this take yet: Make the plan first")
     words = hero_words(_hero_prompt(run, file))
-    was = plan.get("hero") if isinstance(plan.get("hero"), dict) else {}
     plan["hero"] = {"run": str(run), "file": str(file)}
-    if was.get("last"):                                  # HERESY 2361: his last frame asked of the hero, kept for the next one
-        plan["hero"]["last"] = True
     if words:
         plan["hero"]["words"] = words
     plan.pop("exists", None)

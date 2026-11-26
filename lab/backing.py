@@ -366,7 +366,7 @@ def stretcher():
         return want
     if "name" not in _STRETCHER:
         try:
-            p = subprocess.run(["ffmpeg", "-hide_banner", "-filters"], capture_output=True, text=True, timeout=30)
+            p = subprocess.run(["ffmpeg", "-hide_banner", "-filters"], capture_output=True, text=True, timeout=30, encoding="utf-8", errors="replace")
             _STRETCHER["name"] = "rubberband" if re.search(r"\srubberband\s", p.stdout) else "vocoder"
         except (OSError, subprocess.SubprocessError):
             _STRETCHER["name"] = "vocoder"
@@ -422,7 +422,7 @@ def warp(src, dst, segments, shift, frames, rate=RATE):
         flt = (f"apad=pad_dur=1,asendcmd=f={cmds.name},rubberband=tempo={segments[0][1]:.6f}:transients=crisp:pitchq=quality:"
                "channels=together:formant=preserved")
         p = subprocess.run(["ffmpeg", "-v", "error", "-nostdin", "-y", "-i", str(Path(src).resolve()), "-af", flt, "-ar", str(rate), "-c:a", "pcm_f32le",
-                            str(out)], capture_output=True, text=True, timeout=1800, cwd=tmp)
+                            str(out)], capture_output=True, text=True, timeout=1800, cwd=tmp, encoding="utf-8", errors="replace")
         if p.returncode != 0:
             raise RuntimeError("the stretch failed: " + (p.stderr.strip().splitlines() or ["ffmpeg said nothing"])[-1][-300:])
         y, r = sf.read(str(out), dtype="float32", always_2d=True)

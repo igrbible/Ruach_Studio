@@ -87,7 +87,7 @@ def run_still(src_png, out_dir, grain, short_side, long_cap=0, seed=42, kit=KIT,
     if grain.get("swap"):
         cmd += ["--blocks_to_swap", str(grain["swap"])]
     env = dict(os.environ, HF_HUB_OFFLINE="1", PYTORCH_CUDA_ALLOC_CONF="expandable_segments:True")
-    p = subprocess.run(cmd, cwd=str(RT), env=env, capture_output=True, text=True)
+    p = subprocess.run(cmd, cwd=str(RT), env=env, capture_output=True, text=True, encoding="utf-8", errors="replace")
     tail = (p.stdout or "")[-6000:] + (p.stderr or "")[-6000:]
     if log:
         log(tail)

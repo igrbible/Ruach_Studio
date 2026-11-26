@@ -5,13 +5,13 @@ package tray
 
 import "fyne.io/systray"
 
-// Menu: what each item does; Ready runs once the icon is up (the start of the Studio). An item without its func is not shown:
-// the native package has Report and Restart, and no Uninstall (it is one folder); the WSL one has Uninstall.
+// Menu: what each item does; Ready runs once the icon is up (the start of the Studio). An item without its func is not shown.
+// No Uninstall: the native Studio is one folder, removed by deleting it (the WSL package's Uninstall went out with it, HERESY 2990).
 type Menu struct {
-	Icon                                                       []byte
-	Ready                                                      func()
-	Open, Logs, Report, Update, Restart, Stop, Uninstall, Quit func()
-	LogsTip                                                    string
+	Icon                                            []byte
+	Ready                                           func()
+	Open, Logs, Report, Update, Restart, Stop, Quit func()
+	LogsTip                                         string
 }
 
 // Run holds the calling goroutine (the main one) until Quit.
@@ -33,17 +33,12 @@ func Run(m Menu) {
 		}
 		item(m.Open, "Open Ruach Studio", "the page, in its own window")
 		systray.AddSeparator()
-		tip := m.LogsTip
-		if tip == "" {
-			tip = "the two services' journals, followed"
-		}
-		item(m.Logs, "Logs", tip)
+		item(m.Logs, "Logs", m.LogsTip)
 		item(m.Report, "Tester's report…", "the logs and this computer's card, memory and Windows in one .zip on the Desktop; nothing is sent")
 		item(m.Update, "Check for updates", "")
 		item(m.Restart, "Restart the Studio", "the lab and the engine ended and started again")
 		item(m.Stop, "Stop the Studio", "Open starts it again")
 		systray.AddSeparator()
-		item(m.Uninstall, "Uninstall…", "asks first: deletes its Linux with models and songs")
 		quit := systray.AddMenuItem("Quit", "")
 		go func() {
 			<-quit.ClickedCh

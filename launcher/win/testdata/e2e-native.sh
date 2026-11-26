@@ -2,7 +2,8 @@
 # e2e-native.sh · the real launcher binary (console mode) on a made-up native Studio, on test ports (never the Studio's own 7777 and
 # 41870): the first start installs (a stand-in for install.ps1 makes .venv), the lab and the engine come up as two services and the
 # page is opened; the engine killed is started again and the child it left is gone with it; Ctrl-C ends both and their children;
-# --status; --report; an engine without models given up after five starts with its last line said; --selftest.
+# --status; --report; an engine without models given up after five starts with its last line said; --selftest; a folder that is not
+# a Studio answered in words, and the WSL package's flags no longer known (HERESY 2999).
 set -uo pipefail
 cd "$(dirname "$0")/.."
 PE=${E2E_PORT:-47791} PL=${E2E_LAB_PORT:-47871}
@@ -10,13 +11,13 @@ up() { (exec 3<>"/dev/tcp/127.0.0.1/$1") 2>/dev/null; }
 for p in $PE $PL; do up $p && { echo "✗ port $p is taken: E2E_PORT and E2E_LAB_PORT choose others"; exit 1; }; done
 B=$(mktemp -d)
 go build -o "$B/ruachstudio" ./cmd/ruachstudio || exit 1
-S=$B/RuachStudio
+S="$B/Ruach Studio Тест/Тестер Иванов/RuachStudio"   # HERESY 2998: a Studio in a folder with spaces and Cyrillic, as a Windows person's
 mkdir -p "$S/lab" "$S/launcher"
 echo 2.1.0 > "$S/VERSION"
 cat > "$S/lab/lab.py" <<'EOF'
 import http.server, os
 port = int(os.environ.get("LAB_PORT", "41870"))
-print("lab: listening on", port, "· PYTHONUTF8", os.environ.get("PYTHONUTF8"), flush=True)
+print("lab: listening on", port, "· PYTHONUTF8", os.environ.get("PYTHONUTF8"), "· PYTHONIOENCODING", os.environ.get("PYTHONIOENCODING"), flush=True)
 class H(http.server.BaseHTTPRequestHandler):
     def do_GET(s):
         s.send_response(200 if s.path == "/health" else 404); s.end_headers(); s.wfile.write(b'{"status":"ok","jobs":{}}')
@@ -55,7 +56,7 @@ for i in $(seq 1 100); do grep -q "Ctrl-C ends it" "$B/out" && break; sleep 0.1;
 grep -q "install: .venv made" "$B/out" || fail "the first start did not install"
 grep -q "\[open app\] http://127.0.0.1:$PE/" "$B/out" || fail "the page was not opened"
 up $PL && up $PE || fail "the lab and the engine do not both answer"
-grep -q "PYTHONUTF8 1" "$S/logs/lab.log" || fail "the lab's output did not reach logs/lab.log with PYTHONUTF8=1"
+grep -q "PYTHONUTF8 1 · PYTHONIOENCODING utf-8" "$S/logs/lab.log" || fail "the lab's output did not reach logs/lab.log with PYTHONUTF8=1 and PYTHONIOENCODING=utf-8"
 C1=$(cat "$S/child.pid")
 E1=$(grep -o "engine started (pid [0-9]*)" "$S/logs/launcher.log" | tail -1 | grep -o "[0-9]*")
 kill -9 "$E1"
@@ -83,6 +84,14 @@ up $PL && fail "the lab outlived a start given up"
 "$B/ruachstudio" "${L[@]}" --selftest > "$B/self" 2>&1 || fail "--selftest: $(tail -3 "$B/self")"
 grep "self-test" "$B/self" | sed 's/^/  | /'
 up $PL && fail "the lab outlived the self-test"
+mkdir -p "$B/empty"
+"$B/ruachstudio" --root "$B/empty" --console > "$B/none" 2>&1; c=$?
+[ $c = 1 ] && grep -q "does not find its folder beside RuachStudio.exe" "$B/none" && grep -q "Unpack the whole zip first" "$B/none" || fail "a folder without the Studio was not answered in words (exit $c): $(head -2 "$B/none")"
+sed 's/^/  none | /' "$B/none" | head -1
+for f in --wsl --wsl-file=x.wsl --stop --uninstall --resume; do
+  "$B/ruachstudio" --root "$S" --console $f > "$B/flag" 2>&1; c=$?
+  [ $c = 2 ] && grep -q "flag provided but not defined" "$B/flag" || fail "$f is still a flag (exit $c)"
+done
 rm -rf "$B"
-[ $ok = 0 ] && echo "✓ e2e-native: install on the first start, two services, page, a killed engine started again without its old child, Ctrl-C ends all, status, report, a failing engine given up, self-test"
+[ $ok = 0 ] && echo "✓ e2e-native: install on the first start, two services, page, a killed engine started again without its old child, Ctrl-C ends all, status, report, a failing engine given up, self-test, no Studio said in words, no WSL flags"
 exit $ok

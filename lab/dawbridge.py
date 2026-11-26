@@ -39,14 +39,14 @@ def _version(d, path):
     """Read from the install itself, not by starting the program (a DAW may open a window)."""
     try:
         if d["id"] == "reaper":
-            first = (Path(os.path.realpath(path)).parent / "whatsnew.txt").read_text(errors="replace").splitlines()[0]
+            first = (Path(os.path.realpath(path)).parent / "whatsnew.txt").read_text(errors="replace", encoding="utf-8").splitlines()[0]
             m = re.match(r"v?(\d+\.\d+\S*)", first.strip())
             return m.group(1) if m else ""
         if d["id"] == "waveform":                      # the .deb's version, else the number in the program's name
             m = re.search(r"(\d+)$", os.path.basename(path))
             status = Path("/var/lib/dpkg/status")
             if status.is_file() and m:
-                block = re.search(r"Package: waveform" + m.group(1) + r"\n(?:.+\n)*?Version: (\S+)", status.read_text(errors="replace"))
+                block = re.search(r"Package: waveform" + m.group(1) + r"\n(?:.+\n)*?Version: (\S+)", status.read_text(errors="replace", encoding="utf-8"))
                 if block:
                     return block.group(1)
             return m.group(1) if m else ""

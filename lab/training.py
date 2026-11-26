@@ -39,7 +39,7 @@ def paths(kit):
 def _seconds(p):
     try:
         out = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(p)],
-                             capture_output=True, text=True, timeout=30).stdout.strip()
+                             capture_output=True, text=True, timeout=30, encoding="utf-8", errors="replace").stdout.strip()
         return round(float(out), 1)
     except (ValueError, OSError, subprocess.SubprocessError):
         return None
@@ -223,7 +223,7 @@ def plugin_trainers(kit):
 def _plugin_call(t, verb, payload, timeout=60):
     """One word to a plugin's trainer; its last line of JSON. Its refusal ({"error"}) a ValueError, its failure a RuntimeError, each said."""
     try:
-        r = subprocess.run([t["python"], t["script"], verb], input=json.dumps(payload), capture_output=True, text=True, timeout=timeout, cwd=t["folder"])
+        r = subprocess.run([t["python"], t["script"], verb], input=json.dumps(payload), capture_output=True, text=True, timeout=timeout, cwd=t["folder"], encoding="utf-8", errors="replace")
     except (OSError, subprocess.SubprocessError) as e:
         raise RuntimeError(f"the trainer {t['id']} could not be asked to {verb}: {e}")
     lines = [l for l in r.stdout.splitlines() if l.strip()]
@@ -281,7 +281,7 @@ def gpus():
     nvidia-smi is said, not shown as "no GPU"."""
     try:
         out = subprocess.run(["nvidia-smi", "--query-gpu=index,name,memory.total,memory.free", "--format=csv,noheader,nounits"],
-                             capture_output=True, text=True, timeout=20).stdout
+                             capture_output=True, text=True, timeout=20, encoding="utf-8", errors="replace").stdout
         return [{"index": int(i), "name": n.strip(), "total_mb": int(t), "free_mb": int(f)}
                 for i, n, t, f in (l.split(",") for l in out.strip().splitlines())]
     except FileNotFoundError:                             # HERESY 2934: no NVIDIA card or driver, said so (the Windows soak: «[WinError 2]»)
@@ -398,6 +398,7 @@ def prepare(kit, spec):
 
     def work():
         try:
+            winx.need("ffmpeg")                       # HERESY 2989: the set's tracks become the trainer's WAVs by ffmpeg: its absence said in words
             import no_train                           # HERESY 2241: a file marked never for training (an engine's terms: the Reader's speech), refused by name
             marked = [t["file"] for t in tracks if not _parquet_ref(t["file"]) and no_train.of_file(src / t["file"])]
             if marked:
@@ -1239,7 +1240,7 @@ def _unit(run):
 
 
 def _systemctl(*args):
-    return subprocess.run(["systemctl", "--user", *args], capture_output=True, text=True, timeout=20)
+    return subprocess.run(["systemctl", "--user", *args], capture_output=True, text=True, timeout=20, encoding="utf-8", errors="replace")
 
 
 def _unit_state(run):
@@ -1336,7 +1337,7 @@ def _watch(kit, run):
             break
         try:
             out = subprocess.run(["nvidia-smi", "-i", str(gpu), "--query-gpu=memory.used", "--format=csv,noheader,nounits"],
-                                 capture_output=True, text=True, timeout=10).stdout.strip()
+                                 capture_output=True, text=True, timeout=10, encoding="utf-8", errors="replace").stdout.strip()
             job["vram_peak_mb"] = max(job["vram_peak_mb"], int(out.split()[0]))
         except (ValueError, IndexError, OSError, subprocess.SubprocessError):
             pass
@@ -1574,7 +1575,7 @@ def train(kit, spec, gpu_picker, more_cards=None):
     if len(cards) > 1:                                 # HERESY 1631: a process a card, torchrun's (the first card writes the log)
         cmd += ["-m", "torch.distributed.run", "--standalone", f"--nproc_per_node={len(cards)}"]
     cmd += [str(kit / "lab" / "trainer" / "train.py"), str(d / "config.json")]
-    r = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+    r = subprocess.run(cmd, capture_output=True, text=True, timeout=30, encoding="utf-8", errors="replace")
     if r.returncode != 0:
         meta.update(status="failed", error="systemd-run: " + (r.stderr.strip() or r.stdout.strip()))
         _save_meta(d, meta)
@@ -1643,7 +1644,7 @@ def _train_plugin(kit, spec, t, gpu_picker, more_cards):
            "-p", f"StandardOutput=append:{log}", "-p", f"StandardError=append:{log}"]
     cmd += ["--setenv=" + k + "=" + v for k, v in env.items()]
     cmd += [str(x) for x in plan["cmd"]]
-    r = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+    r = subprocess.run(cmd, capture_output=True, text=True, timeout=30, encoding="utf-8", errors="replace")
     if r.returncode != 0:
         meta.update(status="failed", error="systemd-run: " + (r.stderr.strip() or r.stdout.strip()))
         _save_meta(d, meta)
@@ -1710,7 +1711,7 @@ def _watch_plugin(kit, run):
         for g in cards:
             try:
                 out = subprocess.run(["nvidia-smi", "-i", str(g), "--query-gpu=memory.used", "--format=csv,noheader,nounits"],
-                                     capture_output=True, text=True, timeout=10).stdout.strip()
+                                     capture_output=True, text=True, timeout=10, encoding="utf-8", errors="replace").stdout.strip()
                 job["vram_peak_mb"] = max(job["vram_peak_mb"], int(out.split()[0]))
             except (ValueError, IndexError, OSError, subprocess.SubprocessError):
                 pass
@@ -1851,7 +1852,7 @@ def listen(kit, spec, gpu_picker):
         if pick.get("mmproj"):
             cmd += ["--mmproj", str(studio_paths.at(studio_paths.LISTENER, kit) / pick["mmproj"])]
         try:
-            p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
+            p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1, encoding="utf-8", errors="replace")
             for line in p.stdout:
                 line = line.rstrip()
                 if re.match(r"^\d+/\d+ ", line):

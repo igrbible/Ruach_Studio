@@ -39,9 +39,15 @@ PARTS = {"extras": "1.6 GB", "whisper": "3.1 GB", "stems": "1.0 GB", "upscale": 
 # 08.11.2026 (Viktor: «Пересмотри, чтобы ничего лишнего не скачивалось при первой установке»): the transcriber, SheetSage2 with MERT-v2-FullSong
 # beside it (1.0 GB), no longer comes with every install; a part of its own, for covers from a recording
 PARTS["transcriber"] = "1.0 GB"
+# HERESY 2994: the Refiner's Amp (NAM, 2987): ten captures by their authors (MIT) with captures.json and README.md, from v2 under nam/ at its
+# own pin into models/refiner/nam/ (2 961 589 bytes); small enough to come with every install, so the step has captures out of the box
+PARTS["nam"] = "3.0 MB"
 # HERESY 2981: what launcher/fetch_models.py --transcriber-only brings where there is no bash (the 2.1.0-rc2 Windows soak: SheetSage2-F32
 # 229 MB, MERT-v2-FullSong-F32 2.53 GB, SheetSage2-Refined-F16 156 MB and its LICENSE and NOTICE: 2.91 GB)
 TRANSCRIBER_PY_SIZE = "2.9 GB"
+# HERESY 2989: the programs the Windows package brings (launcher/win_tools.py), a part of its own on Windows for an install made without them:
+# FFmpeg 9.0.2's ffmpeg and ffprobe 211 MB and FluidSynth 2.5.7's 6 MB unpacked (117 MB come)
+PROGRAMS_SIZE = "0.2 GB"
 # HERESY 2952 (Viktor 23.11.2026, «Весь YuE2»): an install brings the transcriber again (in F32, with its Refined mode); the part stays for an
 # install made before 2.1.0 and for the lighter Q8_0 pair
 # HERESY 1984: measured anew by the pinned file lists (01.11.2026): the decoders without the sliders (1449: 1.06 GB), UniverSR with Apollo-vocal (1583: 0.42)
@@ -66,12 +72,14 @@ def fw_quant(kit):
         next((q for q in FW_SIZES for n in ("RS-TW-2.0x0.75", "RS-FW-2.4x0.75") if paths.engine_gguf(f"YuE2-3B-{n}-{q}.gguf", kit).is_file()), "")
 
 
-def parts_of(kit):   # (not «parts»: _last_run keeps a list of that name)
-    """the parts the install brings and their sizes, the fine-tune's at its quant (none on a Q5_K_M install)"""
+def parts_of(kit, nt=None):   # (not «parts»: _last_run keeps a list of that name)
+    """the parts the install brings and their sizes, the fine-tune's at its quant (none on a Q5_K_M install); on Windows its programs too"""
     q = fw_quant(kit)
     d = dict(PARTS, fw=FW_SIZES[q]) if q else dict(PARTS)
     if _bash() is None:                             # HERESY 2981: Windows without Git for Windows fetches the transcriber through
         d["transcriber"] = TRANSCRIBER_PY_SIZE      # launcher/fetch_models.py (2952): the F32 pair and the Refined mode, not the Q8_0 pair
+    if os.name == "nt" if nt is None else nt:       # HERESY 2989: FFmpeg and FluidSynth, as the Windows package brings them
+        d["programs"] = PROGRAMS_SIZE
     return d
 
 OMNI = paths.LISTENER + "/Qwen2.5-Omni-7B-GGUF/"
@@ -203,7 +211,7 @@ EXTRAS = [
          {"id": "7b", "label": "7B sharp", "size": "17 GB", "note": "the Studio's own: 20 GB of a card at 1080p (16 of its blocks in RAM), 21 GB of RAM; 1440p fits too", "files": [paths.SEEDVR2 + '/seedvr2_ema_7b_sharp_fp16.safetensors', paths.SEEDVR2 + '/ema_vae_fp16.safetensors']},
          {"id": "all", "label": "All", "size": "40.2 GB", "note": '3B, 7B sharp and 7B', "files": [paths.SEEDVR2 + '/seedvr2_ema_3b_fp16.safetensors', paths.SEEDVR2 + '/seedvr2_ema_7b_sharp_fp16.safetensors', paths.SEEDVR2 + '/seedvr2_ema_7b_fp16.safetensors', paths.SEEDVR2 + '/ema_vae_fp16.safetensors']}]},
     {"name": "listener", "label": "Style listener",
-     "what": "Qwen2.5-Omni-7B: hears the songs of a training set and writes each one's style tags; the GGUF ones run through llama.cpp (vendor/llama.cpp, built by you)",
+     "what": "Qwen2.5-Omni-7B: hears the songs of a training set and writes each one's style tags; the GGUF ones run through llama.cpp (vendor/llama.cpp, built by you on Linux; the Windows package brings it)",
      "variants": [
          {"id": "Q8_0", "size": "9.6 GB", "note": "10.3 GB of VRAM when it listens", "files": [OMNI + "Qwen2.5-Omni-7B-Q8_0.gguf", PROJ]},
          {"id": "Q5_K_M", "size": "6.9 GB", "note": "8.0 GB of VRAM when it listens", "files": [OMNI + "unsloth/Qwen2.5-Omni-7B-Q5_K_M.gguf", PROJ]},
@@ -296,7 +304,7 @@ def _biggest_card_mb():
     if not _BIG:
         try:
             out = subprocess.run(["nvidia-smi", "--query-gpu=memory.total", "--format=csv,noheader,nounits"],
-                                 capture_output=True, text=True, timeout=20).stdout
+                                 capture_output=True, text=True, timeout=20, encoding="utf-8", errors="replace").stdout
             _BIG.append(max([int(x) for x in out.split() if x.strip().isdigit()] or [0]))
         except (OSError, subprocess.SubprocessError):
             _BIG.append(0)
@@ -360,7 +368,8 @@ def _extras(kit):
 
 def _strip(kit, text):
     for root in {str(kit), os.path.realpath(kit)}:
-        text = text.replace(root + "/", "")
+        for sep in {"/", os.sep}:                   # HERESY 2983: and C:\RuachStudio\ where Windows says it so
+            text = text.replace(root + sep, "")
     return text
 
 
@@ -448,8 +457,8 @@ def running():
 SPARE = 2e9
 IRAE_SETS = ["IRAE", "IRAEv2", "IRAEv3", "IRAE-IR", "IRAE-IRv2"]
 TIERS = [
-    {"id": "narrator", "label": "Narrator", "what": "Fish Audio Drama 3 at Q8_0 on a card of 24 GB or more, else Q4_K, with its licence files and the stresses; audio.cpp's server built after it"},   # HERESY 2374; 2441
-    {"id": "writer", "label": "Writer", "what": "the Writer's own language model on this machine, through llama.cpp's llama-server (launcher/extras.sh builds it)"},
+    {"id": "narrator", "label": "Narrator", "what": "Fish Audio Drama 3 at Q8_0 on a card of 24 GB or more, else Q4_K, with its licence files and the stresses; audio.cpp's server built after it on Linux, brought by the Windows package"},   # HERESY 2374; 2441
+    {"id": "writer", "label": "Writer", "what": "the Writer's own language model on this machine, through llama.cpp's llama-server (launcher/extras.sh builds it on Linux; the Windows package brings it)"},
     {"id": "refiner", "label": "Refiner", "what": "sound to MIDI (MuScriptor) and the Voice upscale's FlashSR, which else comes on its first use"},
     {"id": "artist", "label": "Artist", "what": "the covers' helpers and the Qwen-Image 2512 painter with Lightning's 8 steps"},
     {"id": "videographer", "label": "Videographer", "what": "MiniMax H3 for the moving shots and SeedVR2 7B sharp to upscale them; the shots' pictures are the Artist's"},
@@ -521,7 +530,8 @@ def _fetch_tier(kit, tid, token=None):
 
 
 NAMES = {"extras": "our decoders", "whisper": "Whisper", "stems": "the stems' models", "upscale": "UniverSR",
-         "loras": "the LoRAs", "fw": "Ruach Studio's own fine-tune", "transcriber": "the transcriber"}   # HERESY 1794; 08.11.2026
+         "loras": "the LoRAs", "fw": "Ruach Studio's own fine-tune", "transcriber": "the transcriber",
+         "programs": "the Windows programs (FFmpeg, FluidSynth)", "nam": "the NAM amps"}   # HERESY 1794; 08.11.2026; 2989; 2994
 
 
 def _args(body):
@@ -529,7 +539,7 @@ def _args(body):
     part = str(body.get("part", "") or "")
     if part == "missing":
         return [], "what is missing"
-    if part in PARTS or part == "fw":                # HERESY 1794: the fine-tune's part, at the backbone's quant
+    if part in PARTS or part in ("fw", "programs"):   # HERESY 1794: the fine-tune's part, at the backbone's quant; 2989: Windows' programs
         return ["--only", part], NAMES[part]
     for e in EXTRAS:
         name = e["name"] if e else "artwork"
@@ -646,7 +656,7 @@ def _say_py(kit, env):
             JOB["lines"].append("launcher/fetch_models.py is not here: this install cannot download without Git for Windows")
         return 1
     p = subprocess.Popen([sys.executable, str(script), "--transcriber-only", "--yes"], cwd=str(kit), env=env, stdin=subprocess.DEVNULL,
-                         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, errors="replace")
+                         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, errors="replace", encoding="utf-8")
     for line in p.stdout:
         line = hf_access.scrub(_strip(kit, line.rstrip("\n")))
         with LOCK:
@@ -657,22 +667,36 @@ def _say_py(kit, env):
     return p.wait()
 
 
+def _twin(kit):
+    """HERESY 2983 (a tester's Windows, 24.11.2026: «Стемы … скачано 0, не удалось 2»; Viktor: «проверить загрузку и работу абсолютно всех моделей»):
+    fetch-heresy.sh's twin in Python, launcher/fetch_heresy.py, which a machine with no bash runs instead: every part and extra, the same pins,
+    checks, words and list; None where this install does not carry it."""
+    f = kit / "launcher" / "fetch_heresy.py"
+    return f if f.is_file() else None
+
+
 def _say(kit, args, token=None):
-    """One run of fetch-heresy.sh into JOB["lines"]; its exit status (0: nothing failed). A token goes into its environment alone."""
+    """One run of fetch-heresy.sh (HERESY 2983: of its Python twin where there is no bash) into JOB["lines"]; its exit status (0: nothing
+    failed). A token goes into its environment alone."""
     env = dict(os.environ, NO_COLOR="1", HF_HUB_DISABLE_TELEMETRY="1")
     if token:                                       # else whatever the user's own environment holds, as before
         env["HF_TOKEN"] = token
     bash = _bash()
     if bash is None and _base_only(args):           # HERESY 2952: the transcriber and its Refined mode come without Git for Windows too
         return _say_py(kit, env)
-    if bash is None:                                # HERESY 2924: Windows without Git for Windows; said, not a crash
+    twin = _twin(kit) if bash is None else None
+    if bash is None and twin is None:               # HERESY 2924: Windows without Git for Windows; said, not a crash
         with LOCK:
-            JOB["lines"] += ["On Windows the Weights panel downloads through the bash of Git for Windows, and none is installed here.",
-                             "Install Git for Windows (https://git-scm.com/download/win), then press again. The models a song needs come without it too:",
+            JOB["lines"] += ["On Windows the Weights panel downloads through the bash of Git for Windows, or through launcher/fetch_heresy.py, and this",
+                             "install has neither. Install Git for Windows (https://git-scm.com/download/win), or unpack the Studio's package again,",
+                             "then press again. The models a song needs come without them too:",
                              "    .venv\\Scripts\\python launcher\\fetch_models.py"]
         return 1
-    p = subprocess.Popen([bash, str(kit / "heresy" / "fetch-heresy.sh")] + args, cwd=str(kit), env=env, stdin=subprocess.DEVNULL,
-                         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, errors="replace")
+    if twin:                                        # HERESY 2983: its words in UTF-8, read as UTF-8 (a Windows pipe is the system's code page)
+        env.update(PYTHONUTF8="1", PYTHONIOENCODING="utf-8")
+    cmd = [sys.executable, str(twin)] + args if twin else [bash, str(kit / "heresy" / "fetch-heresy.sh")] + args
+    p = subprocess.Popen(cmd, cwd=str(kit), env=env, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+                         errors="replace", encoding="utf-8" if twin else None)
     for line in p.stdout:
         line = hf_access.scrub(_strip(kit, line.rstrip("\n")))
         with LOCK:

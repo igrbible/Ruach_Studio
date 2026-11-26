@@ -41,7 +41,7 @@ def _cpu_times():
     if not winx.PROC:                                    # HERESY 2924: Windows and macOS, psutil's times through winx (no iowait there)
         return winx.cpu_times()
     out = {}
-    with open("/proc/stat") as f:
+    with open("/proc/stat", encoding="utf-8") as f:
         for line in f:
             if not line.startswith("cpu"):
                 break
@@ -57,7 +57,7 @@ def _meminfo():
     if not winx.PROC:                                    # HERESY 2924: psutil's through winx
         return winx.meminfo_mb()
     m = {}
-    with open("/proc/meminfo") as f:
+    with open("/proc/meminfo", encoding="utf-8") as f:
         for line in f:
             k, _, rest = line.partition(":")
             try:
@@ -83,7 +83,7 @@ def _parent(dev):
 
 def _read(path, default=""):
     try:
-        with open(path) as f:
+        with open(path, encoding="utf-8") as f:
             return f.read().strip()
     except OSError:
         return default
@@ -100,7 +100,7 @@ def _disks():
         return _disks_mac()
     found = {}
     try:
-        with open("/proc/self/mounts") as f:
+        with open("/proc/self/mounts", encoding="utf-8") as f:
             rows = [line.split() for line in f]
     except OSError:
         rows = []
@@ -305,7 +305,7 @@ def _diskstats(ids):
         return _diskstats_psutil(ids)
     out = {}
     try:
-        with open("/proc/diskstats") as f:
+        with open("/proc/diskstats", encoding="utf-8") as f:
             for line in f:
                 p = line.split()
                 if len(p) >= 13 and p[2] in ids:

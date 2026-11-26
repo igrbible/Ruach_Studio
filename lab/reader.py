@@ -84,6 +84,7 @@ import name_rule                                    # HERESY 2462: one rule for 
 import upload_guard                                 # HERESY 2659: the gate every sound brought in passes
 import time
 from pathlib import Path
+NT = os.name == "nt"                                 # HERESY 2992: an engine's words for Windows (say_nt, command_nt) there
 
 import sys
 
@@ -404,9 +405,10 @@ def _missing(needs, tiers):
         if not isinstance(n, dict) or not ID_RE.match(str(n.get("id") or "")) or n.get("device"):
             continue
         anyof, allof = [str(x) for x in n.get("any") or []][:8], [str(x) for x in n.get("all") or []][:8]
-        ok = (not anyof or any((kit() / x).is_file() for x in anyof)) and all((kit() / x).is_file() for x in allof)
+        # HERESY 3007: a manifest's ENV/bin/python is ENV\\Scripts\\python.exe on Windows (winx.native, 2934): Higgs's .venv-read was «not set up» there
+        ok = (not anyof or any((kit() / winx.native(x)).is_file() for x in anyof)) and all((kit() / winx.native(x)).is_file() for x in allof)
         if not ok:
-            out.append({"id": n["id"], "say": str(n.get("say") or n["id"])[:160]})
+            out.append({"id": n["id"], "say": str((NT and n.get("say_nt")) or n.get("say") or n["id"])[:160]})   # HERESY 2992
     return out
 
 
@@ -414,7 +416,7 @@ def _setup_of(raw):
     """HERESY 2374: how an engine is set up here: the Engine's tier that fetches its model (and builds what it needs), a command, its size."""
     if not isinstance(raw, dict):
         return None
-    return {k: str(raw.get(k) or "")[:120] for k in ("tier", "command", "size")}
+    return {k: str((NT and raw.get(k + "_nt")) or raw.get(k) or "")[:120] for k in ("tier", "command", "size")}   # HERESY 2992
 
 
 def _tiers_of(raw):
@@ -477,6 +479,7 @@ def engines():
 def engines_public():
     return {"engines": [dict({k: e[k] for k in ("id", "label", "own", "devices", "ready", "need_mb", "langs", "tags", "note", "max_chars", "stress", "seed",
                                                 "top_k", "top_p", "style", "license", "first_run", "missing", "setup", "voice_set", "window", "scene")},   # HERESY 2374: missing, setup; 2456
+                             ready={x: ok and not e["missing"] for x, ok in e["ready"].items()},   # HERESY 2986: «ready» said only when nothing is missing
                              tiers=[{k: t[k] for k in ("id", "quant", "device", "need_mb", "ram_gb", "rtf", "load_s", "ready", "grade")} for t in e["tiers"]
                                     if t["named"]])
                         for e in engines()]}
@@ -537,12 +540,12 @@ def _clean_clip(src, mode, profile, out24):
     try:
         wav, outd, pf = tmp / "in.wav", tmp / "out", tmp / "p.json"
         p = subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(src), "-t", "30", "-ac", "1", "-ar", "44100", "-c:a", "pcm_s16le", str(wav)],
-                           capture_output=True, text=True, timeout=300)
+                           capture_output=True, text=True, timeout=300, encoding="utf-8", errors="replace")
         if p.returncode != 0 or not wav.is_file():
             raise ValueError("ffmpeg could not read it: " + (p.stderr.strip().splitlines() or ["?"])[-1])
         outd.mkdir()
         pf.write_text(json.dumps({"mode": mode, "voice": profile if profile in SEXES else "auto"}), encoding="utf-8")
-        p = subprocess.run([str(py), str(step), str(wav), str(outd), str(pf)], capture_output=True, text=True, timeout=1800, cwd=str(step.parent))
+        p = subprocess.run([str(py), str(step), str(wav), str(outd), str(pf)], capture_output=True, text=True, timeout=1800, cwd=str(step.parent), encoding="utf-8", errors="replace")
         res = outd / "tts-upscaled.flac"
         if p.returncode != 0 or not res.is_file():
             raise ValueError("the clip could not be cleaned: " + ((p.stderr or p.stdout).strip().splitlines() or ["no word from the step"])[-1][-240:])
@@ -551,7 +554,7 @@ def _clean_clip(src, mode, profile, out24):
         except ValueError:
             said = ""
         p = subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(res), "-ac", "1", "-ar", "24000", "-c:a", "pcm_s16le", str(out24)],
-                           capture_output=True, text=True, timeout=300)
+                           capture_output=True, text=True, timeout=300, encoding="utf-8", errors="replace")
         if p.returncode != 0 or not Path(out24).is_file():
             raise ValueError("ffmpeg could not write the cleaned clip: " + (p.stderr.strip().splitlines() or ["?"])[-1])
         return str(said)[:300]
@@ -704,7 +707,7 @@ def voice_add(body):
     src, _ = upload_guard.keep(raw, voices_home(), vid + ".source", head)
     out = voices_home() / (vid + ".wav")
     p = subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(src), "-t", "30", "-ac", "1", "-ar", "24000", "-c:a", "pcm_s16le", str(out)],
-                       capture_output=True, text=True, timeout=300)
+                       capture_output=True, text=True, timeout=300, encoding="utf-8", errors="replace")
     src.unlink(missing_ok=True)
     if p.returncode != 0 or not out.is_file():
         raise ValueError("ffmpeg could not read it: " + (p.stderr.strip().splitlines() or ["?"])[-1])
@@ -804,7 +807,7 @@ def voice_edit(body):
         src, _ = upload_guard.keep(raw, voices_home(), vid + ".source", head)
         new = voices_home() / (vid + ".new.wav")
         pr = subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(src), "-t", "30", "-ac", "1", "-ar", "24000", "-c:a", "pcm_s16le", str(new)],
-                            capture_output=True, text=True, timeout=300)
+                            capture_output=True, text=True, timeout=300, encoding="utf-8", errors="replace")
         src.unlink(missing_ok=True)
         if pr.returncode != 0 or not new.is_file():
             new.unlink(missing_ok=True)
@@ -1256,7 +1259,7 @@ def _held():
         return {}
     try:
         a = subprocess.run(["nvidia-smi", "--query-compute-apps=pid,used_memory", "--format=csv,noheader,nounits"],
-                           capture_output=True, text=True, timeout=20)
+                           capture_output=True, text=True, timeout=20, encoding="utf-8", errors="replace")
         mb = sum(int(r.split(",")[1]) for r in a.stdout.strip().splitlines() if _in_session(r.split(",")[0].strip(), w.p.pid))
     except (OSError, ValueError, IndexError, subprocess.SubprocessError):
         return {}
@@ -1844,7 +1847,7 @@ def _tr_work(d, meta, job):
         src = next(d.glob("source.*"))
         wav = d / "audio16k.wav"
         p = subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(src), "-vn", "-ac", "1", "-ar", "16000", "-c:a", "pcm_s16le", str(wav)],
-                           capture_output=True, text=True, timeout=7200)
+                           capture_output=True, text=True, timeout=7200, encoding="utf-8", errors="replace")
         if p.returncode != 0 or not wav.is_file():
             raise RuntimeError("ffmpeg could not read the recording: " + (p.stderr.strip().splitlines() or ["no sound in it"])[-1][:200])
         import soundfile as sf
@@ -1861,7 +1864,7 @@ def _tr_work(d, meta, job):
             _write(d / "meta.json", meta)
             out = d / "whisper.json"
             p = subprocess.run([str(H["whisper_py"]), str(HERE / "whisper_job.py"), str(wav), str(out), meta["lang"], str(H["whisper_dir"])],
-                               env=env, capture_output=True, text=True, timeout=max(3600, int(dur * 4)), cwd=str(kit()))
+                               env=env, capture_output=True, text=True, timeout=max(3600, int(dur * 4)), cwd=str(kit()), encoding="utf-8", errors="replace")
             if p.returncode != 0 or not out.is_file():
                 raise RuntimeError("Whisper failed: " + (p.stderr.strip().splitlines() or ["no output"])[-1][:300])
         w = _json(out, {})
@@ -2040,7 +2043,7 @@ def _ram_gb():
         except (ImportError, OSError, ValueError):
             return None
     try:
-        with open("/proc/meminfo") as f:
+        with open("/proc/meminfo", encoding="utf-8") as f:
             for line in f:
                 if line.startswith("MemAvailable:"):
                     return int(line.split()[1]) / 2 ** 20
@@ -3023,7 +3026,7 @@ def _to_library(d, t, run, by, why):
     part = t / "audio.part.wav"
     p = subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(d / "take.wav"), "-ac", "2", "-ar", "48000", "-c:a", "pcm_s24le",
                         "-metadata", "comment=" + no_train.comment(by, why), "-metadata", "title=" + run["title"], str(part)],
-                       capture_output=True, text=True, timeout=600)
+                       capture_output=True, text=True, timeout=600, encoding="utf-8", errors="replace")
     if p.returncode != 0:
         part.unlink(missing_ok=True)
         raise RuntimeError("ffmpeg could not write the take: " + (p.stderr.strip().splitlines() or ["?"])[-1])
@@ -3146,7 +3149,7 @@ def _lufs(path):
     """The integrated loudness of a file by ffmpeg's EBU R128 filter, LUFS; None when it cannot say (said by the caller)."""
     try:
         p = subprocess.run(["ffmpeg", "-hide_banner", "-nostats", "-i", str(path), "-af", "ebur128", "-f", "null", "-"],
-                           capture_output=True, text=True, timeout=600)
+                           capture_output=True, text=True, timeout=600, encoding="utf-8", errors="replace")
         m = re.findall(r"^\s*I:\s*(-?[\d.]+)\s*LUFS", p.stderr, re.M)
         return round(float(m[-1]), 2) if m else None
     except (OSError, ValueError, subprocess.SubprocessError):

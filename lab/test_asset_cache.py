@@ -210,13 +210,14 @@ st, h, b = get("/art?name=" + take.name, port=LP)
 ok("  without v (the Videographer's tiles): private, no-cache with its validator", st == 200 and h.get("cache-control") == "private, no-cache" and
    h.get("etag") == 'W/"%s"' % CK, h)
 (take / "artwork.jpg").write_bytes(COVER[::-1])
-st2, h2, b2 = get("/arts", port=LP)
+# HERESY 2669: /arts is kept 4 s for everyone waiting; the page that has just drawn or removed a cover asks ?fresh=1 (app.js), so does this
+st2, h2, b2 = get("/arts?fresh=1", port=LP)
 new = json.loads(b2 or b"{}").get("arts", {}).get(take.name)
 ok("  drawn anew: /arts says a new key at once", new and new != CK and new == hashlib.sha256(COVER[::-1]).hexdigest()[:10], (new, CK))
 st, h, b = get("/art?name=" + take.name + "&v=" + CK, port=LP)
 ok("  the old key now: the new cover, private, no-cache", st == 200 and b == COVER[::-1] and h.get("cache-control") == "private, no-cache", h)
 (take / "artwork.jpg").unlink()
-st, h, b = get("/arts", port=LP)
+st, h, b = get("/arts?fresh=1", port=LP)
 ok("  taken off: not listed", take.name not in json.loads(b or b"{}").get("arts", {}), b[:200])
 
 

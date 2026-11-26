@@ -2,7 +2,7 @@
 """HERESY 2649 (the native Windows port): the Studio's Python on Windows, run by launcher/install.ps1 in the fresh .venv: the lab's packages
 (lab/requirements.txt as on Linux: CUDA 12.8 wheels, or the CPU ones with --cpu for a machine without an NVIDIA card), the pinned downloader
 (tools/downloader-requirements.txt), psutil (lab/winx.py reads the processor and memory through it), then the models a song needs
-(launcher/fetch_models.py). Safe to run again: what is here stays.
+(launcher/fetch_models.py) and their cards (launcher/fetch_cards.py). Safe to run again: what is here stays.
 
     .venv\\Scripts\\python launcher\\setup_win.py [--cpu | --torch-cpu] [--yes] [--no-models]
 
@@ -32,6 +32,10 @@ MAC = sys.platform == "darwin"
 # on Linux, the same pins (lab/test_win_extras_2933.py holds the two lists equal): gguf for the LoRA's measure (lora_alchemy) and the painter's
 # GGUF, pretty_midi (mido with it) for the score's MIDI (2927), mir_eval for the transcriber's measures
 EXTRA = ["gguf==0.19.0", "mir_eval==0.8.2", "pretty_midi==0.2.10"]
+# HERESY 2986 (the check of 2984: the upscale ended «No module named 'universr'» on Windows while Engine → Models said it was here): what UniverSR's
+# inference imports that only its own «pip install -e vendor/UniverSR» brings on Linux (lab/install-venv.sh), pinned as lab/requirements-lock.txt;
+# its code is read where Engine → Models puts it, vendor/UniverSR (lab/upscale_job.py), with no editable install (fetch_heresy.py brings these too)
+UNIVERSR = ["einops==0.8.2", "timm==1.0.30", "torchdiffeq==0.2.5"]
 
 
 def requirements(cpu):
@@ -48,7 +52,7 @@ def requirements(cpu):
         elif cpu or MAC:
             s = re.sub(r"\+cu\d+", "", s).replace("audio-separator[gpu]", "audio-separator[cpu]")
         out.append(s)
-    out += EXTRA + ["psutil"]
+    out += EXTRA + UNIVERSR + ["psutil"]
     p = ROOT / "tmp" / ("requirements-win-cpu.txt" if cpu else "requirements-win.txt")
     p.parent.mkdir(parents=True, exist_ok=True)
     p.write_text("\n".join(out) + "\n", encoding="utf-8")
@@ -118,7 +122,12 @@ def main(argv):
     if a.no_models:
         return 0
     print("── the models a song needs", flush=True)
-    return subprocess.call([sys.executable, str(ROOT / "launcher" / "fetch_models.py")] + (["--yes"] if a.yes else []) + (["--quant", "Q5_K_M"] if a.cpu else []))
+    rc = subprocess.call([sys.executable, str(ROOT / "launcher" / "fetch_models.py")] + (["--yes"] if a.yes else []) + (["--quant", "Q5_K_M"] if a.cpu else []))
+    # HERESY 2879, 3000: the model cards (licences and credits, a few KB) into models/misc/cards/, said card by card; one that does not come stops
+    # nothing (Install again fetches it). Only Pinokio's install.js fetched them until rc3
+    print("── the model cards: the models' licences and credits", flush=True)
+    subprocess.call([sys.executable, str(ROOT / "launcher" / "fetch_cards.py")])
+    return rc
 
 
 if __name__ == "__main__":

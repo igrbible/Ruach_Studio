@@ -46,13 +46,14 @@
  ],
  "auto": {"auto-speed": ["speed", "quality", "mid-q4", "mid-q6", "ram-q4", "ram-q6", "ram"], "auto-quality": ["q8", "ram", "quality", "mid-q6", "ram-q6", "mid-q4", "speed", "ram-q4"]},
  "needs": [{"id": "server", "any": ["build/audio.cpp/build/linux-cuda-release/bin/audiocpp_server", "build/audio.cpp/build/linux-cpu-release/bin/audiocpp_server",
-                                  "heresy/MISC/audio.cpp/build/linux-cuda-release/bin/audiocpp_server", "heresy/MISC/audio.cpp/build/linux-cpu-release/bin/audiocpp_server"],
-            "say": "audio.cpp's server is not built yet"},
+                                  "heresy/MISC/audio.cpp/build/linux-cuda-release/bin/audiocpp_server", "heresy/MISC/audio.cpp/build/linux-cpu-release/bin/audiocpp_server",
+                                  "engine/cuda/audiocpp_server.exe", "engine/cpu/audiocpp_server.exe"],
+            "say": "audio.cpp's server is not built yet", "say_nt": "audiocpp_server.exe is not in this Studio's engine\\cuda or engine\\cpu: the Windows package brings it beside the engine"},
            {"id": "server-vulkan", "device": "xpu", "any": ["build/audio.cpp/build/linux-vulkan-release/bin/audiocpp_server", "heresy/MISC/audio.cpp/build/linux-vulkan-release/bin/audiocpp_server"],
             "say": "audio.cpp's Vulkan build (for an Intel card) is not built yet"},
            {"id": "licence", "all": ["models/narrator/drama-3-gguf/LICENSE", "models/narrator/drama-3-gguf/NOTICE"],
             "say": "the Fish Audio Community License files are not beside the model"}],
- "setup": {"tier": "narrator", "command": "bash tools/narrator-setup.sh", "size": "24.8 GB"},
+ "setup": {"tier": "narrator", "command": "bash tools/narrator-setup.sh", "command_nt": "Engine → Models and LoRAs → Narrator (its server comes with the Windows package)", "size": "24.8 GB"},
  "first_run": "With 22 GB free on a card Q4_K reads a second of speech in about 0.6 s and Q6_K in about 1.2 s; with 15 to 16 GB free, more of their experts in the machine's memory, in about 0.9 to 1.2 s; with 8 GB free, all of them there (22 GB of memory for Q4_K, 30 for Q6_K, 40 for Q8_0), in about 1.5 s for Q4_K and Q6_K and 2.4 s for Q8_0; the processor alone reads about seven times slower than real time. The model loads at the first reading and stays loaded between runs on a card.",
  "note": "Fish Audio Drama 3 (35B MoE, 3B active) through audio.cpp (Apache-2.0) from GGUF quants in models/narrator/drama-3-gguf, its LICENSE and NOTICE beside them. Built with Fish Audio."
 }

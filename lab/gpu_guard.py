@@ -69,9 +69,9 @@ def snapshot(root=KIT):
     """[{index, total_mb, free_mb, limit_mb, room_mb, share, foreign: [(pid, name, mb)], ok, why}] for every card."""
     try:
         q = subprocess.run(["nvidia-smi", "--query-gpu=index,uuid,memory.total,memory.free", "--format=csv,noheader,nounits"],
-                           capture_output=True, text=True, timeout=20)
+                           capture_output=True, text=True, timeout=20, encoding="utf-8", errors="replace")
         a = subprocess.run(["nvidia-smi", "--query-compute-apps=pid,gpu_uuid,used_memory", "--format=csv,noheader,nounits"],
-                           capture_output=True, text=True, timeout=20)
+                           capture_output=True, text=True, timeout=20, encoding="utf-8", errors="replace")
     except FileNotFoundError:                          # HERESY 2934: said, not «[WinError 2] The system cannot find the file specified»
         raise RuntimeError(winx.NO_NVSMI)
     if q.returncode != 0 or not q.stdout.strip():

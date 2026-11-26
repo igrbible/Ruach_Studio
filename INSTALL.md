@@ -1,6 +1,6 @@
 # Installing Ruach Studio
 
-One Linux machine with an NVIDIA card. The Studio runs there; you use it from a browser on that machine or on any other machine of your home network. Nothing goes to a cloud unless you ask (OpenRouter for the Writer, if you choose it).
+One Linux machine with an NVIDIA card. The Studio runs there; you use it from a browser on that machine or on any other machine of your home network. Nothing goes to a cloud unless you ask (OpenRouter for the Writer, if you choose it). On Windows 11 the Studio runs natively from its own zip and `RuachStudio.exe` ([INSTALL_WINDOWS.md](INSTALL_WINDOWS.md)); on a Mac with Apple Silicon from its own zip too ([README › Windows and macOS](README.md#windows-and-macos-native-beta)).
 
 ## What it needs
 
@@ -51,19 +51,26 @@ heresy/fetch-heresy.sh --fw 3.4x0.75-Q8_0   # another merge of Ruach Studio's ow
 ./fetch-models.sh --check                # what is here, what is missing; downloads nothing
 ```
 
-## With Pinokio
+## In one script
 
-[Pinokio](https://pinokio.co) installs and starts the Studio from its menu, on the same kind of machine: Linux x86_64 with an NVIDIA card. In Pinokio, download it from its address, `https://github.com/igrbible/Ruach_Studio`, and press **Install**. Pinokio first brings its AI bundle (conda, git, ffmpeg, uv and the CUDA toolkit 12.8; your own `/usr/local/cuda-12.8` is used instead when it is there), then the install does what the steps above do: the Python environments, the engine, and the models with the backbone your card takes (BF16 from 24 GB, Q8_0 from 7, Q6_K below). Each step says what it does, and a step that fails ends the install with its reason on the last line; **Install again** goes on from there.
+`bash launcher/install.sh` does the steps above in one go, in the Studio's folder: it checks the machine, makes the Python environments, builds the engine and fetches the models with the backbone your card takes (BF16 from 24 GB, Q8_0 from 7, Q6_K below). Each step says what it does, and a step that fails ends the install with its reason on the last line; run it again and it goes on from there. Beside it, `bash launcher/extras.sh` brings the Artist's painter, the style listener, the trainer's base and, where the install took Q8_0, the BF16 backbone, each asked first with its size; `bash launcher/update.sh` takes the newest release (the code, the Pythons, the page, the engine when its code changed, the models it pins); `bash launcher/reset.sh` takes away the Python environments and the engine's build, never your songs, models or settings. Then start the Studio as above: the two services, or `./lab/start-lab.sh` and `./start.sh`.
 
-**Start** runs the lab and the Studio, each in a terminal of its own, and **Open the Studio** opens the page (from another machine of your network: the address `start.sh` prints in that terminal). **More models** offers the Artist's painter, the style listener, the trainer's base and, where the install took Q8_0 for a smaller card, the BF16 backbone, each asked first with its size. The install itself brings the LoRAs the Studio's 💎 sets were made with; a download that fails says why, and **Install** again goes on from where it stopped. The Studio's **Engine → Models and LoRAs** says the same from inside: what is here, what is missing, and a **Fetch** for each part and for every extra, each asked first with its size. **Update** takes the newest release; **Reset** takes away the Python environments and the engine's build, never your songs, models or settings.
+Pinokio (Linux only, unsupported): its menu runs `bash launcher/install.sh --yes` (`--yes`: the models without their question), then the lab and `./start.sh`; on Windows and macOS it points to the Studio's own packages.
 
-The work is done by the bash scripts in `launcher/`, which run the same from a terminal (`bash launcher/install.sh`). Under Pinokio there are no systemd units: stop, start and update the Studio from Pinokio's menu. On Windows 11 the Studio runs through WSL2, by hand for now ([INSTALL_WINDOWS.md](INSTALL_WINDOWS.md)).
+### Moving from a Pinokio install
 
-Until 2.0.0-rc5 these scripts lived in `pinokio/`, a folder where Pinokio then kept its own environment out of its environment page's reach. The first **Update** of such an install stops halfway, its old script finding its folder gone; the menu then moves what Pinokio wrote there out of its way (its `ENVIRONMENT` beside `pinokio.js`, the rest under `tmp/`) and offers **Finish the update**, which sets the new version up.
+Pinokio is not supported since 2.1.0-rc3 (25.11.2026). Its install is a clone of this repository in Pinokio's home (`~/pinokio/api/Ruach_Studio.git`, or under the home Pinokio's settings name), and what is yours is in that folder: the models in `models/`, your LoRAs and settings in `user/`, your songs in `outputs/`. Pinokio's bundle brought CUDA 12.8, git and ffmpeg: give the machine its own first ([What it needs](#what-it-needs)). Then, with Pinokio closed, take the folder out of it and install over it; the models already there are checked and kept, not downloaded again:
+
+```bash
+mv ~/pinokio/api/Ruach_Studio.git ~/Ruach_Studio && cd ~/Ruach_Studio
+bash launcher/reset.sh                              # the Pythons and the engine Pinokio's toolchain built; songs, models and settings stay
+RUACH_UPDATE_CODE_ONLY=1 bash launcher/update.sh    # the newest code
+bash launcher/install.sh                            # the Pythons, the engine and the models, with the machine's own toolchain
+```
 
 ## Intel Arc (beta)
 
-An Intel Arc card runs the engine too, as a beta with no guarantees: songs in every mode, adapters, Extend and going on from kept music. Measured on an Arc Pro B50 (16 GB): a song of 30 s in 43 s (BF16) to 60 s (Q8_0, Full with an adapter), where an RTX 3090 takes about 12 s. On Arc, BF16 is the fastest copy; Q8_0 and Q5_K_M save memory, not time. Training, the Artist and the Refiner's GPU steps still want an NVIDIA card, and Pinokio installs the NVIDIA way only.
+An Intel Arc card runs the engine too, as a beta with no guarantees: songs in every mode, adapters, Extend and going on from kept music. Measured on an Arc Pro B50 (16 GB): a song of 30 s in 43 s (BF16) to 60 s (Q8_0, Full with an adapter), where an RTX 3090 takes about 12 s. On Arc, BF16 is the fastest copy; Q8_0 and Q5_K_M save memory, not time. Training, the Artist and the Refiner's GPU steps still want an NVIDIA card, and `launcher/install.sh` installs the NVIDIA way only.
 
 It needs Intel's GPU driver with Level Zero (the compute runtime) and Intel's **oneAPI Base Toolkit** in `/opt/intel/oneapi` (icpx and the SYCL runtime). Then, in the steps above, instead of `./build.sh --server`:
 
@@ -90,12 +97,11 @@ The page is read from disk at every load: `./build.sh` and a reload of the brows
 tools/test-real.sh                         # the engine on the CPU, its page and a 1-second song, in a library of its own (1–4 minutes)
 node tools/cdp-console.mjs                 # the page against a stand-in server (about 2 minutes)
 node heresy/tools/check-player.mjs         # the player: a click plays, play-on goes to the next take
-node heresy/tools/check-pinokio.mjs        # the Pinokio launcher without Pinokio: its menu, its scripts, the lines it waits for
 tools/test_downloaders.sh                  # the model downloaders, offline
 .venv/bin/python tools/test_flac.py        # the engine's FLAC against the reference flac (needs flac and metaflac)
 ```
 
-Measured on the machine it was made on: 6 passed (the page part 14), 470 passed and 7 skipped, 3, 62, 14 and 18 passed. None of them touches your songs, your settings or your services; the real-server test proves it at its end. The page tests take Chrome from `YUE2_CHROME` when it is not on the `PATH`; on Ubuntu 24.04, Playwright's *Chrome for Testing* needs `--no-sandbox` there (AppArmor), Google Chrome's own package does not.
+Measured on the machine it was made on: 6 passed (the page part 14), 470 passed and 7 skipped, 3, 14 and 18 passed. None of them touches your songs, your settings or your services; the real-server test proves it at its end. The page tests take Chrome from `YUE2_CHROME` when it is not on the `PATH`; on Ubuntu 24.04, Playwright's *Chrome for Testing* needs `--no-sandbox` there (AppArmor), Google Chrome's own package does not.
 
 ## When something is wrong
 
@@ -105,7 +111,7 @@ Measured on the machine it was made on: 6 passed (the page part 14), 470 passed 
 | the page: *Forge is not answering* or a red lamp | the engine is not running | `systemctl --user status ruach-studio`; `journalctl --user -u ruach-studio -n 50` |
 | *no card can take this now* | another program holds the card, or the job does not fit | the message names the program and the card; Engine → GPUs says which card does what |
 | 403 «does not answer this name» | the Studio was opened by a name, not by an address: whoever answers for a name on a network (a site on the internet, the router's own names) can point it at any machine; or by a Tailscale address (100.64–127.x), the carrier-grade NAT's shared space | open it by its address on your network (or http://localhost:7777 on the Studio's own machine), or name it in the Studio's environment: `RUACH_HOSTS=studio.example.org` (a Tailscale address the same way: `RUACH_HOSTS=100.101.102.103`) |
-| the Studio blank inside another page (Pinokio on another port, a page of your own) | the Studio lets only its own pages and Pinokio's (`http://localhost:42000`) put it in a frame | name that page in the Studio's environment: `RUACH_FRAME_ANCESTORS=http://host:port` (commas or spaces between several) |
+| the Studio blank inside another page (a page of your own) | the Studio lets only its own pages (and `http://localhost:42000`) put it in a frame | name that page in the Studio's environment: `RUACH_FRAME_ANCESTORS=http://host:port` (commas or spaces between several) |
 | 403 from another machine | it is not on a private network, or Engine → Security keeps the Studio to its own computer or to the networks listed | open it from your home network, or change Engine → Security on the Studio's computer (deleting `user/access.json` goes back to private networks); or put your own proxy and guard in front (`RUACH_ALLOW_PUBLIC=1`) |
 | the Writer says *no chat server* | none is set | Engine → Chat server (vLLM, LM Studio, Ollama on your machine), or OpenRouter with your key in the Writer |
 | upscale, stems or the lyrics check refuse | their models are missing | `./fetch-models.sh` (or `--check` to see which) |

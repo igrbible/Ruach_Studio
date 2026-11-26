@@ -54,7 +54,7 @@ def _cpu():
         busy, total, _io = winx.cpu_times()["cpu"]
         idle = total - busy
     else:
-        with open("/proc/stat") as f:
+        with open("/proc/stat", encoding="utf-8") as f:
             v = [int(x) for x in f.readline().split()[1:]]
         idle, total = v[3] + (v[4] if len(v) > 4 else 0), sum(v)
     was, STATE["cpu"] = STATE["cpu"], (idle, total)
@@ -68,7 +68,7 @@ def _ram():
         used, total, _c, _su, _st = winx.meminfo_mb()
         return 100.0 * used / max(1, total)
     info = {}
-    with open("/proc/meminfo") as f:
+    with open("/proc/meminfo", encoding="utf-8") as f:
         for line in f:
             k, v = line.split(":", 1)
             info[k] = int(v.split()[0])
@@ -78,7 +78,7 @@ def _ram():
 def _gpus():
     try:
         out = subprocess.run(["nvidia-smi", "--query-gpu=utilization.gpu,memory.used,memory.total", "--format=csv,noheader,nounits"],
-                             capture_output=True, text=True, timeout=15).stdout
+                             capture_output=True, text=True, timeout=15, encoding="utf-8", errors="replace").stdout
     except (OSError, subprocess.SubprocessError):
         return None
     rows = []

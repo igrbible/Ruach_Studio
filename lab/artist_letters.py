@@ -118,7 +118,7 @@ def read(image, on_card=True):
         raise RuntimeError("the listener (Qwen2.5-Omni GGUF and llama.cpp's llama-mtmd-cli) is not on this machine: the lettering cannot be read back")
     r = subprocess.run([str(art_job.CLI), "-m", str(crit[0]), "--mmproj", str(crit[1]), "--image", str(image), "-p", ASK,
                         "-ngl", "99" if on_card else "0", "-c", "8192", "-n", "80", "--temp", "0"],
-                       capture_output=True, text=True, timeout=300 if on_card else 600)
+                       capture_output=True, text=True, timeout=300 if on_card else 600, encoding="utf-8", errors="replace")
     if r.returncode != 0:
         raise RuntimeError("the listener could not read the picture: " + (r.stderr.strip().splitlines() or ["no output"])[-1][-200:])
     text = "\n".join(l.strip() for l in r.stdout.splitlines() if l.strip())

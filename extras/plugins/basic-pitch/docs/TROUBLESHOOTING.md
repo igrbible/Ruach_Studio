@@ -28,10 +28,7 @@ The lab shows the **last line of standard error**. Common messages:
 
 ## `.venv/bin/python` not found
 
-`plugin.json` points at `.venv/bin/python`, relative to the plugin folder. Create
-the venv **inside the plugin folder**, or edit `"python"` in `plugin.json` to point
-at another interpreter that has `basic-pitch` installed. Ruach itself runs on
-Linux (Windows via WSL2), so the Linux layout `bin/python` is right.
+`plugin.json` points at `.venv/bin/python`, relative to the plugin folder. Create the venv **inside the plugin folder**, or edit `"python"` in `plugin.json` to point at another interpreter that has `basic-pitch` installed. On Windows the Studio reads `.venv/bin/python` as `.venv\Scripts\python.exe` by itself (HERESY 2934), so the same `plugin.json` works there.
 
 ## Installing Basic Pitch fails
 

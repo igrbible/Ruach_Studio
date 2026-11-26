@@ -601,7 +601,7 @@ class _Lock:
     def __init__(self, root):
         p = Path(root) / LOCKF
         p.parent.mkdir(parents=True, exist_ok=True)
-        self.f = open(p, "a")
+        self.f = open(p, "a", encoding="utf-8")
 
     def __enter__(self):
         fcntl.flock(self.f, fcntl.LOCK_EX)

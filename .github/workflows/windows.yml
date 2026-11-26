@@ -20,6 +20,10 @@ on:
         description: "Package the Windows engines of this earlier run (its id) instead of building them; empty builds them here (the Mac engine is built anyway)"
         required: false
         default: ""
+      soak:
+        description: "HERESY 3013: soak the package on GitHub's Windows (install, every GET route, a song on the processor, the light parts one at a time); false leaves it out"
+        required: false
+        default: "true"
   push:
     branches: [win-native]
     paths: ["build/**", "lab/**", "launcher/**", "tools/**", "RuachStudio.cmd", "RuachStudio.command", ".github/workflows/windows.yml"]
@@ -167,7 +171,7 @@ jobs:
         continue-on-error: true
         run: |
           $env:PYTHONUTF8 = "1"
-          foreach ($t in "test_places.py", "test_paths.py") { "== $t"; python lab/$t 2>&1 | Select-Object -Last 15 }
+          foreach ($t in "test_places.py", "test_paths.py", "test_utf8_law_2998.py") { "== $t"; python lab/$t 2>&1 | Select-Object -Last 15 }
 
   macos:
     # 16.11.2026 (a tester on an Apple M1): the engine on Apple Silicon with Metal, after timoncool/yue2.cpp's macOS job (MIT)
@@ -225,13 +229,141 @@ jobs:
             build/tools/public/manifest.webmanifest
           retention-days: 14
 
+  natives:
+    # HERESY 2992 (Viktor 25.11.2026: «По всем моделям и по не ASCII путям с пробелами всё зафикси в Windows порте»): the native programs the
+    # Windows rooms lacked, built here with MSVC as the engine is, for the processor (AVX2) and for CUDA 12.8, and packed beside the engine
+    # (engine\cpu, engine\cuda): llama.cpp's llama-server (the Writer, the Bank Builder's Listener) and llama-mtmd-cli (the style listener's
+    # GGUFs) at the commit the Linux Studio runs, static (no ggml or llama DLL beside the engine's), without OpenSSL (it is handed local files)
+    # and for llama.cpp's own set of cards (Pascal and Volta by PTX); audio.cpp's audiocpp_server (the Narrator's Drama 3) from build/audio.cpp
+    # at its pin by its own scripts/build_windows.ps1, fish_drama3 alone as tools/narrator-setup.sh builds it on Linux, its model specs built in
+    # (the package has no build/), for the same cards; ruach-muscriptor (sound to MIDI) from build/muscriptor, the processor's only, as on
+    # Linux. Nothing upstream is patched. Every .exe carries build/tools/utf8.manifest's activeCodePage UTF-8 (HERESY 2649): audio.cpp and
+    # ruach-muscriptor link it in, llama.cpp's two get it merged by mt.exe, and each is checked here and again in the package. A leg that
+    # fails is said in the run; the package is made without it, and its room says so on Windows.
+    name: Natives · windows-x64 · ${{ matrix.what }} · ${{ matrix.kind }}
+    if: ${{ !inputs.engines_from }}
+    runs-on: windows-2022
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { what: llama, kind: cpu }
+          - { what: llama, kind: cuda12 }
+          - { what: narrator, kind: cpu }
+          - { what: narrator, kind: cuda12 }
+          - { what: muscriptor, kind: cpu }
+    env:
+      LLAMA_COMMIT: fb4b2737a808a3fb7c2117a498f43815dc9be53e   # vendor/llama.cpp where the Writer and the Listener run on Linux (02.10.2026)
+      AUDIOCPP_ARCHS: "61-virtual;70-virtual;75-virtual;80-virtual;86-real;89-real;120a-real"   # ggml's own set for CUDA 12.8, as llama.cpp's build takes it
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        if: ${{ matrix.what == 'llama' }}
+        with:
+          repository: ggml-org/llama.cpp
+          ref: ${{ env.LLAMA_COMMIT }}
+          path: llama.cpp
+      - name: CUDA toolkit
+        if: ${{ matrix.kind == 'cuda12' }}
+        uses: Jimver/cuda-toolkit@v0.2.30
+        with:
+          cuda: "12.8.1"
+          method: local
+      - name: llama-server and llama-mtmd-cli (llama.cpp)
+        if: ${{ matrix.what == 'llama' }}
+        shell: pwsh
+        run: |
+          $gpu = if ("${{ matrix.kind }}" -eq "cuda12") { @("-T", "cuda=$env:CUDA_PATH", "-DGGML_CUDA=ON") } else { @("-DGGML_CUDA=OFF") }
+          cmake -S llama.cpp -B llama.cpp/build -G "Visual Studio 17 2022" -A x64 -DBUILD_SHARED_LIBS=OFF -DLLAMA_OPENSSL=OFF -DLLAMA_BUILD_TESTS=OFF `
+            -DLLAMA_BUILD_EXAMPLES=OFF -DGGML_NATIVE=OFF -DGGML_AVX2=ON -DGGML_FMA=ON -DGGML_F16C=ON @gpu
+          if ($LASTEXITCODE) { throw "llama.cpp did not configure" }
+          cmake --build llama.cpp/build --config Release -j $env:NUMBER_OF_PROCESSORS --target llama-server llama-mtmd-cli -- /v:minimal
+          if ($LASTEXITCODE) { throw "llama.cpp did not build" }
+          New-Item -ItemType Directory -Force dist | Out-Null
+          foreach ($n in "llama-server.exe", "llama-mtmd-cli.exe") {
+            $f = Get-ChildItem llama.cpp/build -Recurse -Filter $n | Where-Object { $_.FullName -match '\\Release\\' } | Select-Object -First 1
+            if (-not $f) { throw "no $n" }
+            Copy-Item $f.FullName dist
+          }
+      - name: audiocpp_server (audio.cpp at its pin, by its own script)
+        if: ${{ matrix.what == 'narrator' }}
+        shell: pwsh
+        run: |
+          $k = if ("${{ matrix.kind }}" -eq "cuda12") { "cuda" } else { "cpu" }
+          $a = @{ Preset = "windows-$k-release"; Target = "audiocpp_server"; ModelSet = "custom"; Models = "fish_drama3"; CpuArch = "avx2"; DeploymentBuild = $true; Version = "408935b" }
+          if ($k -eq "cuda") { $a.CudaArchitectures = $env:AUDIOCPP_ARCHS }
+          & ./build/audio.cpp/scripts/build_windows.ps1 @a
+          $f = Get-ChildItem "build/audio.cpp/build/windows-$k-release" -Recurse -Filter audiocpp_server.exe | Select-Object -First 1
+          if (-not $f) { throw "no audiocpp_server.exe" }
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Copy-Item $f.FullName dist
+          Get-ChildItem $f.DirectoryName -Filter *.dll | Copy-Item -Destination dist
+      - name: ruach-muscriptor (build/muscriptor, the processor's)
+        if: ${{ matrix.what == 'muscriptor' }}
+        shell: pwsh
+        run: |
+          # RUACH_MSC_NATIVE=OFF: muscriptor.cpp's own portable x86 set, not the runner's processor (build.sh builds for the machine it runs on)
+          cmake -S build/muscriptor -B build-msc -G "Visual Studio 17 2022" -A x64 -DRUACH_MSC_NATIVE=OFF
+          if ($LASTEXITCODE) { throw "build/muscriptor did not configure" }
+          cmake --build build-msc --config Release -j $env:NUMBER_OF_PROCESSORS --target ruach-muscriptor -- /v:minimal
+          if ($LASTEXITCODE) { throw "ruach-muscriptor did not build" }
+          $f = Get-ChildItem build-msc -Recurse -Filter ruach-muscriptor.exe | Where-Object { $_.FullName -match '\\Release\\' } | Select-Object -First 1
+          if (-not $f) { throw "no ruach-muscriptor.exe" }
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Copy-Item $f.FullName dist
+      - name: UTF-8 in every .exe, the CUDA DLLs each loads beside it, the processor's started
+        shell: pwsh
+        run: |
+          $vs = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -property installationPath
+          $dumpbin = (Get-ChildItem "$vs\VC\Tools\MSVC\*\bin\Hostx64\x64\dumpbin.exe" | Select-Object -First 1).FullName
+          $mt = (Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin\10.*\x64\mt.exe" | Sort-Object FullName -Descending | Select-Object -First 1).FullName
+          if (-not $dumpbin -or -not $mt) { throw "no dumpbin.exe or mt.exe on the runner" }
+          $man = (Resolve-Path build\tools\utf8.manifest).Path
+          $now = Join-Path $env:RUNNER_TEMP "now.manifest"
+          function Test-Utf8($x) {
+            Remove-Item $now -ErrorAction SilentlyContinue
+            & $mt -nologo "-inputresource:$x;#1" "-out:$now" 2>&1 | Out-Null
+            (Test-Path $now) -and ((Get-Content $now -Raw) -match 'activeCodePage[^>]*>\s*UTF-8')
+          }
+          foreach ($e in Get-ChildItem dist -Filter *.exe) {
+            $x = $e.FullName
+            if (-not (Test-Utf8 $x)) {
+              & $mt -nologo "-inputresource:$x;#1" -manifest $man "-outputresource:$x;#1"   # merged into the manifest MSVC linked in
+              if ($LASTEXITCODE) { & $mt -nologo -manifest $man "-outputresource:$x;#1" }      # it had none
+            }
+            if (-not (Test-Utf8 $x)) { throw "$($e.Name) carries no activeCodePage UTF-8" }
+            "$($e.Name): activeCodePage UTF-8"
+            if ("${{ matrix.kind }}" -eq "cuda12") {
+              # the toolkit's DLLs it loads (audio.cpp's cuFFT), all but the three engine\cuda brings already
+              foreach ($d in (& $dumpbin /nologo /dependents $x | ForEach-Object { $_.Trim() } | Where-Object { $_ -match '^[\w.-]+\.dll$' })) {
+                $c = Join-Path $env:CUDA_PATH "bin\$d"
+                if ((Test-Path $c) -and $d -notin "cudart64_12.dll", "cublas64_12.dll", "cublasLt64_12.dll") { Copy-Item $c dist -Force; "  + $d" }
+              }
+            } else {
+              $out = & $x --help 2>&1 | Out-String
+              $code = $LASTEXITCODE
+              "  --help: exit $code"
+              if ($code -eq -1073741515 -or $code -eq -1073741701 -or -not $out.Trim()) { throw "$($e.Name) did not start (exit $code)" }
+            }
+          }
+          $global:LASTEXITCODE = 0
+          Get-ChildItem dist | Select-Object Name, Length | Format-Table -AutoSize | Out-String
+          Compress-Archive -Path dist\* -DestinationPath "ruach-engine-windows-x64-${{ matrix.what }}-${{ matrix.kind }}.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ruach-engine-windows-x64-${{ matrix.what }}-${{ matrix.kind }}
+          path: ruach-engine-windows-x64-${{ matrix.what }}-${{ matrix.kind }}.zip
+          retention-days: 14
+
   package-windows:
-    # HERESY 2685: one zip for Windows. The tree as git holds it, without the engine's sources, the visiting card and the WSL guide; the page
+    # HERESY 2685: one zip for Windows. The tree as git holds it, without the engine's sources and the visiting card; the page
     # built above; engine\cuda (CUDA 12.8) and engine\cpu (AVX2) side by side, launcher\start.py picking by nvidia-smi (HERESY 2686). Its one
     # folder is called RuachStudio, short on purpose: Windows' 260-character paths reach into .venv's deepest files
     name: Package · windows-x64 · one zip
-    needs: [cpu, cuda, page]
-    if: ${{ !cancelled() && !contains(needs.*.result, 'failure') }}
+    needs: [cpu, cuda, page, natives]
+    # HERESY 2992: a natives leg that failed does not stop the package (its room then says so on Windows); the engines and the page do
+    if: ${{ !cancelled() && needs.cpu.result != 'failure' && needs.cuda.result != 'failure' && needs.page.result != 'failure' }}
     runs-on: ubuntu-24.04
     outputs:
       file: ${{ steps.pack.outputs.file }}
@@ -273,13 +405,26 @@ jobs:
           S=stage/RuachStudio
           mkdir -p "$S"
           git archive --format=tar HEAD | tar -x -C "$S"
-          rm -rf "$S/build" "$S/site" "$S/.github" "$S/RuachStudio.command" "$S/INSTALL_WINDOWS.md"
+          rm -rf "$S/build" "$S/site" "$S/.github" "$S/RuachStudio.command"
           git archive --format=tar HEAD build/tools/console/pwa | tar -x -C "$S"
           mkdir -p "$S/build/tools/public" "$S/engine/cuda" "$S/engine/cpu"
           cp page/index.html page/manifest.webmanifest "$S/build/tools/public/"
           unzip -q "$(find engines -name ruach-engine-windows-x64-cuda12.zip | head -1)" -d "$S/engine/cuda"
           unzip -q "$(find engines -name ruach-engine-windows-x64-cpu.zip | head -1)" -d "$S/engine/cpu"
           for k in cuda cpu; do test -f "$S/engine/$k/yue-server.exe" || { echo "no engine/$k/yue-server.exe"; exit 1; }; done
+          # HERESY 2992: the natives job's programs beside the engine, each zip into engine\cpu or engine\cuda, never over a file the engine
+          # brought (unzip -n: the same MSVC and CUDA runtime); a leg that did not build is warned here and named in BUILD.txt, and its room says so
+          nat=""
+          for n in llama-cpu:cpu llama-cuda12:cuda narrator-cpu:cpu narrator-cuda12:cuda muscriptor-cpu:cpu; do
+            z=$(find engines -name "ruach-engine-windows-x64-${n%%:*}.zip" | head -1)
+            if [ -n "$z" ]; then unzip -q -n "$z" -d "$S/engine/${n##*:}"; nat="$nat ${n%%:*}"
+            else echo "::warning::no ${n%%:*} natives in this package (that leg did not build): its room says so on Windows"; fi
+          done
+          # HERESY 2989 (Viktor 25.11.2026: «В Windows сборку включи самый стабильный ffmpeg.exe, чтобы не иметь лишней зависимости. И другие тулзы
+          # так же»): the programs the Studio runs beside it, pinned in launcher/win_tools.py: FFmpeg 9.0.2's ffmpeg and ffprobe (Gyan.dev's static
+          # GPL-3.0 release build) and FluidSynth 2.5.7 (LGPL-2.1), each held to its size and SHA-256 and unpacked into runtime\<name> with its
+          # licence and SOURCE.txt (where its source is); lab/winx.runtime_path and RuachStudio.exe put them first on PATH
+          python3 launcher/win_tools.py --into "$S" ffmpeg fluidsynth
           # HERESY 2880: RuachStudio.exe, the launcher (launcher/win, Go): the lab and the engine kept as two services, the page opened, their
           # output in logs\, a tester's report in one zip. Its tests first: both packages' decisions, and the real binary on a made-up
           # native Studio (install, two services, a killed engine started again, Ctrl-C, status, report, a failing engine given up, self-test)
@@ -287,8 +432,8 @@ jobs:
           ( cd launcher/win
             go test ./...
             bash testdata/e2e-native.sh | tail -1
-            go run github.com/tc-hib/go-winres@v0.3.3 simply --arch amd64 --out cmd/ruachstudio/rsrc --icon cmd/ruachstudio/ruach.ico --manifest gui \
-              --product-name "Ruach Studio" --file-description "Ruach Studio launcher" --original-filename RuachStudio.exe --file-version "$fv" --product-version "$fv"
+            # HERESY 2998: the icon, the version and the manifest from cmd/ruachstudio/winres (go-winres's gui one with activeCodePage UTF-8)
+            go run github.com/tc-hib/go-winres@v0.3.3 make --arch amd64 --in cmd/ruachstudio/winres/winres.json --out cmd/ruachstudio/rsrc --file-version "$fv" --product-version "$fv"
             GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -H windowsgui -X main.version=$ver" -o "$GITHUB_WORKSPACE/$S/RuachStudio.exe" ./cmd/ruachstudio )
           rm -rf "$S/launcher/win"
           ls -la "$S/RuachStudio.exe"
@@ -300,6 +445,7 @@ jobs:
           { sed -e "s/@SHA@/$sha/" -e "s/@DATE@/$when/" -e "s|@REF@|$ref|" -e "s/@VER@/$ver/" note.md; awk 'skip && /^>/ {next} skip && /^$/ {skip=0; next} {skip=0; print}' skip=1 README.md; } > "$S/README.md"
           printf 'Ruach Studio %s, the native Windows package (beta)\ncommit   %s (%s)\nbuilt    %s by %s\nengines  %s\n         engine\\cuda: CUDA 12.8, compute 6.1 (Pascal) to 12.0 (Blackwell) · engine\\cpu: x64 with AVX2\n' \
             "$ver" "$(git rev-parse HEAD)" "$ref" "$when" "$run" "$src" > "$S/BUILD.txt"
+          printf 'natives %s\n' "${nat:- none}" >> "$S/BUILD.txt"   # HERESY 2992: the natives job's legs in this package
           (cd stage && zip -q -r "../$file" RuachStudio)
           ls -la "$file"; unzip -l "$file" | tail -1; du -sh "$S" "$S/engine/cuda" "$S/engine/cpu"
           echo "file=$file" >> "$GITHUB_OUTPUT"
@@ -361,6 +507,66 @@ jobs:
           python -I -c "import sys; sys.path.insert(0, sys.argv[1]); import start; c, n = start.engine_bin(True), start.engine_bin(False); print('a card answers:', c); print('no card:       ', n); print('this runner:    nvidia-smi', start.smi(), '· a card answers:', start.card_answers(start.smi())); assert c.parent.name == 'cuda' and c.is_file() and n.parent.name == 'cpu' and n.is_file()" "$R\launcher"
           if ($LASTEXITCODE) { throw "start.py does not pick the package's engines" }
           Get-Content "$R\BUILD.txt"
+      - name: The programs beside the Studio (HERESY 2989) start, have what the Studio asks of them, and take a path with a space and Cyrillic
+        shell: pwsh
+        run: |
+          $R = (Resolve-Path unpacked\RuachStudio).Path
+          $ff, $fp, $fs = "$R\runtime\ffmpeg\ffmpeg.exe", "$R\runtime\ffmpeg\ffprobe.exe", "$R\runtime\fluidsynth\fluidsynth.exe"
+          foreach ($x in $ff, $fp, $fs, "$R\runtime\ffmpeg\LICENSE", "$R\runtime\ffmpeg\SOURCE.txt", "$R\runtime\fluidsynth\LGPL-2.1.txt") { if (-not (Test-Path $x)) { throw "the package has no $x" } }
+          (& $ff -hide_banner -version | Select-Object -First 1)
+          # what the lab passes to it (the tools audit of 25.11.2026): its filters and encoders, each by name
+          $flt = & $ff -hide_banner -filters | Out-String; $enc = & $ff -hide_banner -encoders | Out-String
+          foreach ($n in "rubberband", "loudnorm", "ebur128", "subtitles", "lut3d", "zoompan", "xfade", "afftdn", "deesser", "asendcmd", "aresample", "atempo", "adeclick", "acompressor") {
+            if ($flt -notmatch "\s$n\s") { throw "ffmpeg has no $n filter" } }
+          foreach ($n in "libx264", "libx265", "libopus", "libmp3lame", "flac", "aac", "pcm_s24le", "mjpeg") { if ($enc -notmatch "\s$n\s") { throw "ffmpeg has no $n encoder" } }
+          # a folder with a space and Cyrillic, as a Windows person's songs lie (its letters from their code points: the runner writes this script in its own encoding)
+          $cy = -join ([char[]](0x041F, 0x0440, 0x043E, 0x0431, 0x0430))
+          $d = Join-Path $env:RUNNER_TEMP "$cy Ruach"; New-Item -ItemType Directory -Force $d | Out-Null
+          $f = Join-Path $d "$cy 1.flac"
+          & $ff -v error -y -f lavfi -i "sine=f=440:d=1" -c:a flac $f
+          if ($LASTEXITCODE -or -not (Test-Path -LiteralPath $f)) { throw "ffmpeg did not write $f" }
+          $s = (& $fp -v error -show_entries format=duration -of csv=p=0 $f | Out-String).Trim()
+          "ffprobe: $s s in $f"
+          if ([double]::Parse($s, [Globalization.CultureInfo]::InvariantCulture) -lt 0.9) { throw "ffprobe read $s s from $f" }
+          $v = & $fs --version 2>&1 | Out-String
+          if ($v -notmatch "2\.5\.7") { throw "fluidsynth.exe did not start (exit $LASTEXITCODE): $v" }
+          ($v.Trim() -split "`n" | Select-Object -First 1)
+          # the lab's own way: winx.runtime_path puts runtime\<name> first on PATH, and shutil.which then finds the package's ffmpeg
+          $env:PYTHONUTF8 = "1"
+          python -I -c "import os, shutil, sys; sys.path.insert(0, os.path.join(sys.argv[1], 'lab')); import winx; print('first on PATH:', winx.runtime_path(sys.argv[1])); w = shutil.which('ffmpeg'); print('ffmpeg:', w); assert w and os.path.dirname(w).lower() == os.path.join(sys.argv[1], 'runtime', 'ffmpeg').lower()" $R
+          if ($LASTEXITCODE) { throw "the lab does not find the package's ffmpeg first on PATH" }
+      - name: The natives beside the engine (HERESY 2992) carry UTF-8, find their DLLs, the processor's start, and the lab finds them
+        shell: pwsh
+        run: |
+          $R = (Resolve-Path unpacked\RuachStudio).Path
+          $vs = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -property installationPath
+          $dumpbin = (Get-ChildItem "$vs\VC\Tools\MSVC\*\bin\Hostx64\x64\dumpbin.exe" | Select-Object -First 1).FullName
+          $mt = (Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin\10.*\x64\mt.exe" | Sort-Object FullName -Descending | Select-Object -First 1).FullName
+          $now = Join-Path $env:RUNNER_TEMP "now.manifest"; $bad = @(); $absent = @()
+          foreach ($k in "cpu", "cuda") {
+            foreach ($n in "llama-server", "llama-mtmd-cli", "audiocpp_server", "ruach-muscriptor") {
+              if ($k -eq "cuda" -and $n -eq "ruach-muscriptor") { continue }   # the processor's alone, as on Linux
+              $x = "$R\engine\$k\$n.exe"
+              if (-not (Test-Path $x)) { $absent += "engine\$k\$n.exe"; continue }
+              Remove-Item $now -ErrorAction SilentlyContinue
+              & $mt -nologo "-inputresource:$x;#1" "-out:$now" 2>&1 | Out-Null
+              if (-not (Test-Path $now) -or (Get-Content $now -Raw) -notmatch 'activeCodePage[^>]*>\s*UTF-8') { $bad += "engine\$k\$n.exe carries no activeCodePage UTF-8" }
+              foreach ($d in (& $dumpbin /nologo /dependents $x | ForEach-Object { $_.Trim() } | Where-Object { $_ -match '^[\w.-]+\.dll$' })) {
+                if (-not (Test-Path "$R\engine\$k\$d") -and $d -ine "nvcuda.dll" -and $d -notmatch '^(api|ext)-ms-' -and -not (Test-Path (Join-Path $env:SystemRoot "System32\$d"))) { $bad += "engine\$k\$n.exe needs $d" }
+              }
+              if ($k -eq "cpu") {
+                $out = & $x --help 2>&1 | Out-String; $code = $LASTEXITCODE
+                "engine\$k\$n.exe --help: exit $code"
+                if ($code -eq -1073741515 -or $code -eq -1073741701 -or -not $out.Trim()) { $bad += "engine\$k\$n.exe did not start (exit $code)" }
+              } else { "engine\$k\$n.exe: every DLL here or in Windows (nvcuda.dll the driver's)" }
+            }
+          }
+          $global:LASTEXITCODE = 0
+          if ($absent) { "::warning::not in this package: $($absent -join ', ') (their rooms say so on Windows)" }
+          if ($bad) { throw ($bad -join '; ') }
+          $env:PYTHONUTF8 = "1"
+          python -I -c "import os, sys; r = sys.argv[1]; sys.path.insert(0, os.path.join(r, 'lab')); import winx; got = {n: winx.native_exe(r, n, ('cpu',)) for n in ('llama-server', 'llama-mtmd-cli', 'audiocpp_server', 'ruach-muscriptor')}; print(got); assert all((got[n] is not None) == os.path.isfile(os.path.join(r, 'engine', 'cpu', n + '.exe')) for n in got)" $R
+          if ($LASTEXITCODE) { throw "the lab does not find the package's natives" }
       - name: The lab from the package starts and answers /health
         shell: pwsh
         run: |
@@ -407,6 +613,366 @@ jobs:
           "---- logs\launcher.log"
           Get-Content "$R\logs\launcher.log" -Tail 20
           if ($p.ExitCode) { throw "the launcher's self-test failed (exit $($p.ExitCode))" }
+      - name: From a folder with spaces and Cyrillic, without PYTHONUTF8, the lab answers, its routes hold and a job runs (HERESY 2998)
+        # HERESY 2998 (Viktor 25.11.2026: «Эра KOI-866 и cp1251 канула в лета. Веди всё в Виндоуз сборке легитимным UTF-8»): the package moved
+        # into a folder as a Windows person's lies (…\Ruach Studio Тест\Тестер Иванов\RuachStudio) with a take under a Cyrillic name; the lab
+        # started by hand with no PYTHONUTF8: this runner's code page is cp1252, which holds no Cyrillic, so every text file and pipe of the lab
+        # must name UTF-8 to pass, and its children get UTF-8 mode from winx.utf8_env; its GET routes swept again, the inspect job (inspect_job.py,
+        # ffmpeg's ebur128 from runtime\ffmpeg) run on the take through the lab, no Unicode error in its log; every .exe of ours carries
+        # activeCodePage UTF-8 (RuachStudio.exe's from cmd/ruachstudio/winres, the engine's from build/tools/utf8.manifest)
+        shell: pwsh
+        run: |
+          $mt = (Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin\10.*\x64\mt.exe" | Sort-Object FullName -Descending | Select-Object -First 1).FullName
+          # the letters from their code points: the runner reads this script in its own encoding
+          $test = -join ([char[]](0x0422, 0x0435, 0x0441, 0x0442))
+          $who = -join ([char[]](0x0422, 0x0435, 0x0441, 0x0442, 0x0435, 0x0440, 0x0020, 0x0418, 0x0432, 0x0430, 0x043D, 0x043E, 0x0432))
+          $song = -join ([char[]](0x041C, 0x043E, 0x0439, 0x0020, 0x0442, 0x0440, 0x0435, 0x043A, 0x0020, 0x0031))
+          $K = Join-Path $env:RUNNER_TEMP "Ruach Studio $test\$who\RuachStudio"
+          New-Item -ItemType Directory -Force (Split-Path $K) | Out-Null
+          Move-Item (Resolve-Path unpacked\RuachStudio).Path $K
+          "the Studio now in $K"
+          $now = Join-Path $env:RUNNER_TEMP "now2.manifest"; $bad = @()
+          foreach ($x in @(Get-Item -LiteralPath "$K\RuachStudio.exe") + @(Get-ChildItem -LiteralPath "$K\engine" -Recurse -Filter *.exe)) {
+            Remove-Item $now -ErrorAction SilentlyContinue
+            & $mt -nologo "-inputresource:$($x.FullName);#1" "-out:$now" 2>&1 | Out-Null
+            if (-not (Test-Path $now) -or (Get-Content $now -Raw) -notmatch 'activeCodePage[^>]*>\s*UTF-8') { $bad += $x.FullName.Substring($K.Length + 1) }
+          }
+          $global:LASTEXITCODE = 0
+          if ($bad) { throw "no activeCodePage UTF-8 in: $($bad -join ', ')" }
+          "every .exe of ours in UTF-8: RuachStudio.exe and engine\"
+          $take = Join-Path $K "outputs\$song"
+          New-Item -ItemType Directory -Force $take | Out-Null
+          [IO.File]::WriteAllText((Join-Path $take "request.json"), "{`"lyrics`": `"$song`"}", [Text.UTF8Encoding]::new($false))
+          & "$K\runtime\ffmpeg\ffmpeg.exe" -v error -y -f lavfi -i "sine=f=440:d=4" -c:a flac (Join-Path $take "audio.flac")
+          if ($LASTEXITCODE) { throw "ffmpeg did not write the take's audio under $take" }
+          Remove-Item Env:PYTHONUTF8 -ErrorAction SilentlyContinue
+          Remove-Item Env:PYTHONIOENCODING -ErrorAction SilentlyContinue
+          $env:LAB_PY = (Get-Command python).Source
+          python -c "import locale, sys; print('this Python without PYTHONUTF8: utf8_mode', sys.flags.utf8_mode, '· open() writes', locale.getpreferredencoding(False))"
+          $p = Start-Process python -ArgumentList "lab\lab.py" -WorkingDirectory $K -PassThru -NoNewWindow -RedirectStandardOutput lab-cy-out.txt -RedirectStandardError lab-cy-err.txt
+          $ok = $false
+          foreach ($i in 1..30) {
+            Start-Sleep 2
+            try { $hr = Invoke-WebRequest http://127.0.0.1:41870/health -UseBasicParsing -TimeoutSec 5; $ok = $true; break } catch { if ($p.HasExited) { break } }
+          }
+          $swept = 0; $got = ""
+          if ($ok) {
+            python "$K\tools\lab-sweep.py" http://127.0.0.1:41870 --out lab-sweep-cyrillic.txt; $swept = $LASTEXITCODE
+            $u = "http://127.0.0.1:41870/inspect?name=" + [uri]::EscapeDataString($song) + "&force=1"
+            foreach ($i in 1..60) {
+              try { $got = (Invoke-WebRequest $u -UseBasicParsing -TimeoutSec 20).Content } catch { $got = "$_" }
+              if ($got -match '"lufs"' -or $got -match '"failed"') { break }
+              $u = "http://127.0.0.1:41870/inspect?name=" + [uri]::EscapeDataString($song)
+              Start-Sleep 2
+            }
+            "inspect: " + $got.Substring(0, [Math]::Min(300, $got.Length))
+          }
+          if (-not $p.HasExited) { Stop-Process -Id $p.Id -Force }
+          "---- the lab's log (last 30 lines)"
+          Get-Content lab-cy-err.txt -Tail 30
+          if (-not $ok) { throw "the lab in $K did not answer without PYTHONUTF8" }
+          if ($swept) { throw "the lab's GET routes in $K without PYTHONUTF8: tools/lab-sweep.py says which failed (above)" }
+          if ($got -notmatch '"lufs"') { throw "the inspect job did not run on the take $take" }
+          if (Select-String -Path lab-cy-out.txt, lab-cy-err.txt -Pattern "UnicodeEncodeError|UnicodeDecodeError" -Quiet) { throw "a Unicode error in the lab's log (above)" }
+
+  soak-windows:
+    # HERESY 3013 (Viktor's law of 21.11.2026: «прежде чем пушить полный тег с релизом… погоняй… виндозную сборку и собери все логи»; 25.11.2026:
+    # the VM cannot take the package over his mobile link): the soak on GitHub's own Windows, every log kept. The package unpacked where a
+    # Windows person's folder lies (C:\Users\runneradmin\Ruach Studio Тест\Тестер Иванов), installed by its own launcher\install.ps1 (the CPU
+    # packages: no card answers here) and marked as RuachStudio.exe marks a whole install, then started by RuachStudio.exe (console, no page):
+    # every GET route of the lab (tools/lab-sweep.py: no 500, no raw WinError), one short song on the processor through /api/v1, then the
+    # light parts one at a time through Engine → Models' own route, each tried and the files it brought deleted again, within the runner's
+    # disk: the transcriber and a 30 s cover, the stems and a 30 s split, Whisper on 30 s, the NAM amps and one render, the upscale on 10 s.
+    # A part that cannot come (its download, the disk) is a warning and stops nothing; an error fails the job: a 500 or a raw WinError, a job
+    # that failed with its part here, a Unicode error in a log. The package itself is made and checked above, whatever this job finds
+    name: Package · windows-x64 · soaked (install, routes, a song, the light parts)
+    needs: [package-windows, check-windows]
+    if: ${{ !cancelled() && needs.package-windows.result == 'success' && inputs.soak != 'false' }}
+    runs-on: windows-2022
+    timeout-minutes: 350
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: ${{ needs.package-windows.outputs.file }}
+          path: pkg
+          skip-decompress: true
+      - name: Unpacked into a folder with spaces and Cyrillic, installed by its own install.ps1, marked as RuachStudio.exe marks it
+        shell: pwsh
+        run: |
+          [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)
+          # the letters from their code points: the runner writes this script in its own encoding
+          $test = -join ([char[]](0x0422, 0x0435, 0x0441, 0x0442))
+          $who = -join ([char[]](0x0422, 0x0435, 0x0441, 0x0442, 0x0435, 0x0440, 0x0020, 0x0418, 0x0432, 0x0430, 0x043D, 0x043E, 0x0432))
+          $Parent = Join-Path $env:USERPROFILE "Ruach Studio $test\$who"
+          $Logs = Join-Path $env:RUNNER_TEMP "soak-logs"
+          New-Item -ItemType Directory -Force $Parent, $Logs | Out-Null
+          $zip = Get-ChildItem pkg -Recurse -Filter *.zip | Select-Object -First 1
+          if (-not $zip) { throw "the package did not come down" }
+          "{0}: {1:N0} MB; {2:N1} GB free on C:" -f $zip.Name, ($zip.Length / 1MB), ((Get-PSDrive C).Free / 1GB)
+          Expand-Archive $zip.FullName -DestinationPath $Parent
+          $Root = Join-Path $Parent "RuachStudio"
+          if (-not (Test-Path -LiteralPath (Join-Path $Root "RuachStudio.exe"))) { throw "no RuachStudio.exe in $Root" }
+          Add-Content -LiteralPath $env:GITHUB_ENV -Encoding utf8 -Value "RUACH_SOAK=$Root"
+          Add-Content -LiteralPath $env:GITHUB_ENV -Encoding utf8 -Value "RUACH_SOAK_LOGS=$Logs"
+          $env:RUACH_SOAK = $Root; $env:RUACH_SOAK_LOGS = $Logs   # GITHUB_ENV reaches the next steps, not this one
+          # the helpers every step below reads (dot-sourced): the answer of a route, the Studio up, a song through /api/v1, a lab job polled
+          @'
+          $ErrorActionPreference = "Stop"
+          [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)
+          $Root = $env:RUACH_SOAK
+          $Logs = $env:RUACH_SOAK_LOGS
+          $Lab = "http://127.0.0.1:41870"
+          $Eng = "http://127.0.0.1:7777"
+          $Py = Join-Path $Root ".venv\Scripts\python.exe"
+          $RawWords = '\[WinError -?\d+\]|\[Errno -?\d+\]|Traceback \(most recent call last\)'
+          function FreeGB { [math]::Round((Get-PSDrive C).Free / 1GB, 1) }
+          function SizeGB([string]$Folder) {
+            $s = (Get-ChildItem -LiteralPath $Folder -Recurse -File -Force -ErrorAction SilentlyContinue | Measure-Object Length -Sum).Sum
+            [math]::Round([double]$s / 1GB, 2)
+          }
+          function Ask([string]$Url, [string]$Method = "GET", $Json = $null, [int]$Secs = 120) {
+            # a 4xx or a 5xx is an answer too (its code and its words); no answer at all is code -1
+            $a = @{ Uri = $Url; Method = $Method; UseBasicParsing = $true; TimeoutSec = $Secs; SkipHttpErrorCheck = $true }
+            if ($null -ne $Json) {
+              $a.Body = [Text.Encoding]::UTF8.GetBytes(($Json | ConvertTo-Json -Depth 8 -Compress))
+              $a.ContentType = "application/json; charset=utf-8"
+            }
+            try { $w = Invoke-WebRequest @a; return [pscustomobject]@{ Code = [int]$w.StatusCode; Text = [string]$w.Content } }
+            catch { return [pscustomobject]@{ Code = -1; Text = [string]$_.Exception.Message } }
+          }
+          function Answers([string]$Url) { return ((Ask $Url -Secs 5).Code -eq 200) }
+          function StudioUp([string]$Tag) {
+            # RuachStudio.exe keeps the lab and the engine as two services; started again when an earlier step's process did not outlive it
+            if ((Answers "$Lab/health") -and (Answers "$Eng/health")) { return }
+            Write-Host "RuachStudio.exe --console --no-open ($Tag)"
+            $exe = Start-Process -FilePath (Join-Path $Root "RuachStudio.exe") -ArgumentList "--console", "--no-open" -WorkingDirectory $Root -PassThru -NoNewWindow -RedirectStandardOutput "$Logs\launcher-out-$Tag.txt" -RedirectStandardError "$Logs\launcher-err-$Tag.txt"
+            $t0 = Get-Date
+            while (((Get-Date) - $t0).TotalMinutes -lt 20) {
+              Start-Sleep 5
+              if ((Answers "$Lab/health") -and (Answers "$Eng/health")) { Write-Host ("the lab and the engine answer after {0:N0} s" -f ((Get-Date) - $t0).TotalSeconds); return }
+              if ($exe.HasExited) { break }
+            }
+            Get-Content "$Logs\launcher-out-$Tag.txt", "$Logs\launcher-err-$Tag.txt" -ErrorAction SilentlyContinue | Write-Host
+            Get-Content -LiteralPath (Join-Path $Root "logs\launcher.log") -Tail 40 -ErrorAction SilentlyContinue | Write-Host
+            throw "RuachStudio.exe did not bring the lab and the engine up ($Tag)"
+          }
+          function Song($Body, [string]$Tag, [int]$Minutes) {
+            $Body | ConvertTo-Json -Depth 8 | Out-File -Encoding utf8 "$Logs\song-$Tag-asked.json"
+            $r = Ask "$Eng/api/v1/songs" "POST" $Body
+            if ($r.Code -lt 200 -or $r.Code -ge 300) { throw "POST /api/v1/songs ($Tag): $($r.Code) $($r.Text)" }
+            $id = ($r.Text | ConvertFrom-Json).job
+            $t0 = Get-Date; $job = $null; $last = ""; $a = $null
+            do {
+              Start-Sleep 10
+              $a = Ask "$Eng/api/v1/jobs/$id"
+              if ($a.Code -eq 200) {
+                $job = $a.Text | ConvertFrom-Json
+                $line = "{0}  {1}" -f $job.status, $job.stage
+                if ($line -ne $last) { Write-Host ("{0,6:N0} s  {1}" -f ((Get-Date) - $t0).TotalSeconds, $line); $last = $line }
+              }
+            } while ((-not $job -or $job.status -notin "done", "failed", "error", "cancelled") -and ((Get-Date) - $t0).TotalMinutes -lt $Minutes)
+            if ($a) { $a.Text | Out-File -Encoding utf8 "$Logs\song-$Tag.json" }
+            if (-not $job -or $job.status -ne "done") { throw "the song ($Tag) did not end done within $Minutes min: $($a.Text)" }
+            Write-Host ("song ({0}): done after {1:N1} min, {2}" -f $Tag, ((Get-Date) - $t0).TotalMinutes, ($job.takes -join ", "))
+            return $job
+          }
+          function Poll202([string]$First, [string]$Then, [string]$Tag, [int]$Minutes) {
+            # a lab route that answers 202 while its job runs, then 200 with its result or 500 with its failure
+            $t0 = Get-Date; $a = Ask $First
+            while ($a.Code -eq 202 -and ((Get-Date) - $t0).TotalMinutes -lt $Minutes) { Start-Sleep 10; $a = Ask $Then }
+            $a.Text | Out-File -Encoding utf8 "$Logs\$Tag.json"
+            Write-Host ("{0}: {1} after {2:N0} s" -f $Tag, $a.Code, ((Get-Date) - $t0).TotalSeconds)
+            return $a
+          }
+          function LabJob([string]$Prefix, [int]$Minutes) {
+            # a lab job by its key in /health (the upscale answers 202 at once and runs on)
+            $t0 = Get-Date; $state = ""
+            while (((Get-Date) - $t0).TotalMinutes -lt $Minutes) {
+              Start-Sleep 10
+              $h = Ask "$Lab/health"
+              if ($h.Code -ne 200) { continue }
+              $hit = ($h.Text | ConvertFrom-Json).jobs.PSObject.Properties | Where-Object { $_.Name -like "$Prefix*" } | Select-Object -First 1
+              if ($hit) { $state = [string]$hit.Value }
+              if ($state -in "done", "failed", "error", "cancelled") { break }
+            }
+            Write-Host ("{0}: {1} after {2:N0} s" -f $Prefix, $state, ((Get-Date) - $t0).TotalSeconds)
+            return $state
+          }
+          function ModelFiles {
+            $set = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+            foreach ($d in "models", "hf_cache") {
+              Get-ChildItem -LiteralPath (Join-Path $Root $d) -Recurse -File -Force -ErrorAction SilentlyContinue | ForEach-Object { [void]$set.Add($_.FullName) }
+            }
+            return , $set
+          }
+          '@ | Out-File -Encoding utf8 (Join-Path $env:RUNNER_TEMP "soak.ps1")
+          $t0 = Get-Date
+          # as RuachStudio.exe runs it at the first start (powershell -ExecutionPolicy Bypass), here with its output kept
+          & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $Root "launcher\install.ps1") -Yes 2>&1 | Tee-Object -FilePath "$Logs\install.txt"
+          $code = $LASTEXITCODE
+          "install.ps1: exit {0} after {1:N0} min; {2:N1} GB free on C:" -f $code, ((Get-Date) - $t0).TotalMinutes, ((Get-PSDrive C).Free / 1GB)
+          if ($code) { throw "the Studio's install stopped (exit $code): install.txt among the logs says why" }
+          # RuachStudio.exe's own mark of an install that ended whole, for this version (native.go, InstallDone), as it writes it after install.ps1
+          $ver = (Get-Content -LiteralPath (Join-Path $Root "VERSION") -Raw).Trim()
+          [IO.File]::WriteAllText((Join-Path $Root ".venv\ruach-install-done"), "$ver`n" + (Get-Date).ToString("o") + "`n", [Text.UTF8Encoding]::new($false))
+          Remove-Item -Recurse -Force -LiteralPath (Join-Path $Root "tmp\uv-cache") -ErrorAction SilentlyContinue   # the packages' download cache: the parts need the room
+          . (Join-Path $env:RUNNER_TEMP "soak.ps1")
+          "models {0} GB, .venv {1} GB, {2} GB free on C:" -f (SizeGB (Join-Path $Root "models")), (SizeGB (Join-Path $Root ".venv")), (FreeGB)
+          $global:LASTEXITCODE = 0
+      - name: RuachStudio.exe brings the lab and the engine up; every GET route of the lab (no 500, no raw WinError)
+        shell: pwsh
+        run: |
+          . (Join-Path $env:RUNNER_TEMP "soak.ps1")
+          StudioUp "start"
+          & $Py (Join-Path $Root "tools\lab-sweep.py") $Lab --out "$Logs\lab-sweep.txt"
+          $swept = $LASTEXITCODE
+          $global:LASTEXITCODE = 0
+          if ($swept) { throw "the lab's GET routes: tools/lab-sweep.py says which failed (above)" }
+      - name: One short song on the processor through /api/v1
+        shell: pwsh
+        run: |
+          . (Join-Path $env:RUNNER_TEMP "soak.ps1")
+          StudioUp "song"
+          $job = Song @{ title = "CI soak"; style = "folk ballad, warm male voice, acoustic guitar, 80 bpm"; mode = "direct"; duration = 30; workspace = "CI soak";
+                         lyrics = "[Verse]`nSnow is falling on the field`nQuiet breathing of the land`n`n[Chorus]`nWind of heaven, living breath`nSing with me, sing with me" } "song" 100
+          $take = [string]@($job.takes)[0]
+          if (-not $take) { throw "the song ended done with no take: $($job | ConvertTo-Json -Depth 6 -Compress)" }
+          $dir = Join-Path $Root "outputs\$take"
+          $audio = Get-ChildItem -LiteralPath $dir -File | Where-Object { $_.Name -match '^audio\.(wav|flac|mp3)$' } | Select-Object -First 1
+          if (-not $audio) { throw "the take $take has no audio in $dir" }
+          "the take: $take, $($audio.Name) {0:N0} KB" -f ($audio.Length / 1KB)
+          Add-Content -LiteralPath $env:GITHUB_ENV -Encoding utf8 -Value "RUACH_SOAK_TAKE=$take"
+          # a take of 10 s cut from it, for the upscale
+          $short = Join-Path $Root "outputs\ci-soak-10s"
+          New-Item -ItemType Directory -Force $short | Out-Null
+          Copy-Item -LiteralPath (Join-Path $dir "request.json") -Destination (Join-Path $short "request.json")
+          & (Join-Path $Root "runtime\ffmpeg\ffmpeg.exe") -v error -y -i $audio.FullName -t 10 -c:a pcm_s24le (Join-Path $short "audio.wav")
+          if ($LASTEXITCODE) { throw "ffmpeg did not cut the 10 s take" }
+      - name: The light parts one at a time, each fetched by Engine → Models' route, tried, and its files deleted again
+        shell: pwsh
+        run: |
+          . (Join-Path $env:RUNNER_TEMP "soak.ps1")
+          StudioUp "parts"
+          $take = $env:RUACH_SOAK_TAKE
+          $dir = Join-Path $Root "outputs\$take"
+          $audio = (Get-ChildItem -LiteralPath $dir -File | Where-Object { $_.Name -match '^audio\.(wav|flac|mp3)$' } | Select-Object -First 1).FullName
+          $style = "folk ballad, warm male voice, acoustic guitar, 80 bpm"
+          $bad = @(); $warned = @()
+          # each part: its size from lab/weights.py's PARTS (GB), what tries it
+          foreach ($part in @(@("transcriber", 3.0), @("stems", 1.0), @("whisper", 3.1), @("nam", 0.01), @("upscale", 0.4))) {
+            $name, $need = $part
+            "==== $name ({0} GB free on C:)" -f (FreeGB)
+            if ((FreeGB) -lt (2 * $need + 3)) { $warned += "$name skipped: $(FreeGB) GB free on C:, it needs about $need GB"; "::warning::$($warned[-1])"; continue }
+            $before = ModelFiles
+            $f = Ask "$Lab/weights/fetch" "POST" @{ part = $name }
+            $fetch = ""; $words = ""
+            if ($f.Code -ne 202) { $fetch = "failed"; $words = "POST /weights/fetch: $($f.Code) $($f.Text)" }
+            else {
+              $t0 = Get-Date
+              do {
+                Start-Sleep 5
+                $w = Ask "$Lab/weights"
+                $j = if ($w.Code -eq 200) { ($w.Text | ConvertFrom-Json).job } else { $null }
+                $fetch = if ($j) { [string]$j.status } else { "" }
+              } while ($fetch -notin "done", "failed" -and ((Get-Date) - $t0).TotalMinutes -lt 45)
+              if ($j) { $words = ($j.lines | Select-Object -Last 60) -join "`n" }
+              "fetch: $fetch after {0:N0} s" -f ((Get-Date) - $t0).TotalSeconds
+            }
+            $words | Out-File -Encoding utf8 "$Logs\fetch-$name.txt"
+            $why = ""
+            if ($fetch -ne "done") {
+              if ($words -match $RawWords) { $bad += "$name's fetch failed with a raw error (fetch-$name.txt)"; "::error::$($bad[-1])" }
+              else { $warned += "$name did not come ($fetch): fetch-$name.txt says why; not tried"; "::warning::$($warned[-1])" }
+            }
+            else { try {
+              switch ($name) {
+                "transcriber" {
+                  # the cover's way: the recording transcribed into a score, then a 30 s song sung from that score
+                  $r = Invoke-WebRequest -Uri "$Eng/transcribe" -Method Post -Form @{ audio = Get-Item -LiteralPath $audio; transcriber = "sheetsage2"; modes = "1" } -UseBasicParsing -SkipHttpErrorCheck -TimeoutSec 300
+                  $tid = ($r.Content | ConvertFrom-Json).id
+                  if (-not $tid) { $why = "POST /transcribe: $($r.StatusCode) $($r.Content)"; break }
+                  $t0 = Get-Date
+                  do { Start-Sleep 10; $s = Ask "$Eng/job?id=$tid" } while ($s.Text -notmatch '"status"\s*:\s*"(done|failed|error|cancelled)"' -and ((Get-Date) - $t0).TotalMinutes -lt 40)
+                  $res = Ask "$Eng/job?id=$tid&result=1"
+                  $res.Text | Out-File -Encoding utf8 "$Logs\transcribe.json"
+                  $abc = if ($res.Code -eq 200) { ($res.Text | ConvertFrom-Json).abc } else { "" }
+                  if (-not $abc) { $why = "the transcriber wrote no score: $($s.Text)"; break }
+                  "the score: {0} characters" -f $abc.Length
+                  $null = Song @{ title = "CI soak cover"; style = $style; abc = $abc; duration = 30; workspace = "CI soak";
+                                  lyrics = "[Verse]`nSnow is falling on the field`nQuiet breathing of the land" } "cover" 100
+                }
+                "stems" {
+                  $a = Poll202 "$Lab/stems?name=$([uri]::EscapeDataString($take))&mode=four" "$Lab/stems?name=$([uri]::EscapeDataString($take))&mode=four" "stems" 40
+                  $made = @(Get-ChildItem -LiteralPath (Join-Path $dir "derived\stems-four") -File -ErrorAction SilentlyContinue | Where-Object { $_.Extension -in ".flac", ".wav" })
+                  if ($a.Code -ne 200 -or $made.Count -lt 4) { $why = "the split: $($a.Code), $($made.Count) stems: $($a.Text)" }
+                  else { "stems: " + (($made | ForEach-Object { $_.Name }) -join ", ") }
+                }
+                "whisper" {
+                  $q = [uri]::EscapeDataString($take)
+                  $a = Poll202 "$Lab/gloss?name=$q&force=1" "$Lab/gloss?name=$q" "whisper" 40
+                  if ($a.Code -ne 200) { $why = "Whisper against the lyrics: $($a.Code) $($a.Text)" }
+                }
+                "nam" {
+                  $set = Join-Path $dir "derived\stems-four"
+                  if (-not (Test-Path -LiteralPath $set)) {
+                    $set = Join-Path $env:RUNNER_TEMP "nam-set"; New-Item -ItemType Directory -Force $set | Out-Null
+                    & (Join-Path $Root "runtime\ffmpeg\ffmpeg.exe") -v error -y -i $audio -c:a flac (Join-Path $set "other.flac")
+                  }
+                  $out = Join-Path $env:RUNNER_TEMP "nam-out"; New-Item -ItemType Directory -Force $out | Out-Null
+                  $params = Join-Path $env:RUNNER_TEMP "nam-params.json"; [IO.File]::WriteAllText($params, "{}", [Text.UTF8Encoding]::new($false))
+                  & $Py (Join-Path $Root "lab\builtin_steps\ruach\nam.py") $set $out $params 2>&1 | Tee-Object -FilePath "$Logs\nam.txt"
+                  $rc = $LASTEXITCODE; $global:LASTEXITCODE = 0
+                  if ($rc -or -not (Test-Path -LiteralPath (Join-Path $out "nam.flac"))) { $why = "the Amp (NAM) step: exit $rc (nam.txt)" }
+                }
+                "upscale" {
+                  $u = Ask "$Lab/upscale?name=ci-soak-10s&mode=subtle&variants=1"
+                  $u.Text | Out-File -Encoding utf8 "$Logs\upscale-asked.json"
+                  $uid = if ($u.Code -eq 202) { ($u.Text | ConvertFrom-Json).id } else { "" }
+                  if (-not $uid) { $why = "GET /upscale: $($u.Code) $($u.Text)"; break }
+                  $state = LabJob "upscale:ci-soak-10s:$uid" 40
+                  if ($state -ne "done") { $why = "the upscale of 10 s: $state" }
+                }
+              }
+            } catch { $why = "$name's try threw: $($_.Exception.Message)" }
+            if ($why) { $bad += $why; "::error::$why" } else { "$($name): tried, it works" } }
+            # the files this part brought (or a fetch cut short left), deleted again: the next part has the room
+            $after = ModelFiles
+            $gone = 0.0
+            foreach ($p in $after) { if (-not $before.Contains($p)) { $gone += (Get-Item -LiteralPath $p -Force).Length; Remove-Item -LiteralPath $p -Force -ErrorAction SilentlyContinue } }
+            "{0}: {1:N2} GB it brought deleted; {2} GB free on C:" -f $name, ($gone / 1GB), (FreeGB)
+          }
+          $global:LASTEXITCODE = 0
+          # HERESY 2998: no Unicode error in the Studio's own logs, from a folder with spaces and Cyrillic
+          $uni = Select-String -Path (Join-Path $Root "logs\*.log") -Pattern "UnicodeEncodeError|UnicodeDecodeError" -ErrorAction SilentlyContinue
+          if ($uni) { $bad += "a Unicode error in the Studio's logs: $(($uni | Select-Object -First 3 | ForEach-Object { $_.Line.Trim() }) -join ' | ')" }
+          $raw = Select-String -Path (Join-Path $Root "logs\*.log") -Pattern '\[WinError -?\d+\]' -ErrorAction SilentlyContinue
+          foreach ($x in ($raw | Select-Object -First 10)) { "::warning::$($x.Filename): $($x.Line.Trim())" }
+          "warned: $($warned.Count), errors: $($bad.Count)"
+          if ($bad) { throw ($bad -join "; ") }
+      - name: The tester's report and every log
+        if: ${{ always() }}
+        shell: pwsh
+        run: |
+          if (-not $env:RUACH_SOAK -or -not (Test-Path (Join-Path $env:RUNNER_TEMP "soak.ps1"))) { "no Studio unpacked: nothing to collect"; exit 0 }
+          . (Join-Path $env:RUNNER_TEMP "soak.ps1")
+          $ErrorActionPreference = "Continue"
+          $rep = Join-Path $Logs "report"
+          $p = Start-Process -FilePath (Join-Path $Root "RuachStudio.exe") -ArgumentList "--report", "--report-dir", $rep -PassThru -NoNewWindow -RedirectStandardOutput "$Logs\report-out.txt" -RedirectStandardError "$Logs\report-err.txt"
+          if ($p.WaitForExit(180000)) { "the tester's report: exit $($p.ExitCode)" } else { "the tester's report did not end in 3 min"; Stop-Process -Id $p.Id -Force }
+          Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.Path -and $_.Path.StartsWith($Root, [StringComparison]::OrdinalIgnoreCase) } | ForEach-Object { "stopping $($_.ProcessName) ($($_.Id))"; Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue }
+          Start-Sleep 3
+          Copy-Item -Recurse -Force -LiteralPath (Join-Path $Root "logs") -Destination (Join-Path $Logs "studio-logs") -ErrorAction SilentlyContinue
+          Get-ChildItem -LiteralPath (Join-Path $Root "models") -Recurse -File -ErrorAction SilentlyContinue | ForEach-Object { "{0,14:N0}  {1}" -f $_.Length, $_.FullName.Substring($Root.Length + 1) } | Out-File -Encoding utf8 "$Logs\models.txt"
+          "{0} GB free on C:" -f (FreeGB) | Out-File -Encoding utf8 "$Logs\disk.txt"
+          Get-ChildItem -LiteralPath $Logs -Recurse -File | ForEach-Object { "{0,10:N0}  {1}" -f $_.Length, $_.FullName.Substring($Logs.Length + 1) }
+          exit 0
+      - uses: actions/upload-artifact@v4
+        if: ${{ always() }}
+        with:
+          name: ruach-soak-windows-logs
+          path: ${{ runner.temp }}/soak-logs
+          if-no-files-found: warn
+          retention-days: 30
 
   package-macos:
     # HERESY 2687: one zip for a Mac with Apple Silicon: the tree as git holds it, without the engine's sources, the visiting card and the

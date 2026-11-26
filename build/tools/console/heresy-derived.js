@@ -174,13 +174,22 @@
     if (name) delete SECS[name]; else SECS = {};
     Array.prototype.forEach.call(document.querySelectorAll(".dv-player[data-dv-secs]"), function (el) { if (!name || el.dataset.dvSecs === name) loadSections(el); });   // the tree and a node window's Output
   });
+  // HERESY 2997 (Viktor 25.11.2026: «Наша waveform в плеерах не похожа на стерео волну»): a wave's two channels (its peaks' "channels", each as long
+  // as its peaks), the left drawn above the middle and the right below; null for one channel or none known: mirrored as before
+  function twoOf(p) { var c = p && p.channels; return Array.isArray(c) && c.length === 2 && (c[0] || []).length === p.peaks.length && (c[1] || []).length === p.peaks.length ? c : null; }
   function loadPeaks(el) {
     var u = el.dataset.dvPeaks;
     if (!u) return;
-    if (PEAKS[u]) { el._peaks = PEAKS[u].peaks; el._secs = PEAKS[u].seconds; return drawPlayer(el); }
+    if (PEAKS[u]) { el._peaks = PEAKS[u].peaks; el._two = twoOf(PEAKS[u]); el._secs = PEAKS[u].seconds; return drawPlayer(el); }
     fetch(u).then(function (r) { return r.ok ? r.json() : null; }).then(function (p) {
       if (!p || !p.peaks || !p.peaks.length) return;
-      PEAKS[u] = p; el._peaks = p.peaks; el._secs = p.seconds; drawPlayer(el);
+      PEAKS[u] = p; el._peaks = p.peaks; el._two = twoOf(p); el._secs = p.seconds; drawPlayer(el);
+      var take = /^\/library\/peaks\?name=([^&]+)$/.exec(u);   // HERESY 2997: a take's wave with no channels yet: the lab adds them, drawn again
+      if (!el._two && take && window.ruachPeakChannels) window.ruachPeakChannels(decodeURIComponent(take[1]), p).then(function (q) {
+        if (!twoOf(q)) return;
+        PEAKS[u] = q;
+        Array.prototype.forEach.call(document.querySelectorAll(".dv-player"), function (o) { if (o.dataset.dvPeaks === u && o._peaks) { o._two = twoOf(q); drawPlayer(o); } });
+      });
     }).catch(function () { /* no wave: the line stays */ });
   }
   // HERESY 2260 (Viktor 08.11.2026: «ДА, по возможности»): the names on a 38 px wave, larger (10.5 px against 9) in one row, nearly opaque on a
@@ -205,11 +214,12 @@
     if (!p) { ctx.fillStyle = dim; ctx.fillRect(0, base - 0.5, w, 1); ctx.fillStyle = lit; ctx.fillRect(0, base - 1, w * at, 2); return; }
     var max = 0, k;
     for (k = 0; k < p.length; k++) if (p[k] > max) max = p[k];
-    var amp = (base - 1) / (max || 1), bw = w / p.length;
+    var amp = (base - 1) / (max || 1), bw = w / p.length, two = el._two;   // HERESY 2997: the left above the middle, the right below
+    var pan = two && window.ruachPan ? window.ruachPan.of(two, p.length, el) : null;   // HERESY 3011: each stretch tinted by its pan
     for (k = 0; k < p.length; k++) {
-      var x = k * bw, v = Math.max(0.5, p[k] * amp);
-      ctx.fillStyle = (k + 0.5) / p.length <= at ? lit : dim;
-      ctx.fillRect(x, base - v, Math.max(1, bw - 0.5), 2 * v);
+      var x = k * bw, v = Math.max(0.5, (two ? two[0][k] : p[k]) * amp), vd = Math.max(0.5, (two ? two[1][k] : p[k]) * amp), c0 = (k + 0.5) / p.length <= at ? lit : dim;
+      ctx.fillStyle = pan && (pan[k] > 0.02 || pan[k] < -0.02) ? window.ruachPan.mix(ctx, c0, pan[k]) : c0;
+      ctx.fillRect(x, base - v, Math.max(1, bw - 0.5), v + vd);
     }
     if (el._secList && el._secList.length && d && state.hooks.paintSections) state.hooks.paintSections(ctx, el._secList, d, w, h, ROOM_MARKS(el));   // HERESY 2232: the player's painter; 2260: at the room's measure
   }
@@ -961,19 +971,28 @@
       if (!Off) return null;
       return fetch(v.url).then(function (r) { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
         .then(function (buf) { return new Off(1, 1, 44100).decodeAudioData(buf); })
-        .then(function (au) {
-          var ch = au.getChannelData(0), n = 900, step = Math.max(1, Math.floor(ch.length / n)), out = [];
+        .then(function (au) {                          // HERESY 2997: each channel (the left alone before), the louder of the two as the one list
+          var chs = [au.getChannelData(0)].concat(au.numberOfChannels > 1 ? [au.getChannelData(1)] : []), n = 900, step = Math.max(1, Math.floor(chs[0].length / n)), out = [], two = [[], []];
           for (var k = 0; k < n; k++) {
-            var m = 0;
-            for (var j = k * step, e = Math.min(ch.length, j + step); j < e; j += 4) { var x = Math.abs(ch[j]); if (x > m) m = x; }
-            out.push(m);
+            var mm = [0, 0];
+            for (var c = 0; c < chs.length; c++) { var ch = chs[c]; for (var j = k * step, e = Math.min(ch.length, j + step); j < e; j += 4) { var x = Math.abs(ch[j]); if (x > mm[c]) mm[c] = x; } }
+            out.push(Math.max(mm[0], mm[1])); two[0].push(mm[0]); two[1].push(mm[1]);
           }
+          if (chs.length > 1) out.ch = two;
           return out;
         });
     };
     if (!v.take) return Promise.resolve().then(decode);
     return fetch("/library/peaks?name=" + encodeURIComponent(v.take)).then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (p) { return p && p.peaks && p.peaks.length ? p.peaks : decode(); }, decode);
+      .then(function (p) {
+        if (!(p && p.peaks && p.peaks.length)) return decode();
+        var ask = window.ruachPeakChannels ? window.ruachPeakChannels(v.take, p) : Promise.resolve(p);   // HERESY 2997: its channels, the lab's when the file has none
+        return Promise.race([ask, new Promise(function (ok) { setTimeout(function () { ok(p); }, 4000); })]).then(function (q) {
+          var out = p.peaks.slice(), c = q && Array.isArray(q.channels) && q.channels.length === 2 ? q.channels : null;
+          if (c && (c[0] || []).length === out.length && (c[1] || []).length === out.length) out.ch = c;
+          return out;
+        });
+      }, decode);
   }
   function openCompare(title, versions, active) {
     if (!versions || !versions.length) return;
@@ -1046,6 +1065,7 @@
     var RING_TIP = "Ring: after the last version the first comes again (Play on lights with it)";
     var SHUF_TIP = "Shuffle: each version once, by chance, then it stops; with Ring it goes round again (Play on lights with it)";
     var VOL_TIP = "Volume of this window, to 150 %: past 100 % it turns red and is heard once you let go, the peaks over full scale cut flat there as the old Peak clip cut them; a drag from below stops at 100 %, let go and drag again to go past it";   // HERESY 2835
+    // HERESY 2996 (Viktor 25.11.2026: «волна без x2 высоты слишком низкая. Сделай дефолтной нашу 2x высоту, а вместо x2 текущего — ещё раз двойное увеличение по высоте этого нашего текущего двойного»): the wave 164 px by default (2094's ×2), ×2 doubles that to 328 px; off until lit, «1» remembered, so an old default and an old «0» both open at 164
     var TALL_TIP = "The wave twice as tall, for the peaks and the fades; remembered";
     var WIDE_TIP = "Wide: the window up to 2000 px, 20 px from the screen's edges, for a longer wave and ruler; remembered";
     // HERESY 2057 (Viktor 04.11.2026: «убери регулировку скорости воспроизведения. Для того оно и сравнение, чтобы углы не срезать»): every version at its own pace
@@ -1057,7 +1077,8 @@
       '<div class="cmp-head"><button type="button" class="cmp-keep cmp-mode cmp-wide-btn" data-cmp="wide" aria-pressed="' + (cmpGet(CMP_WIDE) === "1") + '" aria-label="Wide" data-tip-head="Wide" data-tip="' + WIDE_TIP + '">' + ico(cmpGet(CMP_WIDE) === "1" ? "minimize" : "maximize") + "</button>" +
       '<div class="cmp-head-t"><div class="cmp-title">Compare · ' + esc(title) + '<span class="cmp-now" translate="no"></span></div>' +   // HERESY 2043: the version playing
       '<div class="row-hint">' + versions.length + " versions · a click (or its number) plays it from the same second · Space plays and pauses · ← → five seconds</div></div>" +
-      '<span class="cmp-head-r"><span class="cmp-head-b"><button type="button" class="cmp-loud cmp-tall mono" data-cmp="tall" aria-pressed="' + (cmpGet(CMP_TALL) !== "0") + '" aria-label="The wave twice as tall" data-tip="' + TALL_TIP + '">' +   // HERESY 2045: beside +dB, its own wave
+      '<canvas class="cmp-live" aria-hidden="true"></canvas>' +   // HERESY 3010: the live spectrum, between the title and ×2 / +dB
+      '<span class="cmp-head-r"><span class="cmp-head-b"><button type="button" class="cmp-loud cmp-tall mono" data-cmp="tall" aria-pressed="' + (cmpGet(CMP_TALL) === "1") + '" aria-label="The wave twice as tall" data-tip="' + TALL_TIP + '">' +   // HERESY 2045: beside +dB, its own wave
       TALL_WAVE + '<span class="loud-t">\u00d72</span></button>' +
       '<button type="button" class="cmp-loud mono" data-cmp="loud" aria-pressed="' + (cmpGet("yue2.oldLoud") === "1") + '" aria-label="As loud as before the cut" data-tip="' + LOUD_TIP + '">' +   // HERESY 2044b: in the head, its wave under it
       LOUD_WAVE + '<span class="loud-t">+dB</span></button></span>' +
@@ -1092,13 +1113,13 @@
       }).join("") + "</ol></div>";
     document.body.appendChild(back);
     var box = back.querySelector(".cmp-box"), wave = box.querySelector(".cmp-wave"), playBtn = box.querySelector(".cmp-play"), dragging = false;
-    box.classList.toggle("is-tall", cmpGet(CMP_TALL) !== "0");
+    box.classList.toggle("is-tall", cmpGet(CMP_TALL) === "1");   // HERESY 2996: off until lit
     // HERESY 2057 (Viktor: «куда подевалась кнопка вывода второго оверлея листовкой сравниваемых треков?»): in Blind the sheet hid with the titles; it stays
     // when every version has the same style and lyrics (it tells nothing apart then), its name masked
     if (hk.sheet) Promise.all(versions.map(function (v) { return v.take ? Promise.resolve(hk.sheet(v.take)).catch(function () { return null; }) : Promise.resolve(null); })).then(function (ds) {
       var key = function (d) { return d ? String(d.style || "") + "\u0000" + String(d.lyrics || "") : null; }, k0 = key(ds[0]);
       box.classList.toggle("sheet-same", k0 !== null && ds.every(function (d) { return key(d) === k0; }));
-    });   // HERESY 2044; 2047: tall unless turned off
+    });   // HERESY 2044; 2047: tall unless turned off (2996: its height the default, ×2 off until lit)
     if (cmpGet("yue2.cmpSpeed")) cmpPut("yue2.cmpSpeed", null);   // HERESY 2057: a speed kept by 2044d let go
     back.classList.toggle("is-wide", cmpGet(CMP_WIDE) === "1");
     // HERESY 1550: each version's loudness, and the louder ones turned down to the quietest while «Equal loudness» is on
@@ -1496,25 +1517,30 @@
           octx.clearRect(0, 0, ow, oh);
         }
         if (SB === "none") SB = null;
+        var two = p.ch && p.ch.length === 2 && p.ch[0].length === p.length && p.ch[1].length === p.length ? p.ch : null;   // HERESY 2997: the left above, the right below
+        var PAN = !SB && two && window.ruachPan ? window.ruachPan.of(two, bars, p) : null;   // HERESY 3011: each stretch tinted by its pan (the bands' colours, lit, take its place)
         for (var x = 0; x < bars; x++) {
-          var k0 = Math.floor(x * p.length / bars), k1 = Math.max(k0 + 1, Math.floor((x + 1) * p.length / bars)), m = 0;
-          for (k = k0; k < k1 && k < p.length; k++) if (p[k] > m) m = p[k];
-          var bh = Math.max(1, Math.min(1, m * lv) / max * (h - 6)), played = (x + 0.5) / bars <= at, col = null;
+          var k0 = Math.floor(x * p.length / bars), k1 = Math.max(k0 + 1, Math.floor((x + 1) * p.length / bars)), m = 0, mu = 0, md = 0;
+          for (k = k0; k < k1 && k < p.length; k++) { if (p[k] > m) m = p[k]; if (two) { if (two[0][k] > mu) mu = two[0][k]; if (two[1][k] > md) md = two[1][k]; } }
+          if (!two) mu = md = m;
+          var hu = Math.max(0.5, Math.min(1, mu * lv) / max * (h - 6) / 2), hd = Math.max(0.5, Math.min(1, md * lv) / max * (h - 6) / 2), played = (x + 0.5) / bars <= at, col = null;
           if (SB) {
             var q0 = Math.floor(x * SB.length / bars), q1 = Math.max(q0 + 1, Math.floor((x + 1) * SB.length / bars)), cl = 0, cm = 0, ch = 0, cn = 0;
             for (var q = q0; q < q1 && q < SB.length; q++) if (SB[q]) { cl += SB[q][0]; cm += SB[q][1]; ch += SB[q][2]; cn++; }
             if (cn) col = "rgb(" + [0, 1, 2].map(function (c) { return Math.round((cl * SPEC_LO[c] + cm * SPEC_MID[c] + ch * SPEC_HI[c]) / cn); }).join(",") + ")";
           }
-          ctx.fillStyle = col || (played ? lit : dim);
+          ctx.fillStyle = col || (PAN && (PAN[x] > 0.02 || PAN[x] < -0.02) ? window.ruachPan.mix(ctx, played ? lit : dim, PAN[x]) : played ? lit : dim);   // HERESY 3011
           ctx.globalAlpha = col && !played ? 0.45 : 1;
-          ctx.fillRect(x * 3, (h - bh) / 2, 2, bh);
+          ctx.fillRect(x * 3, h / 2 - hu, 2, hu + hd);
           ctx.globalAlpha = 1;
-          if (octx && m * lv > 1) {                       // HERESY 2920: past full scale, the part the lift cuts: drawn on, past the lane if it reaches
-            var full = m * lv / max * (h - 6), y0 = (h - full) / 2 + OVER_E, y1 = (h - bh) / 2 + OVER_E, top0 = Math.max(0, y0);
+          if (octx && Math.max(mu, md) * lv > 1) {        // HERESY 2920: past full scale, the part the lift cuts: drawn on, past the lane if it reaches; 2997: each side its channel's
+            var fu = mu * lv / max * (h - 6) / 2, fd = md * lv / max * (h - 6) / 2, y0 = h / 2 - fu + OVER_E, y1 = h / 2 - hu + OVER_E, top0 = Math.max(0, y0);
+            var b1 = h / 2 + hd + OVER_E, b0 = Math.min(h + 2 * OVER_E, h / 2 + fd + OVER_E);
             octx.fillStyle = bad; octx.globalAlpha = played ? 0.95 : 0.6;
-            if (y1 - top0 > 0.5) { octx.fillRect(x * 3, top0, 2, y1 - top0); octx.fillRect(x * 3, h + 2 * OVER_E - y1, 2, y1 - top0); }
+            if (mu * lv > 1 && y1 - top0 > 0.5) octx.fillRect(x * 3, top0, 2, y1 - top0);
+            if (md * lv > 1 && b0 - b1 > 0.5) octx.fillRect(x * 3, b1, 2, b0 - b1);
             octx.globalAlpha = 1;
-            overN++; overMax = Math.max(overMax, Math.max(0, OVER_E - y0));
+            overN++; overMax = Math.max(overMax, Math.max(0, Math.max(fu, fd) - h / 2));
           }
         }
         if (oc) { oc.dataset.over = String(overN); oc.dataset.past = String(Math.round(overMax)); }   // for the checks: bars cut, how far past the lane
@@ -1806,6 +1832,8 @@
       }, 0);
       document.removeEventListener("keydown", key, true);
       window.removeEventListener("resize", drawWave);
+      window.removeEventListener("ruach-marks", onMarks);   // HERESY 3009
+      if (window.HeresyLiveSpec && window.HeresyLiveSpec.mirror) window.HeresyLiveSpec.mirror(null);   // HERESY 3010: the head's copy given back
       clearInterval(tick);
       back.remove();
     }
@@ -2038,6 +2066,13 @@
     wave.addEventListener("pointercancel", function () { dragging = false; if (segDrag) { segDrag = null; drawWave(); } });
     window.addEventListener("resize", drawWave);
     document.addEventListener("keydown", key, true);
+    // HERESY 3009: 🔥 or 💎 liking a take and 👎 taking them off (2902, the cards' own setMark and rate, the same writes) drawn on this window's 👍 👎
+    var onMarks = function (e) { var n = e && e.detail && e.detail.name; if (!n || versions.some(function (v) { return v.take === n; })) paintRates(); };
+    window.addEventListener("ruach-marks", onMarks);
+    // HERESY 3010 (Viktor 25.11.2026: «В сравнителе пустует бОльшая часть верхней части окна… Прикрути дублем живую волну, которая у нас в мини-плеере
+    // играет… шириной в пикселов 800»): the player's live spectrum drawn again in the head, the same frame of the version heard (heresy-livespec.js)
+    var liveCv = box.querySelector(".cmp-live");
+    if (liveCv && window.HeresyLiveSpec && window.HeresyLiveSpec.mirror) window.HeresyLiveSpec.mirror(liveCv); else if (liveCv) liveCv.hidden = true;
     back.addEventListener("mousedown", function (e) { if (e.target === back) close(); });
     box.addEventListener("click", function (e) {
       if (e.target.closest('[data-cmp="loud"]')) {        // HERESY 2037: the player's setting, from here
@@ -2092,7 +2127,7 @@
       if (b && b.dataset.cmp === "sheet") { if (sheet) return sheetClose(); return versions[active].take ? sheetOpen(active) : (window.HeresyToast || say)(tt("This version is a file of a tree: it has no style and lyrics of its own")); }   // HERESY 2043
       if (b && b.dataset.cmp === "blind") { var bl = b.getAttribute("aria-pressed") !== "true"; b.setAttribute("aria-pressed", String(bl)); cmpPut(CMP_BLIND, bl ? "1" : null); return setBlind(bl); }   // 2009: kept
       if (b && (b.dataset.cmp === "playon" || b.dataset.cmp === "ring" || b.dataset.cmp === "shuffle")) return modeFlip(b.dataset.cmp);   // HERESY 2044
-      if (b && b.dataset.cmp === "tall") { var tl = !box.classList.contains("is-tall"); box.classList.toggle("is-tall", tl); cmpPut(CMP_TALL, tl ? null : "0"); /* HERESY 2047: on by default, off remembered */ b.setAttribute("aria-pressed", String(tl)); return requestAnimationFrame(drawWave); }
+      if (b && b.dataset.cmp === "tall") { var tl = !box.classList.contains("is-tall"); box.classList.toggle("is-tall", tl); cmpPut(CMP_TALL, tl ? "1" : null); /* HERESY 2996: off by default (2047's tall height), on remembered */ b.setAttribute("aria-pressed", String(tl)); return requestAnimationFrame(drawWave); }
       if (b && b.dataset.cmp === "wide") { var wd = !back.classList.contains("is-wide"); back.classList.toggle("is-wide", wd); cmpPut(CMP_WIDE, wd ? "1" : null); b.setAttribute("aria-pressed", String(wd)); b.innerHTML = ico(wd ? "minimize" : "maximize"); return requestAnimationFrame(drawWave); }
       if (b && b.dataset.cmp === "spec") { var sp = cmpGet(CMP_SPEC) !== "1"; cmpPut(CMP_SPEC, sp ? "1" : null); b.setAttribute("aria-pressed", String(sp)); if (sp) wantBands(active); return drawWave(); }
       if (b && b.dataset.cmp === "dis") { hideDis = !hideDis; cmpPut(CMP_SHOW, hideDis ? "0" : null); b.setAttribute("aria-pressed", String(!hideDis)); return paintRates(); }

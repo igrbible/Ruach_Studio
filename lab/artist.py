@@ -162,6 +162,10 @@ def outpaint21():
     return hits[0] if hits else None
 
 
+# HERESY 3007: where a missing Qwen painter comes from, in this system's way: fetch-heresy.sh is bash, and Windows has none; Engine → Models and
+# LoRAs → Qwen painters is the same fetch there (launcher/fetch_heresy.py, 2983)
+FETCH_QWEN = "Engine → Models and LoRAs → Qwen painters" if os.name == "nt" else "heresy/fetch-heresy.sh"
+
 def qwen_ready(painter):
     """HERESY 1318: a Qwen painter's files are here."""
     if is21(painter):
@@ -275,7 +279,7 @@ def draw_batch(body):
     if painter not in QWEN:
         raise ValueError("a batch is painted by one of Qwen-Image's brushes")
     if not qwen_ready(painter):
-        raise ValueError(QWEN[painter][0] + " is not on this machine (heresy/fetch-heresy.sh)")
+        raise ValueError(QWEN[painter][0] + " is not on this machine (" + FETCH_QWEN + ")")
     model = ""
     if painter in ("qwen2512-fp8", "qwen21-fp8"):
         model = Path(str(body.get("model") or "")).name
@@ -380,7 +384,7 @@ def draw(body):
     asked = str(body.get("painter") or "").strip().lower()
     painter = asked if asked in QWEN else H["painter"](body.get("painter"))   # HERESY 1318: a Qwen painter by its own name
     if painter in QWEN and not qwen_ready(painter):
-        raise ValueError(QWEN[painter][0] + " is not on this machine: its files go into " + paths.ARTIST + "/" + ("Qwen-Image-2.1" if is21(painter) else "Qwen-Image-2512") + "/" + ("checkpoints/" if painter == "qwen21-fp8" else "") + " (heresy/fetch-heresy.sh)")
+        raise ValueError(QWEN[painter][0] + " is not on this machine: its files go into " + paths.ARTIST + "/" + ("Qwen-Image-2.1" if is21(painter) else "Qwen-Image-2512") + "/" + ("checkpoints/" if painter == "qwen21-fp8" else "") + " (" + FETCH_QWEN + ")")
     model = ""
     if painter == "qwen2512-fp8":                       # HERESY 1318: which fine-tune
         model = Path(str(body.get("model") or "")).name
@@ -515,7 +519,7 @@ def draw_grid(body):
     if painter not in artist_recipes.PAINTERS:
         raise ValueError("the grid paints with Qwen-Image 2512: choose one of its brushes")
     if not qwen_ready(painter):
-        raise ValueError(QWEN[painter][0] + " is not on this machine (heresy/fetch-heresy.sh)")
+        raise ValueError(QWEN[painter][0] + " is not on this machine (" + FETCH_QWEN + ")")
     model = ""
     if painter == "qwen2512-fp8":
         model = Path(str(body.get("model") or "")).name
@@ -975,7 +979,7 @@ def _part(d, run, job, gpu, only, lock, lives, out):
         if only:
             env["ART_ONLY"] = ",".join(str(n) for n in only)
         p = subprocess.Popen([str(H["py"]), str(HERE / "artist_job.py"), str(d)], env=env, text=True,
-                             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding="utf-8", errors="replace")
         with lock:
             job.setdefault("procs", []).append(p)    # HERESY 1270, 1354: for Stop, every card's painter
             job["proc"] = p
@@ -1082,7 +1086,7 @@ class Served:
         self.gpu, self.painter, self.idle, self.busy, self.ok = gpu, "", None, True, True
         self.rows, self.errs, self.seen = queue.Queue(), collections.deque(maxlen=40), {"t": time.time(), "painting": False}
         self.p = subprocess.Popen([str(H["py"]), str(HERE / "artist_job.py")], env=env, text=True, bufsize=1,
-                                  stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                                  stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding="utf-8", errors="replace")
         threading.Thread(target=self._out, daemon=True).start()
         threading.Thread(target=self._err, daemon=True).start()
 
@@ -1276,7 +1280,7 @@ def _kept_held(run):
         return {}
     try:
         a = subprocess.run(["nvidia-smi", "--query-compute-apps=pid,used_memory", "--format=csv,noheader,nounits"],
-                           capture_output=True, text=True, timeout=20)
+                           capture_output=True, text=True, timeout=20, encoding="utf-8", errors="replace")
     except (OSError, subprocess.SubprocessError):
         return {}
     mb = {}

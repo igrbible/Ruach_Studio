@@ -418,9 +418,9 @@ try:
 
     # ── the lock on the class: nothing of it comes back unseen ────────────────────────────────────────────────────────────────────────
     PROC_OK = {"winx.py", "sys_live.py", "perf.py", "survivors.py", "training.py", "artist.py", "reader.py", "audio_io.py", "writer_llm.py",
-               "places.py", "gpu_live.py", "gpu_roles.py"}
+               "gpu_live.py", "gpu_roles.py"}
     # each a read of /proc that runs on Linux alone: behind winx.PROC, systemd's unit (survivors, the Trainer's runs), the Arc's sysfs
-    # (gpu_live, writer_llm), sys.platform (audio_io) or a try that says «not WSL» (places)
+    # (gpu_live, writer_llm) or sys.platform (audio_io)
     bad = []
     import ast
     for f in sorted(LAB.rglob("*.py")):

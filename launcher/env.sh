@@ -1,8 +1,8 @@
-# Ruach Studio under Pinokio (HERESY 1259): the toolchain that install.sh, update.sh, studio.sh and extras.sh share; sourced,
+# The launcher's scripts (HERESY 1259): the toolchain that install.sh, update.sh and extras.sh share; sourced,
 # never run. Nothing here installs anything except ruach_tools (cmake and ninja into .venv, when the machine has none fit).
 #
 # The CUDA toolkit 12.8: /usr/local/cuda-12.8 when it is there (the way the Studio is made and tested), else the one
-# Pinokio's AI bundle brings (its CUDA_HOME), else an nvcc 12.8 on the PATH. build.sh and start.sh take it as
+# CUDA_HOME names (a conda prefix, for one), else an nvcc 12.8 on the PATH. build.sh and start.sh take it as
 # RUACH_CUDA_HOME. With the machine's toolkit the machine's gcc builds too, when CUDA 12.8 takes it (11 to 14).
 
 RUACH_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -23,7 +23,7 @@ ruach_cuda() {
 if [ -z "${RUACH_CUDA_HOME:-}" ] || [ ! -x "$RUACH_CUDA_HOME/bin/nvcc" ]; then RUACH_CUDA_HOME="$(ruach_cuda || true)"; fi
 export RUACH_CUDA_HOME
 if [ -n "$RUACH_CUDA_HOME" ] && [ "$RUACH_CUDA_HOME" != /usr/local/cuda-12.8 ]; then
-    # a conda prefix (Pinokio's): its cudart, cublas and nccl are not in lib64, where start.sh looks, and the engine's RUNPATH names
+    # a conda prefix: its cudart, cublas and nccl are not in lib64, where start.sh looks, and the engine's RUNPATH names
     # only its own build folder (measured 09.10.2026): the folders that hold them go first on the library path
     for ruach_lib in "$RUACH_CUDA_HOME/lib" "$RUACH_CUDA_HOME/targets/x86_64-linux/lib"; do   # each is put in front: CUDA's own targets/ ends first
         if [ -e "$ruach_lib/libcudart.so.12" ] || [ -e "$ruach_lib/libnccl.so.2" ]; then

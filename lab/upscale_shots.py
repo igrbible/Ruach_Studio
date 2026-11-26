@@ -76,7 +76,7 @@ def _root(kit):
 def _frames(p):
     try:
         out = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-count_packets", "-show_entries", "stream=nb_read_packets",
-                              "-of", "csv=p=0", str(p)], capture_output=True, text=True, timeout=60).stdout.strip()
+                              "-of", "csv=p=0", str(p)], capture_output=True, text=True, timeout=60, encoding="utf-8", errors="replace").stdout.strip()
         return int(out or 0)
     except (OSError, ValueError, subprocess.SubprocessError):
         return 0

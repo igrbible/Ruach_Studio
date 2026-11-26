@@ -48,4 +48,4 @@ for s in segments:
     segs.append(seg)
 json.dump({"segments": segs, "language": info.language, "duration": round(info.duration, 2),
            "load_s": round(t1 - t0, 1), "listen_s": round(time.time() - t1, 1)},
-          open(out, "w"), ensure_ascii=False)
+          open(out, "w", encoding="utf-8"), ensure_ascii=False)

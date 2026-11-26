@@ -99,7 +99,7 @@ def arrange(src, spans, out):
 
 def rubberband_here():
     try:
-        p = subprocess.run(["ffmpeg", "-hide_banner", "-filters"], capture_output=True, text=True, timeout=20)
+        p = subprocess.run(["ffmpeg", "-hide_banner", "-filters"], capture_output=True, text=True, timeout=20, encoding="utf-8", errors="replace")
         return " rubberband " in p.stdout
     except (OSError, subprocess.SubprocessError):
         return False
@@ -116,7 +116,7 @@ def stretch(src, factor, out):
     by = "rubberband" if rubberband_here() else "atempo"
     af = f"rubberband=tempo={f:.6f}:pitchq=quality:transients=smooth" if by == "rubberband" else f"atempo={f:.6f}"
     p = subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(src), "-af", af, "-c:a", codec, "-ar", str(info.samplerate), str(out)],
-                       capture_output=True, text=True, timeout=1800)
+                       capture_output=True, text=True, timeout=1800, encoding="utf-8", errors="replace")
     if p.returncode != 0:
         raise RuntimeError("ffmpeg could not stretch it: " + (p.stderr.strip().splitlines() or ["?"])[-1][-300:])
     return {"seconds": sf.info(str(out)).frames / info.samplerate, "by": by}

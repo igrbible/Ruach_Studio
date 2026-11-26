@@ -37,6 +37,14 @@ TITLES = {"vocals": "Vocals", "instrumental": "Instrumental", "drums": "Drums", 
 import soundfile as sf
 from audio_separator.separator import Separator
 
+# HERESY 2984 (a tester's Windows, 24.11.2026: the stems' models fetched, the split itself refused): with no ffmpeg on this machine (the
+# Windows build carries none) audio-separator will not start, though only its default writer, pydub, needs it. Then soundfile writes
+# its work files, as WAV (any of the take's sample formats), and keep() writes the stems as always. With ffmpeg here nothing changes.
+NO_FFMPEG = shutil.which("ffmpeg") is None
+if NO_FFMPEG:
+    Separator.check_ffmpeg_installed = lambda self: None
+WRITER = {"output_format": "WAV", "use_soundfile": True} if NO_FFMPEG else {"output_format": "FLAC"}
+
 t0 = time.time()
 outdir.mkdir(parents=True, exist_ok=True)
 work = outdir / ".work"
@@ -53,8 +61,7 @@ OVERLAP = int(os.environ.get("LAB_SPLIT_OVERLAP") or 0)
 
 def run(model_dir, model, source, sr=None):        # HERESY 1463: sr, a model's own rate (UVR's VR models: 44.1 kHz)
     more = {"mdxc_params": {"segment_size": 256, "override_model_segment_size": False, "batch_size": None, "overlap": OVERLAP, "pitch_shift": 0}} if OVERLAP else {}
-    sep = Separator(model_file_dir=model_dir, output_dir=str(work), output_format="FLAC",
-                    sample_rate=sr or rate, log_level=30, **more)
+    sep = Separator(model_file_dir=model_dir, output_dir=str(work), sample_rate=sr or rate, log_level=30, **WRITER, **more)
     sep.load_model(model_filename=model)
     return [Path(work / Path(f).name) if not Path(f).is_absolute() else Path(f) for f in sep.separate(str(source))]
 

@@ -1,7 +1,6 @@
 #!/bin/bash
-# Ruach Studio under Pinokio (HERESY 1259): an update to the newest release on the branch (main): the code, the Python packages,
-# the page and the engine (when its C++ changed), the models a new release pins. The Studio stopped first (Pinokio's menu offers
-# Update only then). From a terminal: bash launcher/update.sh
+# The launcher (HERESY 1259): an update to the newest release on the branch (main): the code, the Python packages,
+# the page and the engine (when its C++ changed), the models a new release pins. The Studio stopped first. From a terminal: bash launcher/update.sh
 set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
@@ -30,8 +29,6 @@ else
 fi
 echo "  $before → $(cat VERSION 2>/dev/null)"
 [ -n "${RUACH_UPDATE_CODE_ONLY:-}" ] && { echo "${G}the code only (RUACH_UPDATE_CODE_ONLY).${X}"; exit 0; }
-# HERESY 1352: from here to its last step the update is unfinished, and Pinokio's menu offers to finish it
-mkdir -p tmp && echo "an update to $(cat VERSION 2>/dev/null) began $(date '+%F %T') and has not ended" > tmp/update-unfinished
 
 . "$ROOT/launcher/env.sh"
 step "② the Python packages"
@@ -46,7 +43,6 @@ step "④ the models this release pins"
 .venv/bin/python lab/migrate_models.py --auto 2>/dev/null || python3 lab/migrate_models.py --auto || true
 bash fetch-models.sh --update; r=$?
 [ $r = 0 ] || [ $r = 5 ] || stop "a download did not complete (fetch-models.sh says which above): Update again goes on from there"
-rm -f tmp/update-unfinished
 # HERESY 1567: an older version's weights of models the Studio no longer reads (SDXL since 1405, Krea 2 since 1428, the sliders since
 # 1449) stay where it put them: said with their size and how to free the space, never removed here
 old=()
@@ -59,4 +55,4 @@ if [ ${#old[@]} -gt 0 ]; then
   echo "  nothing reads them now; to free the space: rm -rf ${old[*]}"
 fi
 echo
-echo "${G}Updated to $(cat VERSION 2>/dev/null).${X} Start it from Pinokio's menu."
+echo "${G}Updated to $(cat VERSION 2>/dev/null).${X} Start it again: systemctl --user restart heresy-lab ruach-studio, or ./lab/start-lab.sh, then ./start.sh."

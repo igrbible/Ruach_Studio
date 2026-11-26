@@ -114,7 +114,7 @@ def studio_now():
     try:
         if shutil.which("systemctl"):
             pid = subprocess.run(["systemctl", "--user", "show", "-p", "MainPID", "--value", "ruach-studio"],
-                                 capture_output=True, text=True, timeout=10).stdout.strip()
+                                 capture_output=True, text=True, timeout=10, encoding="utf-8", errors="replace").stdout.strip()
         else:                                          # HERESY 2934: no systemd (RuachStudio.exe on Windows, macOS): the engine is who listens on its port
             pid = str(winx.listener_pid(int(os.environ.get("YUE2CPP_PORT") or 7777)) or "")
         if not pid or pid == "0":

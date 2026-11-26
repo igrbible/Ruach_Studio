@@ -207,11 +207,6 @@ def save(kit, name, data):
                 plan["hero"].pop("human", None)
             else:
                 plan["hero"]["human"] = bool(data["hero_human"])
-        if "hero_last" in data and data["hero_last"] in (True, False):   # HERESY 2361: the hero's picture as the last frame of his shots (H3 FL2VA)
-            if data["hero_last"]:
-                plan["hero"]["last"] = True
-            else:
-                plan["hero"].pop("last", None)
     for k, most in (("clip_title", 200), ("credits", 1000), ("author", 200), ("verse", 200)):   # HERESY 1948: the clip's titles, his to write; 2246
         if k in data:
             plan[k] = str(data.get(k) or "")[:most]
@@ -297,7 +292,9 @@ import shutil
 import subprocess
 
 AW, AH = 1280, 720
-FONTS = ("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf")
+# HERESY 3005: the Studio's own DejaVu Sans (lab/fonts, Bitstream Vera licence), not the system's: Windows and macOS have none, and the cards fell to
+# Pillow's small Latin-only default with Cyrillic as boxes
+FONTS = tuple(str(Path(__file__).resolve().parent / "fonts" / n) for n in ("DejaVuSans.ttf", "DejaVuSans-Bold.ttf"))
 
 
 def _font(bold, size):
@@ -408,7 +405,7 @@ def animatic(kit, name, audio, cover=None, labels=None, job=None):
     p = subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "concat", "-safe", "0", "-i", "list.txt", "-i", str(audio), "-map", "0:v", "-map", "1:a",
                         "-c:v", "libx264", "-tune", "stillimage", "-preset", "veryfast", "-crf", "24", "-r", "25", "-pix_fmt", "yuv420p",
                         "-c:a", "aac", "-b:a", "192k", "-shortest", "-movflags", "+faststart", "out.mp4"],
-                       cwd=str(tmp), capture_output=True, text=True, timeout=1800)
+                       cwd=str(tmp), capture_output=True, text=True, timeout=1800, encoding="utf-8", errors="replace")
     if p.returncode != 0 or not (tmp / "out.mp4").is_file():
         raise RuntimeError("ffmpeg: " + (p.stderr.strip()[-300:] or "no output"))
     (tmp / "out.mp4").replace(out)
@@ -625,7 +622,7 @@ def view_path(clip_file):
 def rate_of(f):
     """The file's mean rate in bits a second, from its size and its length (ffprobe); 0 when it cannot be read."""
     try:
-        p = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(f)], capture_output=True, text=True, timeout=30)
+        p = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(f)], capture_output=True, text=True, timeout=30, encoding="utf-8", errors="replace")
         d = float(p.stdout.strip() or 0)
     except (OSError, ValueError, subprocess.SubprocessError):
         return 0
@@ -653,7 +650,7 @@ def make_view(clip_file, force=False):
     p = subprocess.run(nice + ["ffmpeg", "-v", "error", "-y", "-i", str(clip_file), "-map", "0:v:0", "-map", "0:a:0?", "-vf", scale,
                                "-c:v", "libx264", "-preset", "veryfast", "-crf", "23", "-maxrate", VIEW_MAX, "-bufsize", "6M", "-g", "48",
                                "-pix_fmt", "yuv420p", "-threads", "4", "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart", str(part)],
-                       capture_output=True, text=True, timeout=3600)
+                       capture_output=True, text=True, timeout=3600, encoding="utf-8", errors="replace")
     if p.returncode != 0 or not part.is_file():
         part.unlink(missing_ok=True)
         raise RuntimeError("ffmpeg, the light copy: " + (p.stderr.strip()[-300:] or "no output"))
@@ -830,7 +827,7 @@ def _srt_time(t):
 def _secs(p):
     try:                                              # HERESY 2011 (C12): with a timeout, as 1430 gave every other one
         r = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(p)], capture_output=True, text=True,
-                           timeout=30)
+                           timeout=30, encoding="utf-8", errors="replace")
     except subprocess.TimeoutExpired:
         return None
     try:
@@ -1407,7 +1404,7 @@ def _melt(tmp, parts, lens, melts, xd, nice=(), threads="2", enc=("-preset", "ve
         ins = [a for i in run for a in ("-i", f"{i:04d}.mp4")]
         p = subprocess.run(list(nice) + ["ffmpeg", "-v", "error", "-y", *ins, "-filter_complex", ";".join(graph), "-map", f"[{prev}]",
                                          "-frames:v", str(sum(lens[i] for i in run)), "-c:v", "libx264", *enc,
-                                         "-pix_fmt", "yuv420p", "-threads", threads, name], cwd=str(tmp), capture_output=True, text=True, timeout=1800)
+                                         "-pix_fmt", "yuv420p", "-threads", threads, name], cwd=str(tmp), capture_output=True, text=True, timeout=1800, encoding="utf-8", errors="replace")
         if p.returncode != 0 or not (tmp / name).is_file():
             raise RuntimeError(f"ffmpeg, the dissolve after shot {run[0] + 1}: " + (p.stderr.strip()[-300:] or "no output"))
         out.append(f"file '{name}'")
@@ -1425,7 +1422,7 @@ def _watched(cmd, cwd, job, end, base, timeout=1800):
     """HERESY 2326: ffmpeg's last pass with its progress read as it goes (-progress pipe:1): the job from base to 1 by the seconds it has written of
     end. (return code, its error output)."""
     p = subprocess.Popen(cmd[:cmd.index("ffmpeg") + 1] + ["-progress", "pipe:1", "-nostats"] + cmd[cmd.index("ffmpeg") + 1:], cwd=cwd,
-                         stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                         stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8", errors="replace")
     err = []
     th = threading.Thread(target=lambda: err.extend(p.stderr), daemon=True)
     th.start()
@@ -1570,7 +1567,7 @@ def clip(kit, name, audio, cover=None, job=None, labels=None, rows=None, lyrics=
             vf = ",".join(x for x in (gv, vf) if x)
             vf = ",".join(x for x in (vf, *_edges(shots, i, between, every)) if x).replace("{T}", f"{max(0.0, n / FPS - DIP):.3f}")   # HERESY 1916
             p = subprocess.run(nice + ["ffmpeg", "-v", "error", "-y", "-i", str(vid), "-an", "-vf", vf, "-frames:v", str(m), "-c:v", "libx264", *enc,
-                                        "-threads", threads, part], cwd=str(tmp), capture_output=True, text=True, timeout=1800)
+                                        "-threads", threads, part], cwd=str(tmp), capture_output=True, text=True, timeout=1800, encoding="utf-8", errors="replace")
             if p.returncode != 0 or not (tmp / part).is_file():
                 raise RuntimeError(f"ffmpeg, shot {i + 1}'s video: " + (p.stderr.strip()[-300:] or "no output"))
             parts.append(f"file '{part}'")
@@ -1605,7 +1602,7 @@ def clip(kit, name, audio, cover=None, job=None, labels=None, rows=None, lyrics=
         vf = ",".join(x for x in (_move(move, m, W, H), *_edges(shots, i, between, every)) if x).replace("{T}", f"{max(0.0, n / FPS - DIP):.3f}")   # HERESY 1916
         p = subprocess.run(nice + ["ffmpeg", "-v", "error", "-y", "-framerate", str(FPS), "-i", str(stills[key]), "-vf", vf,
                                    "-frames:v", str(m), "-c:v", "libx264", *enc,  "-threads", threads, part],
-                           cwd=str(tmp), capture_output=True, text=True, timeout=1800)
+                           cwd=str(tmp), capture_output=True, text=True, timeout=1800, encoding="utf-8", errors="replace")
         if p.returncode != 0 or not (tmp / part).is_file():
             raise RuntimeError(f"ffmpeg, shot {i + 1}: " + (p.stderr.strip()[-300:] or "no output"))
         parts.append(f"file '{part}'")
@@ -1619,7 +1616,12 @@ def clip(kit, name, audio, cover=None, job=None, labels=None, rows=None, lyrics=
     sung, heard = lyrics_ass(rows, tmp / "lyrics.ass", end, OW, OH, True, font=f_lyr) if lyrics and words else (lyrics_ass(rows, tmp / "lyrics.ass", end, OW, OH, font=f_lyr) if lyrics else 0, 0)   # HERESY 1916; 1917: in the clip's shape; 2248
     shown = titles_ass(tmp / "titles.ass", end, OW, OH, plan.get("clip_title") or plan.get("title") or "", plan.get("credits") or "",
                        plan.get("author") or "", plan.get("verse") or "", title_style, font=f_tit) if titles else 0   # HERESY 1948; 2246: the template, the author, the verse
-    fd = ":fontsdir=fonts" if fam else ""                # HERESY 2394: libass finds the user's fonts there, the system's as before
+    # HERESY 2394: libass finds the user's fonts there, the system's as before. HERESY 3005: the Studio's own DejaVu Sans laid beside them every
+    # time, so «DejaVu Sans» (STUDIO, the titles' and karaoke's default) is found on a system without it (Windows, macOS)
+    for f in FONTS:
+        (tmp / "fonts").mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(f, tmp / "fonts" / Path(f).name)
+    fd = ":fontsdir=fonts"
     # HERESY 2963: the Narrator's voice ({file, at, seconds, duck, lines}): its words in their own style, over the sung lines
     said = voice_ass(voice.get("lines") or [], tmp / "voice.ass", end, OW, OH, font=f_lyr) if voice else 0
     subs = ",".join(x for x in ("subtitles=lyrics.ass" + fd if sung else "", "subtitles=titles.ass" + fd if shown else "",

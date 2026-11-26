@@ -4,7 +4,7 @@ Issues and pull requests are read and answered, and the roadmap moves with them.
 
 ## Reporting a problem
 
-Open an issue from its template: there is one for each room and a general one. Say what you did, step by step, what you expected and what happened instead, with the words of any message as they were. Add the server log (the log above the player → Copy) or the lab's lines from around the moment, and the Studio's version (☰ → About), how it was installed (Pinokio or by hand), the system, the card and its memory.
+Open an issue from its template: there is one for each room and a general one. Say what you did, step by step, what you expected and what happened instead, with the words of any message as they were. Add the server log (the log above the player → Copy) or the lab's lines from around the moment, and the Studio's version (☰ → About), how it was installed (the Windows or macOS package, the AppImage, or a clone on Linux), the system, the card and its memory.
 
 A security problem: please don't put its details in a public issue. Report it privately instead: the repository's Security tab, Report a vulnerability.
 

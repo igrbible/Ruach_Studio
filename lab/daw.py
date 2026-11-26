@@ -312,7 +312,7 @@ def refs_add(refs_dir, filename, body, title=""):
     part = rd / f".{rid}.part.flac"
     try:
         p = subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(src), "-t", str(REF_MAX_S), "-ac", "2", "-ar", "48000", "-c:a", "flac",
-                            "-sample_fmt", "s32", "-bits_per_raw_sample", "24", str(part)], capture_output=True, text=True, timeout=600)
+                            "-sample_fmt", "s32", "-bits_per_raw_sample", "24", str(part)], capture_output=True, text=True, timeout=600, encoding="utf-8", errors="replace")
         if p.returncode != 0:
             raise ValueError("ffmpeg could not read it: " + ((p.stderr or "").strip().splitlines() or ["?"])[-1][-200:])
         secs = sf.info(str(part)).duration

@@ -22,3 +22,8 @@ licensed under the Apache License, Version 2.0. See LICENSE.
 Third-party code, assets, model weights and adapters retain their own
 copyrights, licenses and notices. The kit's license does not replace them.
 ----------------------------------------------------------------------
+
+The Windows package brings two programs of others beside the Studio (HERESY 2989; launcher/win_tools.py pins each by its SHA-256). The Studio runs them as programs of their own, which links nothing of theirs into it; each keeps its own licence, given in its folder with SOURCE.txt, which says where its source is:
+
+- runtime/ffmpeg: FFmpeg 9.0.2 (ffmpeg.exe, ffprobe.exe), Gyan.dev's release essentials build, under the GNU General Public License, version 3 or later (its LICENSE beside it; its README.txt names the source commit and every library built in). FFmpeg's source: https://ffmpeg.org/releases/ffmpeg-9.0.2.tar.xz.
+- runtime/fluidsynth: FluidSynth 2.5.7 (fluidsynth.exe and its DLLs), its makers' Windows build, under the GNU Lesser General Public License, version 2.1 or later (LGPL-2.1.txt beside it, and in LICENSES/). Its source: https://github.com/FluidSynth/fluidsynth/archive/refs/tags/v2.5.7.tar.gz.

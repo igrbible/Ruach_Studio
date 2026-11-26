@@ -148,10 +148,8 @@ RuachI18n.add("it", {
 "Ends at %": "Fine, %",
 "Curve": "Curva",
 "His AIO #4 second pass: 60 steps from step 20, no Lightning, Detailz 0.6 and Qwen Enhancer 0.7, the extra noise 1.0 (as his QWEN2_00075 was made; the saved graph has 0.6), the colours put back to the picture's; then on a picture Second pass… ×2": "Il suo secondo passaggio di AIO #4: 60 passi dal 20°, senza Lightning, Detailz 0.6 e Qwen Enhancer 0.7, rumore aggiunto 1.0 (così è stato fatto il suo QWEN2_00075; il grafo salvato ha 0.6), i colori riportati a quelli dell'immagine; poi su un'immagine «Secondo passaggio…» ×2",
-// HERESY 2361: the Videographer's final at 1280 × 704, the hero as the last frame
+// HERESY 2361: the Videographer's final at 1280 × 704 (its «Hero as the last frame» removed by 2995)
 "Final · 28 steps, 1280 × 704": "Finale · 28 passi, 1280 × 704",
-"Hero as the last frame": "L'eroe come ultimo fotogramma",
-"Pressed: in the hero's shots MiniMax H3 gets the hero's own picture as the last frame too (FL2VA), so his likeness holds through the motion; such a shot ends on that picture. Not pressed: the shot's picture as its first frame alone": "Premuto: nelle inquadrature dell'eroe MiniMax H3 riceve anche la sua immagine come ultimo fotogramma (FL2VA), così la somiglianza regge nel movimento; un'inquadratura così finisce su quell'immagine. Non premuto: solo l'immagine dell'inquadratura come primo fotogramma",
 // HERESY 2347: a run of before 2.0.7 by its own step log
 "About: its logged steps at its measured speed; the time of its earlier sittings was not recorded (a run of before 2.0.7)": "Circa: i suoi passi registrati alla sua velocità misurata; il tempo delle sessioni precedenti non è stato registrato (una sessione di prima della 2.0.7)",
 // HERESY 2346: the Videographer animatic and clip unread said; the guard on a lab started before it
@@ -3696,7 +3694,7 @@ RuachI18n.add("it", {
 "Restart the engine?": "Riavviare il motore?",
 "It then lists what came; the page reconnects by itself. Nothing may be rendering.": "Poi mostra ciò che è arrivato; la pagina si ricollega da sé. Niente deve essere in rendering.",
 "The engine restarts…": "Il motore si riavvia…",
-"The Studio does not run as a service here (Pinokio, or ./start.sh by hand): stop it and start it again there, and the engine lists what came.": "Qui lo Studio non gira come servizio (Pinokio, o ./start.sh a mano): fermalo e riavvialo lì, e il motore mostra ciò che è arrivato.",
+"The Studio does not run as a service here (its icon, or ./start.sh by hand): stop it and start it again there, and the engine lists what came.": "Qui lo Studio non gira come servizio (la sua icona, o ./start.sh a mano): fermalo e riavvialo lì, e il motore mostra ciò che è arrivato.",
 "Not restarted:": "Non riavviato:",
 "Checkpoints for the extra decoders and the sliders, made into GGUF here": "Checkpoint dei decoder extra e degli slider, trasformati qui in GGUF",
 "LoRAs: the Kit's library and Ruach Studio's own": "LoRA: la libreria del Kit e quelle di Ruach Studio",
@@ -3757,7 +3755,6 @@ RuachI18n.add("it", {
 "Switching the link…": "Cambio il collegamento…",
 "Move {0} to another folder": "Sposta {0} in un'altra cartella",
 "A folder that is there already; {0} goes into it as «{1}». On the same disk it is renamed at once; on another it is copied, checked file by file, then the link is switched, and the old copy stays, renamed, for you to remove after a look.": "Una cartella che c'è già; {0} ci entra come «{1}». Sullo stesso disco si rinomina subito; su un altro si copia, si controlla file per file, poi si cambia il collegamento, e la vecchia copia resta, rinominata, perché tu la tolga dopo un'occhiata.",
-"A Windows path works too: D:\\Music is /mnt/d/Music.": "Va bene anche un percorso Windows: D:\\Music è /mnt/d/Music.",
 "{0} cannot move there": "{0} non può spostarsi lì",
 "The same disk: the folder is renamed there at once, nothing is copied.": "Lo stesso disco: la cartella si rinomina lì subito, niente si copia.",
 "Another disk: {0} copied (free there: {1}), checked file by file, then the link switched. The old copy stays, renamed, until you remove it.": "Un altro disco: si copiano {0} (liberi lì: {1}), si controllano file per file, poi si cambia il collegamento. La vecchia copia resta, rinominata, finché non la togli.",
@@ -3825,7 +3822,6 @@ RuachI18n.add("it", {
 "/ {#0} tracks": { "one": "/ {#0} traccia", "other": "/ {#0} tracce" },
 "track": "traccia",
 "tracks": "tracce",
-"BF16 (7.2 GB) is not on this machine: Pinokio's «More models» fetches it, or heresy/fetch-heresy.sh --backbone BF16; the Studio offers it after its next start.": "BF16 (7.2 GB) non è su questa macchina: lo scarica «More models» di Pinokio, o heresy/fetch-heresy.sh --backbone BF16; lo Studio lo offre dopo il prossimo avvio.",
 "Copy the style": "Copia lo stile",
 "Back into the form": "Di nuovo nel modulo",
 "Back into the form (Esc)": "Di nuovo nel modulo (Esc)",
@@ -5011,9 +5007,8 @@ RuachI18n.add("it", {
 RuachI18n.add("it", {
 "The take would not start: press ▶ again": "Il take non è partito: premi di nuovo ▶"
 });
-// HERESY 1169 · 1362: the updater under Pinokio and without systemd-run
+// HERESY 1169 · 1362: the updater without systemd-run
 RuachI18n.add("it", {
-"this Studio runs under Pinokio: update it there, by Update in Pinokio's menu": "questo Studio gira sotto Pinokio: aggiornalo lì, con Update nel menu di Pinokio",
 "this machine has no systemd-run for the update to run in: update by hand (git fetch --tags, git checkout the release, ./build.sh)": "questa macchina non ha systemd-run in cui far girare l'aggiornamento: aggiorna a mano (git fetch --tags, git checkout della versione, ./build.sh)"
 });
 // HERESY 1169 · 1364: TTA and the pictures picked upscaled in one run
@@ -8456,7 +8451,7 @@ RuachI18n.add("it", {
 "RS-TW 2.0 ×0.75 was not fetched: {0}": "RS-TW 2.0 ×0.75 non è stato scaricato: {0}",
 "RS-TW 2.0 ×0.75 did not come: Engine → Models and LoRAs says why and fetches it again.": "RS-TW 2.0 ×0.75 non è arrivato: «Motore → Modelli e LoRA» dice perché e lo scarica di nuovo.",
 "The engine restarts to list RS-TW 2.0 ×0.75…": "Il motore si riavvia per elencare RS-TW 2.0 ×0.75…",
-"RS-TW 2.0 ×0.75 is here. The Studio does not run as a service here: start it again (Pinokio, or ./start.sh), and the page switches to it at its next start.": "RS-TW 2.0 ×0.75 è qui. Qui lo Studio non gira come servizio: riavvialo (Pinokio, o ./start.sh), e la pagina passa a esso al prossimo avvio.",
+"RS-TW 2.0 ×0.75 is here. The Studio does not run as a service here: start it again (its icon, or ./start.sh), and the page switches to it at its next start.": "RS-TW 2.0 ×0.75 è qui. Qui lo Studio non gira come servizio: riavvialo (la sua icona, o ./start.sh), e la pagina passa a esso al prossimo avvio.",
 "The engine has not listed RS-TW 2.0 ×0.75 yet: the page switches to it at its next start.": "Il motore non elenca ancora RS-TW 2.0 ×0.75: la pagina passa a esso al prossimo avvio.",
 "Not switched: {0}": "Non cambiato: {0}",
 // HERESY 2078b: ⓘ's takes a frozen workspace or the archive holds, after the number
@@ -10300,10 +10295,11 @@ RuachI18n.add("it", {
 "Refined needs SheetSage2-Refined, which this Studio does not have yet.": "Refined richiede SheetSage2-Refined, che questo Studio non ha ancora.",
 "BF16 (7.2 GB) is not in this Studio yet: Engine → Models and LoRAs fetches it under Backbone, and the Studio offers it after its next start.": "BF16 (7.2 GB) non è ancora in questo Studio: «Motore → Modelli e LoRA» lo scarica alla riga «Modello base», e lo Studio lo offre dopo il prossimo avvio.",
 "The server keeps no library: songs made in this tab stay until it reloads.": "Il server non tiene una libreria: le canzoni create in questa scheda restano finché non si ricarica.",
-"This engine keeps no settings file, so it answers this computer and private networks; started the Studio's way (its icon, Pinokio or start.sh), it lets you choose.": "Questo motore non tiene un file di impostazioni, quindi risponde a questo computer e alle reti private; avviato come si avvia lo Studio (la sua icona, Pinokio o start.sh), ti lascia scegliere.",
+"This engine keeps no settings file, so it answers this computer and private networks; started the Studio's way (its icon or start.sh), it lets you choose.": "Questo motore non tiene un file di impostazioni, quindi risponde a questo computer e alle reti private; avviato come si avvia lo Studio (la sua icona o start.sh), ti lascia scegliere.",
 "it needs Whisper large-v3, which this Studio does not have yet: Engine → Models": "richiede Whisper large-v3, che questo Studio non ha ancora: «Motore → Modelli»",
 "The lyrics check and karaoke timing need Whisper large-v3, which this Studio does not have yet.": "La verifica del testo e i tempi del karaoke richiedono Whisper large-v3, che questo Studio non ha ancora.",
 "Whisper large-v3 is not in this Studio yet: Engine → Models and LoRAs fetches it (3.1 GB)": "Whisper large-v3 non è ancora in questo Studio: «Motore → Modelli e LoRA» lo scarica (3.1 GB)",
+"The stems' models are not whole in this Studio yet: Engine → Models and LoRAs fetches them (1.0 GB)": "I modelli degli stem non sono ancora completi in questo Studio: «Motore → Modelli e LoRA» li scarica (1.0 GB)",
 "{0}: not fetched.": "{0}: non scaricato.",
 "The check did not run.": "Il controllo non è partito.",
 "On Windows the Weights panel downloads through the bash of Git for Windows, and none is installed here.": "Su Windows «Modelli e LoRA» scarica tramite la bash di Git for Windows, e qui non è installato.",
@@ -10376,5 +10372,62 @@ RuachI18n.add("it", {
 "The clip's voice is taken off": "La voce del clip è tolta",
 "No take of the Narrator in the library yet: read one in the Narrator first": "In libreria non c'è ancora una take del Lettore: leggine prima una nel Lettore",
 "The Narrator's voice over the clip": "La voce del Lettore sopra il clip",
-"A take of the Narrator's world, by link: it stays home, the clip only names it.": "Una take del mondo del Lettore, per collegamento: resta a casa, il clip la nomina soltanto."
+"A take of the Narrator's world, by link: it stays home, the clip only names it.": "Una take del mondo del Lettore, per collegamento: resta a casa, il clip la nomina soltanto.",
+// HERESY 2987: the Refiner's Amp (NAM), its captures from the Studio's set and from user/nam/
+"Amp (NAM)": "Amplificatore (NAM)",
+"a stem through an amp's capture": "uno stem attraverso la cattura di un amplificatore",
+"A stem of the set played through a NAM capture (Neural Amp Modeler) of an amp, a pedal or a whole rig: the Studio's own set or your .nam files in user/nam/; the drive into it, its output and dry/wet, the result at the stem's loudness and length. A lane of its own in the DAW, or the stem's version.": "Uno stem del set suonato attraverso una cattura NAM (Neural Amp Modeler) di un amplificatore, un pedale o un'intera catena: il set dello Studio o i tuoi file .nam in user/nam/; la spinta in ingresso, la sua uscita e il dry/wet, il risultato al volume e alla durata dello stem. Una traccia a sé nel DAW, o la versione dello stem.",
+"Which stem goes through the amp; a set without it gives the first it has of guitar, other, bass, instrumental (a bass capture: bass, other)": "Quale stem passa per l'amplificatore; un set senza dà il primo che ha tra guitar, other, bass, instrumental (una cattura di basso: bass, other)",
+"Capture": "Cattura",
+"The capture the stem plays through: the Studio's set by its kind, then yours from user/nam/, read anew each time the step opens": "La cattura attraverso cui suona lo stem: il set dello Studio per tipo, poi le tue da user/nam/, rilette ogni volta che il passo si apre",
+"How hard the stem hits the capture: above zero it breaks up more, below zero it stays cleaner": "Quanto forte lo stem colpisce la cattura: sopra lo zero si rompe di più, sotto lo zero resta più pulito",
+"Output, dB": "Uscita, dB",
+"The result's level against the stem's own loudness, at any dry/wet: 0 dB keeps the stem's place in the mix": "Il livello del risultato rispetto al volume dello stem stesso, a qualsiasi dry/wet: 0 dB tiene lo stem al suo posto nel mix",
+"Dry/wet, %": "Dry/wet, %",
+"How much of the amp: 100 is the amp alone, 0 the stem as it was; between them an equal-power blend, brought back to the stem's loudness": "Quanto amplificatore: 100 è solo l'amplificatore, 0 lo stem com'era; in mezzo una miscela a potenza costante, riportata al volume dello stem",
+"Vocals": "Voci",
+"Guitar amps": "Amplificatori per chitarra",
+"Bass amps": "Amplificatori per basso",
+"Pedals": "Pedali",
+"Full rigs": "Catene intere",
+"Outboard": "Apparecchi da studio",
+"Other captures": "Altre catture",
+"Yours, from user/nam/": "Tue, da user/nam/",
+"No NAM capture here yet: put .nam files in user/nam/ (any folder under it) and open the step again": "Ancora nessuna cattura NAM qui: metti file .nam in user/nam/ (in qualsiasi cartella al suo interno) e riapri il passo",
+"choose a capture": "scegli una cattura",
+"Reading the captures…": "Leggo le catture…",
+"The captures did not load: {0}": "Le catture non si sono caricate: {0}",
+"captured by {0}": "catturato da {0}",
+"licence: {0}": "licenza: {0}",
+"your own file, user/nam/{0}": "un tuo file, user/nam/{0}",
+"The Studio cannot play it: {0}": "Lo Studio non può suonarla: {0}",
+"That capture is not here any more: choose another": "Quella cattura non è più qui: scegline un'altra",
+// HERESY 2994: the Amp (NAM) finished: its part in Engine → Models, the cabinet after it, dry/wet that keeps the stem's place
+"NAM amps: the captures the Refiner's Amp (NAM) plays a stem through (guitar amps, a bass amp, a pedal, a rig; MIT, by their authors)": "Amplificatori NAM: le catture attraverso cui l'«Amplificatore (NAM)» del Rifinitore suona uno stem (amplificatori per chitarra, uno per basso, un pedale, una catena; MIT, dai loro autori)",
+"Cabinet": "Cassa",
+"Auto: after a guitar amp head": "Auto: dopo una testata per chitarra",
+"Generic cab": "Cassa generica",
+"No cabinet": "Senza cassa",
+"A cabinet after the amp. The generic cab is a filter, not a recorded cabinet: a guitar speaker's band (about 80 Hz to 5 kHz) and its mid curve. Auto puts it after the Studio's guitar amps captured without a cabinet (amp heads) and leaves pedals, bass amps, rigs and your own captures as they are": "Una cassa dopo l'amplificatore. La cassa generica è un filtro, non una cassa registrata: la banda di un altoparlante per chitarra (da circa 80 Hz a 5 kHz) e la sua curva dei medi. Auto la mette dopo gli amplificatori per chitarra dello Studio catturati senza cassa (testate) e lascia come sono i pedali, gli amplificatori per basso, le catene e le tue catture",
+"an amp head without a cabinet: on Auto the generic cab follows it": "una testata senza cassa: in Auto la segue la cassa generica",
+"the NAM amps": "gli amplificatori NAM",
+"The Studio's own captures are not here yet: Engine → Models brings them (NAM amps, 3 MB)": "Le catture dello Studio non sono ancora qui: le porta Motore → Modelli (amplificatori NAM, 3 MB)",
+// HERESY 2989, 2992, 3008 (the rc3 sweep, drafted by the OpenRouter apprentice, deepseek-chat, checked): the Windows programs' part and the two Windows tails
+"Windows programs: FFmpeg 9.0.2 (ffmpeg, ffprobe) and FluidSynth 2.5.7, pinned, into runtime/": "Programmi Windows: FFmpeg 9.0.2 (ffmpeg, ffprobe) e FluidSynth 2.5.7, fissati, in runtime/",
+"the Windows programs (FFmpeg, FluidSynth)": "i programmi Windows (FFmpeg, FluidSynth)",
+"Fish Audio Drama 3 at Q8_0 on a card of 24 GB or more, else Q4_K, with its licence files and the stresses; audio.cpp's server built after it on Linux, brought by the Windows package": "Fish Audio Drama 3 in Q8_0 su una scheda da 24 GB o più, altrimenti Q4_K, con i suoi file di licenza e gli accenti; il server di audio.cpp compilato dopo su Linux, portato dal pacchetto Windows",
+"Qwen2.5-Omni-7B: hears the songs of a training set and writes each one's style tags; the GGUF ones run through llama.cpp (vendor/llama.cpp, built by you on Linux; the Windows package brings it)": "Qwen2.5-Omni-7B: ascolta le canzoni di un set di addestramento e scrive i tag di stile di ognuna; quelle GGUF girano tramite llama.cpp (vendor/llama.cpp, compilato da te su Linux; il pacchetto Windows lo porta)",
+"Add capture…": "Aggiungi cattura…",
+"Adding {0}…": "Aggiunta di {0}…",
+"Added: {0}": "Aggiunto: {0}",
+"Already here: {0}": "Già presente: {0}",
+"Not added: {0}": "Non aggiunto: {0}",
+"Not added: a capture is a .nam file": "Non aggiunto: una cattura è un file .nam",
+"Not added: a NAM capture is at most 64 MB": "Non aggiunto: una cattura NAM è al massimo di 64 MB",
+"no file was sent": "nessun file è stato inviato",
+"a NAM capture is at most 64 MB": "una cattura NAM è al massimo di 64 MB",
+"too small to be a NAM capture": "troppo piccolo per essere una cattura NAM",
+"not a NAM capture: a .nam file is JSON, and this is not": "non è una cattura NAM: un file .nam è JSON, e questo non lo è",
+"not a NAM capture: it has no architecture or weights": "non è una cattura NAM: non ha architettura o pesi",
+"Add a capture of your own: a .nam file from your computer; the lab checks that the step can play it and keeps it in user/nam/": "Aggiungi una cattura personale: un file .nam dal tuo computer; il laboratorio verifica che il passaggio possa riprodurlo e lo conserva in user/nam/"
 });

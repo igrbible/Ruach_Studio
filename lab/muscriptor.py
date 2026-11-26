@@ -18,6 +18,7 @@ import threading
 from pathlib import Path
 
 import paths                       # HERESY 2330: where the weights live
+import winx                        # HERESY 2992: the Windows package's build found beside the engine
 
 SIZES = ("small", "medium", "large")
 BYTES = {"small": 209425152, "medium": 618442496, "large": 2739142176}
@@ -26,7 +27,14 @@ _ONE = threading.Lock()
 
 
 def binary(kit):
+    if winx.NT:                                     # HERESY 2992: the Windows package's, in engine\cpu (the processor's, as build.sh makes it on Linux)
+        return winx.native_exe(kit, "ruach-muscriptor", ("cpu",)) or Path(kit) / "engine" / "cpu" / "ruach-muscriptor.exe"
     return Path(kit) / "build" / "build-muscriptor" / "ruach-muscriptor"
+
+
+def not_built():
+    """HERESY 2992: the words for the transcriber not being here, by system."""
+    return winx.no_native("ruach-muscriptor", "sound to MIDI") if winx.NT else "the MIDI transcriber is not built: ./build.sh builds it"
 
 
 def weights(kit, size):
@@ -56,7 +64,7 @@ def devices(kit):
     if key not in _DEV:
         try:
             out = subprocess.run([str(b), "--devices"], capture_output=True, text=True, timeout=60,
-                                 env=dict(os.environ, CUDA_VISIBLE_DEVICES="")).stdout
+                                 env=dict(os.environ, CUDA_VISIBLE_DEVICES=""), encoding="utf-8", errors="replace").stdout
         except (OSError, subprocess.SubprocessError):
             out = ""
         _DEV.clear()
@@ -115,7 +123,7 @@ def run(kit, audio, out, size, only="", job=None):
     out.mkdir(parents=True, exist_ok=True)
     raw = out / "sound.f32"
     p = subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(audio), "-ac", "1", "-ar", "16000", "-f", "f32le", str(raw)],
-                       capture_output=True, text=True, timeout=900)
+                       capture_output=True, text=True, timeout=900, encoding="utf-8", errors="replace")
     if p.returncode != 0 or not raw.is_file():
         raise RuntimeError("ffmpeg did not read the sound: " + (p.stderr.strip()[-200:] or "no output"))
     args = [str(binary(kit)), "--model", str(weights(kit, size)), "--in", str(raw), "--json", str(out / "notes.json"),
@@ -129,7 +137,7 @@ def run(kit, audio, out, size, only="", job=None):
         behind = _beside()
         proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, errors="replace",
                                 env=dict(os.environ, CUDA_VISIBLE_DEVICES=""),
-                                preexec_fn=(lambda: os.nice(19)) if behind and os.name == "posix" else None)   # HERESY 2914
+                                preexec_fn=(lambda: os.nice(19)) if behind and os.name == "posix" else None, encoding="utf-8")   # HERESY 2914
         for line in proc.stdout:
             parts = line.split()
             if job is not None:

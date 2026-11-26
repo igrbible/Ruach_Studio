@@ -20,7 +20,7 @@ GTS = ((1, 2.5), (2, 5.0), (3, 8.0), (4, 16.0), (5, 32.0), (6, 64.0), (7, 128.0)
 
 
 def _smi(args):
-    p = subprocess.run(["nvidia-smi"] + list(args), capture_output=True, text=True, timeout=20)
+    p = subprocess.run(["nvidia-smi"] + list(args), capture_output=True, text=True, timeout=20, encoding="utf-8", errors="replace")
     if p.returncode != 0:
         raise RuntimeError((p.stderr or p.stdout).strip()[:300] or "nvidia-smi failed")
     return p.stdout

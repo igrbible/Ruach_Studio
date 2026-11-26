@@ -6,7 +6,7 @@ AI-Toolkit's encode_audio makes, written in its file layout (keys "latent", "dto
 _ruach_cache/NNN_ruach.safetensors. AI-Toolkit's own _latent_cache is neither touched nor read. Audio as AI-Toolkit loads it: float in [-1, 1], stereo, no loudness normalisation.
 
     .venv/bin/python lab/trainer/cache.py SET_FOLDER [--only 001,002] [--device cuda] [--out DIR]"""
-import argparse, glob, os, subprocess, sys, time
+import argparse, glob, math, os, subprocess, sys, time
 
 import torch
 
@@ -19,6 +19,41 @@ from vae import SAMPLE_RATE, YuE2VAE  # noqa: E402
 
 HEAD = "tokenizer_head_joint_v4.pt"
 VERSION = "yue2_tokenizer-head-joint-v4"
+
+# HERESY 2991: the VAE never takes a decode past full scale. An mp3 (or a float WAV) mastered past 0 dBFS decodes to float far past ±1:
+# FMA's noise-rock cover to +34.8 dBFS with 58 % of its samples past ±1. A player in int16 clips that; the VAE took it as it was, and
+# the latent came out 4.6-111 times the norm: the five such tracks behind a fine-tune run's loss spikes (05.11.2026). Light overs stay as they
+# are: a neighbour at +1.2 dBFS with 0.1 % of its samples past ±1 kept a latent of 0.94.
+OVER_SHARE_MAX = 0.001                                   # more than 0.1 % of the samples past ±1 ...
+OVER_PEAK_MAX = 2.0                                      # ... or a peak past +6 dBFS: past full scale
+
+
+class OverFullScale(ValueError):
+    """HERESY 2991: a decode past full scale, refused with its measure."""
+
+
+def full_scale(w, name="", mode="refuse"):
+    """HERESY 2991: w (channels x samples, float; a torch tensor or a numpy array) as decoded, before the VAE. Within the bounds it
+    comes back as it is, the very object (every PCM WAV, every honest mp3, light overs). Past them, mode "refuse" raises OverFullScale
+    with the measure (the giga-set builders keep it as the track's .fail), mode "normalise" returns w scaled to a peak of 0.99 and says
+    so (the Train room: a user's float WAV mastered hot is still the user's song). A decode that is not finite is refused in both."""
+    n = w.numel() if hasattr(w, "numel") else w.size
+    if not n:
+        return w
+    a = abs(w)
+    peak = float(a.max())
+    if peak <= 1.0:
+        return w
+    share = float((a > 1.0).sum()) / n
+    finite = math.isfinite(peak)
+    if finite and share <= OVER_SHARE_MAX and peak <= OVER_PEAK_MAX:
+        return w
+    what = (f"{name or 'the track'}: the decode peaks at {20 * math.log10(peak):+.1f} dBFS, {share * 100:.2f} % of its samples past ±1"
+            if finite else f"{name or 'the track'}: the decode is not finite (NaN or Inf)")
+    if mode == "normalise" and finite:
+        print(f"cache: {what}: scaled to a peak of -0.1 dBFS before the VAE (HERESY 2991)", flush=True)
+        return w * (0.99 / peak)
+    raise OverFullScale(f"{what}: past full scale, not given to the VAE (HERESY 2991)")
 
 
 def load_vae(checkpoint, device):
@@ -109,7 +144,7 @@ def _transcriber(kit, transcriber="sheetsage2"):
 def _transcribe(exe, gguf, wav, target, cot, transcriber="sheetsage2"):
     """One recording's sheet into target; (True, characters) or (False, why), the why kept as target.fail."""
     r = subprocess.run([exe, "--model", gguf, "--audio", wav, "--out", target + ".part"] + SHEET_FLAGS[cot], capture_output=True, text=True, timeout=900,
-                       env=_angles_env(transcriber))
+                       env=_angles_env(transcriber), encoding="utf-8", errors="replace")
     text = open(target + ".part", encoding="utf-8").read() if os.path.isfile(target + ".part") else ""
     if r.returncode != 0 or not text.strip():
         why = (r.stderr.strip().splitlines() or r.stdout.strip().splitlines() or ["no score written"])[-1]
@@ -266,7 +301,7 @@ def build(set_folder, checkpoint, kit, device="cuda", only=None, out_dir=None):
     print(f"cache: VAE and MERT head ready in {time.time() - t0:.0f} s; {len(todo)} tracks", flush=True)
     from safetensors.torch import save_file
     for i, stem in enumerate(todo):
-        w = stereo48_track(set_folder, stem)
+        w = full_scale(stereo48_track(set_folder, stem), stem, mode="normalise")   # HERESY 2991: never past full scale into the VAE
         with torch.no_grad():
             lat = vae.encode(w[None].to(device, torch.float32))[0].T.contiguous()       # [T, 64]
             tokens = tok.tokenize(w, SAMPLE_RATE)

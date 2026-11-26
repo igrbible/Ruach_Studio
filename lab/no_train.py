@@ -47,16 +47,26 @@ def of_take(folder):
     return None
 
 
-def _tag(path):
+def _probe(path):
     """The file's comment tag as ffprobe reads it (WAV INFO ICMT, a FLAC or Ogg comment, an MP3's ID3 comment); "" when it has none or ffprobe
-    cannot read it."""
+    cannot read it. HERESY 2989: None when ffprobe itself does not start here, which says nothing about the file (it said "", «unmarked»)."""
     try:
         p = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format_tags", "-of", "json", str(path)],
-                           capture_output=True, text=True, timeout=30)
+                           capture_output=True, text=True, timeout=30, encoding="utf-8", errors="replace")
+    except OSError:
+        return None
+    except subprocess.SubprocessError:
+        return ""
+    try:
         tags = (json.loads(p.stdout or "{}").get("format") or {}).get("tags") or {}
-    except (OSError, ValueError, subprocess.SubprocessError):
+    except ValueError:
         return ""
     return " ".join(str(v) for k, v in tags.items() if str(k).lower() in ("comment", "icmt", "description"))
+
+
+def _tag(path):
+    """The comment tag, "" when it cannot be read for any reason."""
+    return _probe(path) or ""
 
 
 def of_file(path):
@@ -65,7 +75,9 @@ def of_file(path):
         why = of_take(p.parent)
         if why:
             return why
-    tag = _tag(p)
+    tag = _probe(p)
+    if tag is None:                                   # HERESY 2989: without ffprobe «no mark» is not known: it stays out, and says why
+        return "its comment tag cannot be read here (ffprobe does not start), so it stays out until it can be"
     return "its comment tag says never for training" if MARK in tag else None
 
 

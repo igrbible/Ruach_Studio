@@ -1,5 +1,5 @@
 """HERESY 2980: the debug journal's studio.log and lab.log where the services are not systemd's (Windows' RuachStudio.exe: logs\\lab.log and
-logs\\engine.log; macOS and Pinokio: tmp/logs/): the end of their own files, said as such, the rotated file's end before the current one's;
+logs\\engine.log; macOS: tmp/logs/): the end of their own files, said as such, the rotated file's end before the current one's;
 journalctl's own lines first where it has them.
     .venv/bin/python lab/test_debug_logs_2980.py"""
 import subprocess, sys, tempfile
@@ -46,7 +46,7 @@ with tempfile.TemporaryDirectory() as d:
     db.subprocess.run = empty_journal
     try:
         s = db.journal("heresy-lab", 3600, k)
-        check("tmp/logs/lab.log" in s and s.endswith("[lab] the last line\n"), "macOS/Pinokio: journalctl with nothing for the unit → tmp/logs/lab.log")
+        check("tmp/logs/lab.log" in s and s.endswith("[lab] the last line\n"), "macOS: journalctl with nothing for the unit → tmp/logs/lab.log")
         cut, where = db.log_tail(k, "heresy-lab", cap=30)
         check(where == "tmp/logs/lab.log" and cut == "[lab] the last line\n", "a tail starts at a whole line, at most the cap")
         check(db.journal("ruach-studio", 3600, k).startswith("(journalctl had nothing for ruach-studio"), "no engine log: said as before")

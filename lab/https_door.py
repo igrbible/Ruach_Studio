@@ -1,7 +1,7 @@
 """HERESY 1985 (Viktor 01.11.2026: «авторедирект с 7777 на 7443, модалка с предупреждением, чреватыми последствиями при возврате на 7777… при отказе
 уведомляем, что не будет работать в сетапе с удалённой машиной Студии»; «По самоподписному корневому сертификату поддерживаю твою идею»): the lab's side
 of the Studio over https.
-· The door (tls_door.py, 1805) is started by the lab itself when nothing answers on its port, so it runs under Pinokio and ./start.sh as under systemd
+· The door (tls_door.py, 1805) is started by the lab itself when nothing answers on its port, so it runs under ./start.sh and the native packages as under systemd
   (RUACH_TLS=0 keeps it off); it dies with the lab's own group.
 · What the page needs to know: whether the door answers, on which port, whether its certificate is signed by the Studio's own authority (and that
   authority's certificate to download and trust once), their fingerprints.

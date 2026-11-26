@@ -96,8 +96,7 @@
     var ask = home ? Promise.resolve("") : window.HeresyDialog.prompt(
       tr("Move {0} to another folder").replace("{0}", L) + "\n\n" +
       tr("A folder that is there already; {0} goes into it as «{1}». On the same disk it is renamed at once; on another it is copied, checked file by file, then the link is switched, and the old copy stays, renamed, for you to remove after a look.")
-        .replace("{0}", L).replace("{1}", p.name) +
-      (S.data.wsl ? "\n\n" + tr("A Windows path works too: D:\\Music is /mnt/d/Music.") : ""), "", { ok: tr("Plan the move"), max: 1000, placeholder: "/mnt/data/Ruach" });
+        .replace("{0}", L).replace("{1}", p.name), "", { ok: tr("Plan the move"), max: 1000, placeholder: "/mnt/data/Ruach" });
     return ask.then(function (to) {
       if (to == null || (!home && !String(to).trim())) return;
       return lab("/places/plan?name=" + encodeURIComponent(name) + "&to=" + encodeURIComponent(to)).then(function (pl) {

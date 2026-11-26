@@ -579,7 +579,8 @@ def _decode(path, head, limit_s=DECODE_S):
     try:
         p = subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     except OSError:
-        raise Refused(W_BODY.format(name, "ffmpeg, which checks every file, is missing"))
+        import winx                                   # HERESY 2989: where ffmpeg comes from, in words (Windows names no program in its error)
+        raise Refused(f"Refused: {name} cannot be checked here: {winx.no_program('ffmpeg')}")
     err, late, cap = [], [], (MAX_S + 1) * head.rate * width * ch
     reader = threading.Thread(target=lambda: err.append(p.stderr.read()), daemon=True)
     reader.start()

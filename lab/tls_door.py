@@ -71,7 +71,7 @@ def own_names():
             pass
         return sorted(names), sorted(ips)
     try:
-        for a in subprocess.run(["hostname", "-I"], capture_output=True, text=True, timeout=5).stdout.split():
+        for a in subprocess.run(["hostname", "-I"], capture_output=True, text=True, timeout=5, encoding="utf-8", errors="replace").stdout.split():
             ips.add(a)
     except (OSError, subprocess.SubprocessError):
         pass

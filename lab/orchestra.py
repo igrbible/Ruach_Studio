@@ -216,12 +216,36 @@ def library(kit, fresh=False):
     return out
 
 
-def sfizz(kit):
+# HERESY 2989 (Viktor 25.11.2026: «И другие тулзы так же, если есть что-то, что мы пропустили ранее»): on Windows FluidSynth comes in the
+# package (runtime/fluidsynth, launcher/win_tools.py) and SF2 instruments play; sfizz_render is not in it yet, and an SFZ one says so
+SFZ_NOT_HERE = ("an SFZ instrument does not play on Windows yet (sfizz_render is not in the Windows package): choose an SF2 one, "
+                "or the General MIDI bank")
+
+
+def sfizz(kit, nt=None):
+    if os.name == "nt" if nt is None else nt:
+        return Path(kit) / "runtime" / "sfizz" / "sfizz_render.exe"
     return Path(kit) / "build" / "build-sfizz" / "out" / "library" / "bin" / "sfizz_render"
 
 
-def fluidsynth(kit):
+def fluidsynth(kit, nt=None):
+    if os.name == "nt" if nt is None else nt:
+        return Path(kit) / "runtime" / "fluidsynth" / "fluidsynth.exe"
     return Path(kit) / "build" / "build-fluidsynth" / "out" / "src" / "fluidsynth"
+
+
+def renderers_missing(kit, nt=None):
+    """Why a version cannot be rendered on this machine, or None. Linux: both renderers built, as before. Windows (HERESY 2989): FluidSynth
+    from the package; an SFZ instrument is refused at its render (SFZ_NOT_HERE)."""
+    nt = os.name == "nt" if nt is None else nt
+    if nt:
+        if fluidsynth(kit, nt).is_file():
+            return None
+        return ("FluidSynth is not in this Studio: the Windows package brings it in runtime\\, and Engine → Models and LoRAs → "
+                "«Windows programs» fetches it into an install that has none")
+    if not sfizz(kit, nt).is_file() or not fluidsynth(kit, nt).is_file():
+        return "the renderers are not built: heresy/MISC/claude-tc/midi/build-renderers.sh builds them"
+    return None
 
 
 # ---- HERESY 1889: a drum kit with keys of its own (Karoryfer's): GM's pieces on the kit's, as its own keymap files name each key (every
@@ -301,11 +325,13 @@ def render(kit, mid, inst, out, rate=48000):
     if not f.is_file():
         raise FileNotFoundError(f"no instrument {inst['file']}")
     out = Path(out)
+    if inst["kind"] == "sfz" and os.name == "nt" and not sfizz(kit).is_file():   # HERESY 2989
+        raise FileNotFoundError(SFZ_NOT_HERE)
     if inst["kind"] == "sfz" and inst.get("keymap") == "drums":          # HERESY 1889: GM's pieces on the kit's own keys
         return _render_kit(kit, mid, inst, out, rate)
     if inst["kind"] == "sfz":
         p = subprocess.run([str(sfizz(kit)), "--sfz", str(f), "--midi", str(mid), "--wav", str(out), "--samplerate", str(rate), "--use-eot"],   # to the end's mark
-                           capture_output=True, text=True, timeout=3600)
+                           capture_output=True, text=True, timeout=3600, encoding="utf-8", errors="replace")
         if p.returncode != 0 or not out.is_file():
             raise RuntimeError("sfizz_render: " + (p.stderr.strip() or p.stdout.strip())[-300:])
         return str(out)
@@ -327,11 +353,11 @@ def render(kit, mid, inst, out, rate=48000):
             m.save(str(play))
         raw = Path(tmp) / "out.raw"
         p = subprocess.run([str(fluidsynth(kit)), "-ni", "-q", "-R", "0", "-C", "0", "-g", "0.6", "-r", str(rate), "-T", "raw", "-O", "s16",
-                            "-F", str(raw), str(f), str(play)], capture_output=True, text=True, timeout=3600)
+                            "-F", str(raw), str(f), str(play)], capture_output=True, text=True, timeout=3600, encoding="utf-8", errors="replace")
         if p.returncode != 0 or not raw.is_file():
             raise RuntimeError("fluidsynth: " + (p.stderr.strip() or p.stdout.strip())[-300:])
         q = subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "s16le", "-ar", str(rate), "-ac", "2", "-i", str(raw), str(out)],
-                           capture_output=True, text=True, timeout=600)
+                           capture_output=True, text=True, timeout=600, encoding="utf-8", errors="replace")
         if q.returncode != 0:
             raise RuntimeError("ffmpeg: " + q.stderr.strip()[-200:])
     return str(out)

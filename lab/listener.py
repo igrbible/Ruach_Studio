@@ -40,8 +40,17 @@ def excerpt(path, start, seconds):
 
 def length(path):
     out = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(path)],
-                         capture_output=True, text=True, timeout=30).stdout.strip()
+                         capture_output=True, text=True, timeout=30, encoding="utf-8", errors="replace").stdout.strip()
     return float(out or 0)
+
+
+def mtmd_cli(kit=KIT):
+    """llama.cpp's llama-mtmd-cli: built here on Linux (launcher/extras.sh); HERESY 2992: on Windows the package's, beside the engine (its
+    CUDA build where a card answers, else the processor's)."""
+    import winx
+    if winx.NT:
+        return winx.native_exe(kit, "llama-mtmd-cli") or Path(kit) / "engine" / "cpu" / "llama-mtmd-cli.exe"
+    return Path(kit) / "vendor" / "llama.cpp" / "build" / "bin" / "llama-mtmd-cli"
 
 
 def gguf(a, d, stems):
@@ -49,9 +58,11 @@ def gguf(a, d, stems):
     import tempfile
     model = Path(a.model)
     proj = Path(a.mmproj) if a.mmproj else next(iter(sorted(model.parent.glob("mmproj-*f16.gguf")) or sorted(model.parent.glob("mmproj-*.gguf"))), None)
-    cli = KIT / "vendor" / "llama.cpp" / "build" / "bin" / "llama-mtmd-cli"
+    cli = mtmd_cli()
     if not proj or not cli.is_file():
-        sys.exit(f"needs {cli} and an mmproj-*.gguf beside the model")
+        import winx
+        sys.exit(winx.no_native("llama-mtmd-cli", "the style listener's GGUFs") + "; bf16 hears in .venv" if winx.NT and not cli.is_file()
+                 else f"needs {cli} and an mmproj-*.gguf beside the model")   # HERESY 2992
     out_path = d / "styles.json"
     out = json.load(open(out_path, encoding="utf-8")) if out_path.is_file() else {}
     out.setdefault("tags", {})
@@ -66,7 +77,7 @@ def gguf(a, d, stems):
             subprocess.run(["ffmpeg", "-v", "error", "-y", "-ss", str(start), "-t", str(a.seconds), "-i", str(wav), "-ac", "1", "-ar", "16000", str(cut)],
                            check=True, timeout=300)
             r = subprocess.run([str(cli), "-m", str(model), "--mmproj", str(proj), "--audio", str(cut), "-p", PROMPT,
-                                "-ngl", "99", "-c", "8192", "-n", "160", "--temp", "0"], capture_output=True, text=True, env=env, timeout=600)
+                                "-ngl", "99", "-c", "8192", "-n", "160", "--temp", "0"], capture_output=True, text=True, env=env, timeout=600, encoding="utf-8", errors="replace")
             lines = [l.strip() for l in r.stdout.splitlines() if l.strip()]
             if r.returncode != 0 or not lines:
                 print(f"{i + 1}/{len(stems)} {stem} FAILED: {(r.stderr or '').strip().splitlines()[-1:] }", flush=True)

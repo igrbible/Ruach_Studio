@@ -241,7 +241,7 @@ def _voice(wav, a, b):
     import os, subprocess, sys as _sys
     try:
         p = subprocess.run([str(P.get("py") or _sys.executable), os.path.join(os.path.dirname(os.path.abspath(__file__)), "vocal_rest.py"), str(wav),
-                            f"{a:.2f}", f"{b:.2f}"], capture_output=True, text=True, timeout=600, env=dict(os.environ, CUDA_VISIBLE_DEVICES=""))
+                            f"{a:.2f}", f"{b:.2f}"], capture_output=True, text=True, timeout=600, env=dict(os.environ, CUDA_VISIBLE_DEVICES=""), encoding="utf-8", errors="replace")
         j = json.loads((p.stdout.strip().splitlines() or ["{}"])[-1])
     except Exception as e:
         return f"the voice could not be split ({type(e).__name__})"
@@ -1163,7 +1163,7 @@ def _chain_voice(wav, a, b, run):
     cmd = winx.nice(9) + [str(P.get("py") or _sys.executable), os.path.join(os.path.dirname(os.path.abspath(__file__)), "vocal_rest.py"), str(wav),
            f"{a:.2f}", f"{b:.2f}"]
     try:
-        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=dict(os.environ, CUDA_VISIBLE_DEVICES=""))
+        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=dict(os.environ, CUDA_VISIBLE_DEVICES=""), encoding="utf-8", errors="replace")
     except Exception as e:
         return f"the voice could not be split ({type(e).__name__})"
     run["pid"] = p.pid

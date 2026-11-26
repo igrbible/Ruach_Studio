@@ -91,7 +91,7 @@ A card under 7 GB takes Q6_K (the install's models 10.1 GB) or, under 4.5 GB, m-
 
 **Only when you ask for it by name:** a backbone at another quant beside these (BF16 7.2, Q8_0 3.8, Q6_K 2.9, Q5_K_M 2.6 GB); every other sound engine: the IRA, five IRAE, the seven RS-FW merges (RS-FW 2.4 ×0.75 among them, the default before 2.0.6) and RS-TW 2.0 ×0.9 (By room → Sound engines: 100.3 GB at BF16, 53.3 at Q8_0, 41.2 at Q6_K; each also on its own in Engine → Models and LoRAs, 7.2, 3.8 or 2.9 GB); the Artist's ten shared adapters (7.5 GB), each fp8 fine-tune of Qwen-Image 2512 (20.4 GB), Qwen-Image 2.1 under Qwen's research licence (33.1 GB); MiniMax H3's every int8 tier (201 GB) or its BF16 (478 GB), SeedVR2 3B (7.3 GB) or all three (40.2 GB); the style listener in bf16 (22 GB); MuScriptor small or medium (0.2 or 0.6 GB); the 💎 workspaces from the Librarian (5.6 GB, all seven).
 
-**Not counted:** the NVIDIA driver and the CUDA toolkit 12.8 (the system's, or Pinokio's own), Pianoteq, Organteq and Airteq (Modartt's, yours to buy or to try, if you want them), and your takes. pip keeps no copy of the wheels it fetched (since 2.0.5; before, `~/.cache/pip` kept 8.7 GB more).
+**Not counted:** the NVIDIA driver and the CUDA toolkit 12.8 (the system's), Pianoteq, Organteq and Airteq (Modartt's, yours to buy or to try, if you want them), and your takes. pip keeps no copy of the wheels it fetched (since 2.0.5; before, `~/.cache/pip` kept 8.7 GB more).
 
 ## The Rooms
 
@@ -222,7 +222,11 @@ What it needs:
 - The CUDA toolkit 12.8, `git`, `cmake`, `gcc`/`g++`, `python3.12`, `ffmpeg`, `curl`. FLAC needs nothing more: the engine encodes it itself, the Refiner and the exports through ffmpeg.
 - Only for the tests: `flac` and `metaflac` (`sudo apt install flac`) for the FLAC test, which checks the engine's encoder against the reference; Node.js 22+ and Chrome or Chromium for the page tests.
 
-**The Studio answers on port 7777**: http://127.0.0.1:7777 on its machine, http://ITS-ADDRESS:7777 from your network. Over https or on its own machine, Chrome and Edge install it as an app from the address bar: a web app (PWA) with its own window and icon, the same Studio, nothing of it kept offline. [INSTALL.md](INSTALL.md) installs it step by step (on Windows 11 and on a Mac with Apple Silicon the native beta: [Windows and macOS](#windows-and-macos-native-beta)); [INSTALL_by_LLM_Agent.md](INSTALL_by_LLM_Agent.md) is the same for an AI agent. With [Pinokio](https://pinokio.co) the install and the start are buttons of its menu, on Linux ([INSTALL.md › With Pinokio](INSTALL.md#with-pinokio)).
+**The Studio answers on port 7777**: http://127.0.0.1:7777 on its machine, http://ITS-ADDRESS:7777 from your network. Over https or on its own machine, Chrome and Edge install it as an app from the address bar: a web app (PWA) with its own window and icon, the same Studio, nothing of it kept offline. [INSTALL.md](INSTALL.md) installs it step by step (on Windows 11 and on a Mac with Apple Silicon the native beta: [Windows and macOS](#windows-and-macos-native-beta)); [INSTALL_by_LLM_Agent.md](INSTALL_by_LLM_Agent.md) is the same for an AI agent.
+
+**Pinokio (Linux only, unsupported)**: a minimal menu that installs and starts the Studio as [INSTALL.md › In one script](INSTALL.md#in-one-script) does; on Windows and macOS, the Studio's own packages.
+
+**Moving from a Pinokio install**: Pinokio is not supported since 2.1.0-rc3. Its folder keeps your models (`models/`), your LoRAs and settings (`user/`) and your songs (`outputs/`); [INSTALL.md › Moving from a Pinokio install](INSTALL.md#moving-from-a-pinokio-install) installs the Studio over them.
 
 ## Linux: AppImage
 
@@ -346,7 +350,7 @@ Issues and pull requests are read and answered; the roadmap moves with them.
 - **The Creator**: frames over the room, the VAE in the ☰ menu under the model, Max length in Sampling, Denoising steps.
 - **The Writer**: the whole notebook exported to one file and imported back, nothing written over.
 - **Open** says what of a prompt file the form could not take; copying works on the machine's address; F5 keeps a run.
-- **Windows 11**: [INSTALL_WINDOWS.md](INSTALL_WINDOWS.md), through WSL2.
+- **Windows 11**: a guide through WSL2, dropped on 25.11.2026 for the native zip ([INSTALL_WINDOWS.md](INSTALL_WINDOWS.md)).
 
 Everything that changed: [CHANGELOG.md](CHANGELOG.md).
 
@@ -362,7 +366,7 @@ Everything that changed: [CHANGELOG.md](CHANGELOG.md).
 - **The Refiner's chain in the order of the work**: the stems split from the debuzzed and upscaled take and mixed by the remaster, the top drawn anew at the end.
 - **The guide's Score and Voices on a Score**: YuE2's ABC line by line, and how a narrator and a choir are timed on one take.
 - **The Artist room, an early preview**: pictures for your songs from a prompt of your own, in three shapes from one seed, painted by Krea 2 Muse, seen developing step by step and kept in a gallery; a square one becomes a take's cover.
-- **[Pinokio](https://pinokio.co) on Linux**: install, start, update and more models from its menu; the work is done by bash scripts that run the same from a terminal ([INSTALL.md › With Pinokio](INSTALL.md#with-pinokio)).
+- **[Pinokio](https://pinokio.co) on Linux**: install, start, update and more models from its menu; the work is done by bash scripts that run the same from a terminal ([INSTALL.md › Moving from a Pinokio install](INSTALL.md#moving-from-a-pinokio-install)).
 - **The player where the songs are**: in two rows where they are heard and compared, in one elsewhere, and back with its take and its place after a reload.
 - **Fewer tips**: none repeats what the screen already says.
 - **The cards live**: each card's load and memory second by second, under it in Engine → GPUs and beside the server log, the Studio's card framed.
@@ -593,6 +597,18 @@ Everything that changed: [CHANGELOG.md](CHANGELOG.md).
 - **The Musician and the DAW**: how long a song can really be beside Max length; a plan with a chord that swallowed its notes planned again; comping a stretch from another version of a stem; the Refiner's Compare node.
 - **The Trainer**: its steps show the run you chose; the run's events in every chart view.
 - **Windows, macOS and Pinokio**: every room's Python found on Windows, no firewall question at the first start, the debug journal with the engine's and the lab's logs.
+
+Everything that changed: [CHANGELOG.md](CHANGELOG.md).
+
+### Done › 2.1.0-rc3 (November 2026)
+
+- **Windows natively, WSL2 gone**: RuachStudio.exe runs the native zip alone; FFmpeg 9.0.2, FluidSynth 2.5.7, llama.cpp's and audio.cpp's servers and the sound-to-MIDI transcriber come with the package, for a card and for the processor; the tester's report names each program with its version.
+- **UTF-8 from any folder**: a Studio in a folder with spaces or Cyrillic, songs in one, Cyrillic tags and lyrics: every file, pipe and console in UTF-8; every part of Engine → Models fetches without bash; the model cards come with every install.
+- **Amp (NAM) in the Refiner**: a stem through a capture of an amp, a pedal or a rig; ten captures by their authors under MIT with the install, your own .nam files beside them.
+- **The players**: a stereo wave tinted by its pan in the player, the compare window and the Refiner's tree; the compare window taller, its 👍 following 🔥 and 💎, the live spectrum in its head.
+- **The Videographer**: a clip's whole render as one order for the night; Qwen-Image 2.1's key frames read in one pass per card; DejaVu Sans as its own font on every system.
+- **Guards**: a training track mastered past full scale scaled to −0.1 dBFS before the decoder; private voice adapters kept out of every publish under any name.
+- **Pinokio cut to a minimal Linux menu, unsupported**: the Studio installs from its GitHub clone on Linux (Pinokio's menu runs the same `launcher/install.sh --yes` and start), and from its own packages on Windows and macOS; a Pinokio install moves over with its models, settings and songs ([INSTALL.md](INSTALL.md#moving-from-a-pinokio-install)).
 
 Everything that changed: [CHANGELOG.md](CHANGELOG.md).
 

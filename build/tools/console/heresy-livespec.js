@@ -239,10 +239,14 @@
     S.grad = null;
   }
   function rgba(a) { return "rgba(" + S.rgb.join(",") + "," + a + ")"; }
-  function paintGrad() {
-    var A = S.dark ? ALPHA.dark : ALPHA.light, gr = cx.createLinearGradient(0, TOP_GAP, 0, S.geo.h);
+  function gradFor(c, h) {
+    var A = S.dark ? ALPHA.dark : ALPHA.light, gr = c.createLinearGradient(0, TOP_GAP, 0, h);
     gr.addColorStop(0, rgba(A[0])); gr.addColorStop(1, rgba(A[1]));
-    S.grad = gr; S.line = rgba(A[2]);
+    return gr;
+  }
+  function paintGrad() {                // HERESY 3010: the player's fill when it has a room ("none" while it has not), the copy's made anew
+    var A = S.dark ? ALPHA.dark : ALPHA.light;
+    S.grad = S.geo ? gradFor(cx, S.geo.h) : "none"; S.line = rgba(A[2]); M.grad = null;
   }
   function place() {
     var g = measure();
@@ -259,53 +263,86 @@
     return true;
   }
   function replan() {                   // the points read the bins of the spectrogram in hand (HERESY 2849: its rate and its bins, 1025 for both sources)
-    if (!S.geo) return;
-    var d = D.data, rate = d ? d.sr : 48000, nb = d ? d.bins - 1 : 1024, pk = S.geo.w + "|" + rate + "|" + nb;
-    if (!S.P || S.P.key !== pk) plan(S.geo.w, rate, nb, pk);
+    var w = S.geo ? S.geo.w : M.g ? M.g.w : 0;   // HERESY 3010: by the compare window's copy where the player has no room
+    if (!w) return;
+    var d = D.data, rate = d ? d.sr : 48000, nb = d ? d.bins - 1 : 1024, pk = w + "|" + rate + "|" + nb;
+    if (!S.P || S.P.key !== pk) plan(w, rate, nb, pk);
+  }
+  // HERESY 3010 (Viktor 25.11.2026: «В сравнителе пустует бОльшая часть верхней части окна… Прикрути дублем живую волну, которая у нас в
+  // мини-плеере играет… шириной в пикселов 800»): the same curve on a second canvas, the compare window's head (heresy-derived.js hands it here as
+  // the window opens and takes it back as it closes): the same frame of the same version heard, nothing read twice, no analyser; drawn at the
+  // canvas's own size, the log axis stretched to it; under 160 px wide (a narrow window) not drawn and out of sight. It keeps the loop going
+  // where the player has no room of its own (the one-row player)
+  var M = { cv: null, cx: null, g: null, grad: null, frames: 0, ro: null };
+  function mplace() {
+    var c = M.cv;
+    if (!c || !c.isConnected) { M.g = null; return false; }
+    var w = c.clientWidth, h = c.clientHeight, dpr = window.devicePixelRatio || 1;
+    c.style.visibility = w < 160 ? "hidden" : "";
+    if (w < 160 || h < 12) { M.g = null; return false; }
+    var key = [w, h, dpr].join("|");
+    if (!M.g || M.g.key !== key) {
+      c.width = Math.max(1, Math.round(w * dpr)); c.height = Math.max(1, Math.round(h * dpr));
+      M.cx.setTransform(c.width / w, 0, 0, c.height / h, 0, 0);
+      M.g = { w: w, h: h, key: key }; M.grad = null;
+    }
+    return true;
+  }
+  function mclear() { if (M.cx && M.cv) { M.cx.save(); M.cx.setTransform(1, 0, 0, 1, 0, 0); M.cx.clearRect(0, 0, M.cv.width, M.cv.height); M.cx.restore(); } }
+  function mirror(c) {
+    if (M.cv && M.cv !== c) mclear();
+    if (M.ro) { M.ro.disconnect(); M.ro = null; }
+    M.cv = c || null; M.cx = c ? c.getContext("2d") : null; M.g = null; M.grad = null;
+    if (c && window.ResizeObserver) { M.ro = new ResizeObserver(function () { mplace(); moved(); }); M.ro.observe(c); }   // seen at once, the loop running or not
+    S.dirty = true;
+    if (c && !S.run && heard()) start();
   }
 
   // ------------------------------------------------------------ the loop
-  function trace(area) {                // the curve through the points' midpoints; the foot 1 px under the canvas, so silence draws no line
-    var P = S.P, live = S.live, h = S.geo.h, span = h + 1 - TOP_GAP, dx = P.dx, x0 = 0, y0 = h + 1 - live[0] * span;
-    if (area) { cx.moveTo(0, h + 1); cx.lineTo(0, y0); } else cx.moveTo(0, y0);
+  function trace(c, g, area) {          // the curve through the points' midpoints; the foot 1 px under the canvas, so silence draws no line (HERESY 3010: on c, at g's size)
+    var P = S.P, live = S.live, h = g.h, span = h + 1 - TOP_GAP, dx = g.w / (P.n - 1), x0 = 0, y0 = h + 1 - live[0] * span;
+    if (area) { c.moveTo(0, h + 1); c.lineTo(0, y0); } else c.moveTo(0, y0);
     for (var i = 1; i < P.n; i++) {
       var x1 = i * dx, y1 = h + 1 - live[i] * span;
-      cx.quadraticCurveTo(x0, y0, (x0 + x1) / 2, (y0 + y1) / 2);
+      c.quadraticCurveTo(x0, y0, (x0 + x1) / 2, (y0 + y1) / 2);
       x0 = x1; y0 = y1;
     }
-    cx.lineTo(x0, y0);
+    c.lineTo(x0, y0);
   }
   // HERESY 2856 (Viktor 19.11.2026: «В самый подвал полупрозрачно очерти семь зон… рисочки с их меточками, чтобы они не сливались с плеером, но
   // были видны как разделители диапазонов… сверх верха… вынеси вправо»): sub to 60 Hz, low to 250, low-mid to 500, mid to 2 kHz, high-mid to 4 kHz,
   // highs to 20 kHz on the curve's own log axis (nothing of the curve moves); every other zone a faint floor band, a tick and its number at each
   // border; above 20 kHz only said at the right, inside the edge's fade, since it almost never shows
   var ZONE_EDGES = [60, 250, 500, 2000, 4000], ZONE_SAID = { 60: "60", 250: "250", 500: "500", 2000: "2k", 4000: "4k" };
-  function zones(g) {
+  function zones(c, g) {
     var span = Math.log(F_HI / F_LO), X = function (f) { return g.w * Math.log(f / F_LO) / span; }, all = [F_LO].concat(ZONE_EDGES, [F_HI]);
-    cx.save();
-    cx.fillStyle = S.line; cx.strokeStyle = S.line; cx.lineWidth = 1;
-    cx.globalAlpha = 0.07;
-    for (var i = 1; i < all.length - 1; i += 2) cx.fillRect(X(all[i]), g.h - 5, X(all[i + 1]) - X(all[i]), 5);
-    cx.globalAlpha = 0.38;
-    cx.font = "9px " + (getComputedStyle(bar).fontFamily || "sans-serif"); cx.textBaseline = "bottom";
-    cx.textAlign = "left";
+    c.save();
+    c.fillStyle = S.line; c.strokeStyle = S.line; c.lineWidth = 1;
+    c.globalAlpha = 0.07;
+    for (var i = 1; i < all.length - 1; i += 2) c.fillRect(X(all[i]), g.h - 5, X(all[i + 1]) - X(all[i]), 5);
+    c.globalAlpha = 0.38;
+    c.font = "9px " + (getComputedStyle(bar).fontFamily || "sans-serif"); c.textBaseline = "bottom";
+    c.textAlign = "left";
     ZONE_EDGES.forEach(function (f) {
       var x = Math.round(X(f)) + 0.5;
-      cx.beginPath(); cx.moveTo(x, g.h); cx.lineTo(x, g.h - 7); cx.stroke();
-      cx.fillText(ZONE_SAID[f], x + 2, g.h - 1);
+      c.beginPath(); c.moveTo(x, g.h); c.lineTo(x, g.h - 7); c.stroke();
+      c.fillText(ZONE_SAID[f], x + 2, g.h - 1);
     });
-    cx.textAlign = "right"; cx.fillText("20k \u203a", g.w - 50, g.h - 1);
-    cx.restore();
+    c.textAlign = "right"; c.fillText("20k \u203a", g.w - 50, g.h - 1);
+    c.restore();
   }
-  function draw() {
-    var g = S.geo;
-    cx.clearRect(0, 0, g.w, g.h);
+  function paint(c, g, grad) {
+    c.clearRect(0, 0, g.w, g.h);
     if (S.peak < 0.004) return;
-    cx.beginPath(); trace(true); cx.lineTo(g.w, g.h + 1); cx.closePath();
-    cx.fillStyle = S.grad; cx.fill();
-    cx.beginPath(); trace(false);
-    cx.lineWidth = 1; cx.lineJoin = "round"; cx.strokeStyle = S.line; cx.stroke();
-    zones(g);
+    c.beginPath(); trace(c, g, true); c.lineTo(g.w, g.h + 1); c.closePath();
+    c.fillStyle = grad; c.fill();
+    c.beginPath(); trace(c, g, false);
+    c.lineWidth = 1; c.lineJoin = "round"; c.strokeStyle = S.line; c.stroke();
+    zones(c, g);
+  }
+  function draw() {                     // HERESY 3010: the player's room, and the compare window's copy where there is one
+    if (S.geo) paint(cx, S.geo, S.grad);
+    if (M.g) { if (!M.grad) M.grad = gradFor(M.cx, M.g.h); paint(M.cx, M.g, M.grad); M.frames++; }
   }
   function frame(now) {
     S.raf = 0;
@@ -320,7 +357,9 @@
     if (el && el !== S.el) { S.el = el; S.dirty = true; }
     if (S.dirty || now - S.measured > 1000) {   // the room measured again once a second, or when a box it hangs on changed
       S.measured = now; S.dirty = false;
-      if (!enabled() || !place()) { halt(); return; }
+      var on = enabled(), placed = on && place(), mirrored = on && mplace();   // HERESY 3010: the compare window's copy keeps it going without the player's room
+      if (!placed && !mirrored) { halt(); return; }
+      if (!placed) replan();
       if (S.el) { resolve(S.el); replan(); S.gdb = gainDb(S.el); }
     }
     if (!S.rgb) tone();
@@ -365,6 +404,7 @@
     S.raf = 0;
     if (S.live) S.live.fill(0);
     if (cx) { cx.save(); cx.setTransform(1, 0, 0, 1, 0, 0); cx.clearRect(0, 0, cv.width, cv.height); cx.restore(); }
+    mclear();                           // HERESY 3010
   }
   function sync() {
     if (enabled()) { start(); return; }
@@ -444,10 +484,12 @@
                el: !S.el ? "" : S.el === f ? "footer" : S.el === other ? "compare" : "other",
                // HERESY 2849: whence the take's spectrum (lab, page), its address, why there is none, the frame read last, the sum of the curve, the lift's dB
                source: D.where, key: D.key, why: D.why, frames: D.data ? D.data.frames : 0, at: S.at, sig: sig, gainDb: S.gdb, made: made.length,
-               t: S.el ? S.el.currentTime : 0, paused: S.el ? S.el.paused : true };
+               t: S.el ? S.el.currentTime : 0, paused: S.el ? S.el.paused : true,
+               mirror: M.g ? [M.g.w, M.g.h] : null, mirrorFrames: M.frames, mirrorCanvas: M.cv ? [M.cv.width, M.cv.height] : null };   // HERESY 3010
     },
     resetStats: function () { S.frames = 0; S.work = 0; S.since = performance.now(); },
     stats: function () { var t = (performance.now() - S.since) / 1000; return { frames: S.frames, seconds: t, fps: t > 0 ? S.frames / t : 0, msPerFrame: S.frames ? S.work / S.frames : 0 }; },
-    sync: sync
+    sync: sync,
+    mirror: mirror                      // HERESY 3010: the compare window's head hands its canvas here (null takes it back)
   };
 })();

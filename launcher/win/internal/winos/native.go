@@ -14,7 +14,7 @@ import (
 
 // NativePlatform is the system under the native package's launcher (internal/native): on Windows the real one (job objects,
 // Edge, Explorer, a console for the install); elsewhere a printed stand-in, so the launcher's decisions run in tests.
-type NativePlatform struct{ Platform }
+type NativePlatform struct{}
 
 // Output runs a small tool hidden (nvidia-smi, python --version) and returns what it printed.
 func (NativePlatform) Output(timeout time.Duration, exe string, args ...string) (string, error) {

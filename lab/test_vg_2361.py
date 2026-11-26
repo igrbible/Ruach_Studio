@@ -2,8 +2,8 @@
 """HERESY 2361 (Viktor 11.11.2026: «Пока что делай как советуешь там», the night report's advice for the Videographer taken): on a studio of its own
 in a temporary folder (never this Studio's), the processor only, no card:
   the final at 1280 × 704 with 28 steps (one pass holds a shot of 5 s), asking the draft's room;
-  the hero's own picture as the last frame of his shots when the plan asks it (hero.last): which shots are his, the job's «last», a picture asked
-  and not found said, never taken for «not asked»; the choice saved and kept across another hero;
+  the hero's own picture as the last frame of his shots, removed by HERESY 2995: a plan that asked it (hero.last) read as it is and shot without
+  it, the job, the lab's log and the night render saying so; the save and another hero no longer carry it;
   MiniMax H3's sampler with a last frame (FL2VA's «last» anchor at the target's last latent frame, its rows after the first frame's, its
   condition noise drawn after the first's), and without one exactly as before; the runtime gives the last picture cover-cropped to the canvas,
   shown to the encoder after the first, and none in FastH3;
@@ -58,51 +58,55 @@ try:
           h.SIZES["final"]["16:9"] == (1280, 704) and h.SIZES["final"]["9:16"] == (704, 1280) and h.MODES["final"]["steps"] == 28
           and h.need_mb("final") == h.need_mb("draft") and h.pass_frames(*h.SIZES["final"]["16:9"]) == 124)
 
-    print("the hero as the last frame")
+    print("«Hero as the last frame» removed (HERESY 2995): a plan that asked it is shot without it, and told so")
     plan = {"name": name, "title": "a test", "seconds": 15.0, "look": {}, "shots": [
         {"t0": 0.0, "t1": 5.0, "scene": {}, "frame_from": {"by": "frames", "hero": True}},
         {"t0": 5.0, "t1": 10.0, "scene": {}, "frame_from": {"by": "frames", "hero": False}, "hero": True},
         {"t0": 10.0, "t1": 15.0, "scene": {}, "hero": True}],
-        "hero": {"run": "r1", "file": "01.png", "words": "a wooden boy"}}
+        "hero": {"run": "r1", "file": "01.png", "words": "a wooden boy", "last": True}}
     v._write(kit, name, plan)
     hero_png = kit / "hero.png"
     Image.new("RGB", (512, 768), (10, 200, 30)).save(hero_png)
     pics[("r1", "01.png")] = hero_png
-    check("whose shot: his picture's word first (drawn from the hero, or not), else chosen so",
-          [h.hero_shot(s) for s in plan["shots"]] == [True, False, True] and h.hero_shot({"t0": 0, "t1": 1}) is False)
+    check("its code gone from the shots: no hero_last, no hero_shot", not hasattr(h, "hero_last") and not hasattr(h, "hero_shot"))
     p = v.get(kit, name)
-    check("not asked: no last frame", h.hero_last(kit, p, p["shots"][0]) == ("", ""))
-    q = v.save(kit, name, {"hero_last": True})
-    check("asked (hero_last), kept on the hero", q["hero"].get("last") is True, q.get("hero"))
-    check("his shot gets his picture; a shot drawn without him none",
-          h.hero_last(kit, q, q["shots"][0]) == (str(hero_png), "") and h.hero_last(kit, q, q["shots"][1]) == ("", ""))
+    check("a plan of before that asked it (hero.last) reads as it is", p["hero"].get("last") is True and p["hero"]["words"] == "a wooden boy", p.get("hero"))
+    check("… and the shots know it was asked", h.hero_last_gone(p) == h.HERO_LAST_GONE and h.hero_last_gone({"hero": {"run": "r1"}}) == "" and h.hero_last_gone({}) == "")
     h.ready = lambda k: {"ready": True, "missing": []}
     sp = kit / "user/videos/.h3/gpu0-h3"
     sp.mkdir(parents=True)
     (sp / "worker.json").write_text(json.dumps({"status": "ready", "pid": os.getpid(), "gpu": 0, "at": time.time()}))
     j0 = h.shoot(kit, name, 0, "a prompt", "final")
-    j1 = h.shoot(kit, name, 1, "a prompt", "final")
     jf = h.shoot(kit, name, 0, "a prompt", "fast")
-    check("the job: his shot «last» = his picture, at 1280 × 704 and 28 steps; a shot without him none", j0.get("last") == str(hero_png) and "last" not in j1
-          and j0["width"] == 1280 and j0["height"] == 704 and j0["steps"] == 28 and j0.get("frames") is None, {k: j0.get(k) for k in ("last", "width", "steps", "frames")})
-    check("«fast» too (832 × 480, the same worker kind): the last frame goes with it", jf.get("last") == str(hero_png))
+    check("the hero's shot goes without a last frame, at 1280 × 704 and 28 steps, nothing «missing» said of it",
+          "last" not in j0 and "last_missing" not in j0 and j0["width"] == 1280 and j0["height"] == 704 and j0["steps"] == 28 and j0.get("frames") is None,
+          {k: j0.get(k) for k in ("last", "last_missing", "width", "steps", "frames")})
+    check("… the job says the plan asked it and that it is gone (2361, 2995); «fast» the same",
+          "2361" in j0.get("said", "") and "2995" in j0["said"] and "without it" in j0["said"] and jf.get("said") == j0["said"] and "last" not in jf, j0.get("said"))
     st = h.status(kit, name)
-    check("the queue says which shots carry the hero's last frame", any(j["i"] == 0 and j["last"] for j in st["jobs"]) and any(j["i"] == 1 and not j["last"] for j in st["jobs"]))
-    pics.clear()
-    j2 = h.shoot(kit, name, 2, "a prompt", "draft")
-    check("asked and his picture gone: no last frame, and it says why (never «not asked»)", "last" not in j2 and "not here" in (j2.get("last_missing") or ""), j2.get("last_missing"))
-    st = h.status(kit, name)
-    check("… and the queue says it too", any(j["i"] == 2 and "not here" in (j.get("last_missing") or "") for j in st["jobs"]))
-    pics[("r1", "01.png")] = hero_png
+    check("the queue carries no last frame", st["jobs"] and all("last" not in j and "last_missing" not in j for j in st["jobs"]), st["jobs"])
     h.cancel(kit, name)
+    q = v.save(kit, name, {"hero_last": False})
+    check("the save leaves hero_last alone: the plan stays as it was written", q["hero"].get("last") is True, q.get("hero"))
+    import vg_night as vn
+    real = vn.h3_shots
+    vn.h3_shots = types.SimpleNamespace(need_mb=lambda m: 1, shoot=lambda *a, **k: {"said": h.HERO_LAST_GONE},
+                                        status=lambda k, n: {"jobs": [], "workers": []}, cancel=lambda *a, **k: None)
+    try:
+        r = vn.stage_shoot(kit, {"name": name, "shoot": {"prompts": {"0": "a", "1": "b", "2": "c"}, "mode": "draft", "size": "16:9"}},
+                           {"more_gpus": lambda *a: [0]})
+    finally:
+        vn.h3_shots = real
+    check("the night render says it once in its order's log", r.get("said") == [h.HERO_LAST_GONE] and r["todo"] == 3, r)
     import frames_job as fj
     pics[("r2", "02.png")] = hero_png
     q = fj.hero_set(kit, name, "r2", "02.png")
-    check("another hero picked: the last-frame choice stays", q["hero"].get("last") is True and q["hero"]["run"] == "r2", q.get("hero"))
-    q = v.save(kit, name, {"hero_last": False})
-    check("unpressed: taken off", "last" not in q["hero"], q.get("hero"))
-    q = v.save(kit, name, {"hero_last": "yes"})
-    check("an odd value left out", "last" not in q["hero"], q.get("hero"))
+    check("another hero picked: nothing of the last frame carried to him", "last" not in q["hero"] and q["hero"]["run"] == "r2", q.get("hero"))
+    q = v.save(kit, name, {"hero_last": True})
+    check("an old page's hero_last: true is not taken", "last" not in q["hero"], q.get("hero"))
+    j2 = h.shoot(kit, name, 2, "a prompt", "draft")
+    check("a plan that never asked it: nothing said, no last frame", "said" not in j2 and "last" not in j2, j2)
+    h.cancel(kit, name)
     done = {"out": str(v.shots_dir(kit, name) / "20261111-120000-000-000.mp4"), "t0": 0.0, "t1": 5.0, "mode": "final", "steps": 28, "seed": 1,
             "width": 1280, "height": 704, "first": "x.jpg", "last": str(hero_png)}
     v.shots_dir(kit, name).mkdir(parents=True, exist_ok=True)

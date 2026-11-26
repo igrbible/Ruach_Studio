@@ -172,7 +172,7 @@ def fetch_endpoint(ch, hf, repo, rev, path, into):
     env = dict(os.environ, HF_ENDPOINT=ch["where"].rstrip("/"), HF_HUB_DISABLE_XET="1")
     cmd = [hf, "download", repo, path, "--revision", rev, "--local-dir", into, "--quiet"]
     try:
-        p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL, text=True, errors="replace", env=env)
+        p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL, text=True, errors="replace", env=env, encoding="utf-8")
         said, rc = p.stdout or "", p.returncode
     except OSError as e:
         said, rc = str(e), 127

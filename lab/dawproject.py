@@ -63,7 +63,7 @@ def tempo_meter(req):
 
 def _seconds(p):
     out = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(p)],
-                         capture_output=True, text=True, timeout=60).stdout.strip()
+                         capture_output=True, text=True, timeout=60, encoding="utf-8", errors="replace").stdout.strip()
     return float(out or 0)
 
 

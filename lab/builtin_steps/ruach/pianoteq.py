@@ -194,7 +194,7 @@ def main(set_dir, outdir, params_file):
     prefs = own_prefs(work)
     try:
         r = subprocess.run([str(binary), "--headless", "--quiet", "--prefs", str(prefs)] + (["--fxp", str(fx)] if fx else ["--preset", preset]) +
-                           ["--midi", str(mid), "--wav", str(wav), "--rate", str(rate)], capture_output=True, text=True, timeout=7200)
+                           ["--midi", str(mid), "--wav", str(wav), "--rate", str(rate)], capture_output=True, text=True, timeout=7200, encoding="utf-8", errors="replace")
     finally:
         shutil.rmtree(prefs.parent, ignore_errors=True)
         if fx:

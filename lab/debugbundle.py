@@ -206,8 +206,8 @@ def secret_keys(events):
 
 
 # HERESY 2980 (a tester's debug journal, Windows native 2.1.0-rc1, 23.11.2026: its studio.log and lab.log said «no journal … [WinError 2]» and nothing else): where the services are not systemd's, their own log files, as each launcher writes them:
-# Windows' RuachStudio.exe logs\\lab.log and logs\\engine.log (rotated into lab.1.log, engine.1.log), macOS's RuachStudio.command and Pinokio's
-# launcher/lab.sh and studio.sh tmp/logs/lab.log and tmp/logs/engine.log. Their lines carry no time of their own: the tail is taken, at most LOG_TAIL
+# Windows' RuachStudio.exe logs\\lab.log and logs\\engine.log (rotated into lab.1.log, engine.1.log), macOS's RuachStudio.command
+# tmp/logs/lab.log and tmp/logs/engine.log (Pinokio's launcher/lab.sh and studio.sh wrote there too until HERESY 2988). Their lines carry no time of their own: the tail is taken, at most LOG_TAIL
 # bytes a service, the rotated file's end before the current one's
 LOG_FILES = {"ruach-studio": ("engine.log", "studio.log"), "heresy-lab": ("lab.log",)}
 LOG_DIRS = ("logs", "tmp/logs")
@@ -244,7 +244,7 @@ def log_tail(kit, unit, cap=LOG_TAIL):
 def journal(unit, since_s, kit=None):
     try:
         p = subprocess.run(["journalctl", "--user", "-u", unit, "--since", f"-{int(since_s)}s", "--no-pager", "-o", "short-iso"],
-                           capture_output=True, text=True, timeout=60)
+                           capture_output=True, text=True, timeout=60, encoding="utf-8", errors="replace")
         if p.returncode == 0 and p.stdout.strip():
             return p.stdout
         said = f"(journalctl had nothing for {unit}: {p.stderr.strip()[:200]})\n"

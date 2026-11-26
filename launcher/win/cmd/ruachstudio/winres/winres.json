@@ -1,0 +1,31 @@
+{
+  "RT_GROUP_ICON": {
+    "#1": {
+      "0000": "../ruach.ico"
+    }
+  },
+  "RT_MANIFEST": {
+    "#1": {
+      "0409": "ruachstudio.manifest"
+    }
+  },
+  "RT_VERSION": {
+    "#1": {
+      "0409": {
+        "fixed": {
+          "file_version": "0.0.0.0",
+          "product_version": "0.0.0.0"
+        },
+        "info": {
+          "0409": {
+            "FileDescription": "Ruach Studio launcher",
+            "FileVersion": "0.0.0.0",
+            "OriginalFilename": "RuachStudio.exe",
+            "ProductName": "Ruach Studio",
+            "ProductVersion": "0.0.0.0"
+          }
+        }
+      }
+    }
+  }
+}

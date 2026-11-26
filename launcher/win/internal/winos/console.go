@@ -1,3 +1,6 @@
+// Package winos is the native launcher's Windows: services started hidden in a job object, the install in a console of its own,
+// Edge's app window, Explorer, message boxes, one instance at a time. The files without a build tag build everywhere, so the
+// decisions run on Linux in tests (testdata/e2e-native.sh); the *_windows.go files are Windows-only.
 package winos
 
 import (

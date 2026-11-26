@@ -124,7 +124,9 @@ func powershell() string {
 // each step and asks about the models; when the install stops, the window stays until Enter, so its last lines can be read.
 func (NativePlatform) RunInstall(l native.Layout, env []string) (int, error) {
 	script := strings.ReplaceAll(l.Install(), "'", "''")
-	cmd := "$Host.UI.RawUI.WindowTitle = 'Ruach Studio - install'; " +
+	// HERESY 2998: the window in UTF-8 from its first line (install.ps1 says so again for itself)
+	cmd := "try { [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding $false } catch { }; " +
+		"$Host.UI.RawUI.WindowTitle = 'Ruach Studio - install'; " +
 		"try { & '" + script + "'; $c = $LASTEXITCODE } catch { Write-Host $_; $c = 1 }; " +
 		"if ($c) { Write-Host ''; Write-Host 'Ruach Studio: the install stopped. The lines above say why. Press Enter to close this window, then start Ruach Studio again: it goes on where it stopped.'; [void](Read-Host) }; " +
 		"exit $c"

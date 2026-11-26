@@ -66,7 +66,7 @@ def denoise(src, dst, amount_db, floor):
     lat = int(round(0.025 * sf.info(str(src)).samplerate))
     af = f"apad=pad_len={lat},{af},atrim=start_sample={lat},asetpts=PTS-STARTPTS"
     p = subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(src), "-af", af, "-c:a", "flac", "-sample_fmt", "s32", str(dst)],
-                       capture_output=True, text=True, timeout=3600)
+                       capture_output=True, text=True, timeout=3600, encoding="utf-8", errors="replace")
     if p.returncode != 0:
         raise RuntimeError("ffmpeg's denoiser failed: " + ((p.stderr or "").strip().splitlines() or ["?"])[-1])
     return af

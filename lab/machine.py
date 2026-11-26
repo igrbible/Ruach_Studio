@@ -9,7 +9,7 @@ import winx   # HERESY 2934
 
 
 def _smi(fields):
-    q = subprocess.run(["nvidia-smi", "--query-gpu=" + fields, "--format=csv,noheader,nounits"], capture_output=True, text=True, timeout=20)
+    q = subprocess.run(["nvidia-smi", "--query-gpu=" + fields, "--format=csv,noheader,nounits"], capture_output=True, text=True, timeout=20, encoding="utf-8", errors="replace")
     if q.returncode != 0:
         raise RuntimeError((q.stderr or q.stdout).strip()[:200] or "nvidia-smi failed")
     return [[c.strip() for c in line.split(",")] for line in q.stdout.strip().splitlines() if line.strip()]

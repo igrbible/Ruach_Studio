@@ -50,7 +50,7 @@ def _cmd(cmd):
 def _run(cmd, timeout=10):
     cmd = _cmd(cmd)
     try:
-        r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, encoding="utf-8", errors="replace")
     except (OSError, subprocess.SubprocessError):
         return None
     return r.stdout if r.returncode == 0 else None
@@ -58,7 +58,7 @@ def _run(cmd, timeout=10):
 
 def cards(root="/proc/asound"):
     try:
-        txt = Path(root, "cards").read_text()
+        txt = Path(root, "cards").read_text(encoding="utf-8")
     except OSError:
         return []
     out = []
@@ -73,7 +73,7 @@ def streams(root, card):
     """A USB card's formats each way, from its stream0: channels, bits, rates; {} for a card that has no such file."""
     p = Path(root, f"card{card}", "stream0")
     try:
-        txt = p.read_text()
+        txt = p.read_text(encoding="utf-8")
     except OSError:
         return {}
     res = {}
@@ -91,7 +91,7 @@ def streams(root, card):
 def pcms(root="/proc/asound"):
     """«04-00: USB Audio : USB Audio : playback 1 : capture 1» each line one device of a card, its ways."""
     try:
-        txt = Path(root, "pcm").read_text()
+        txt = Path(root, "pcm").read_text(encoding="utf-8")
     except OSError:
         return []
     out = []
@@ -217,7 +217,7 @@ def devices(root="/proc/asound", user_dir=None):
 
 def gateway(user_dir):
     try:
-        g = json.loads(Path(user_dir, "audio.json").read_text()).get("gateway") or {}
+        g = json.loads(Path(user_dir, "audio.json").read_text(encoding="utf-8")).get("gateway") or {}
     except (OSError, ValueError):
         g = {}
     out = {"out": g.get("out", ""), "in": g.get("in", ""), "rate": int(g.get("rate") or 0)}
@@ -235,7 +235,7 @@ def set_balance(user_dir, balance_db, level_db=None):
     lifted); [0, 0] or None takes it off. Kept with the gateway in user/audio.json; the gateway's own devices first."""
     p = Path(user_dir, "audio.json")
     try:
-        cfg = json.loads(p.read_text())
+        cfg = json.loads(p.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         cfg = {}
     g = cfg.get("gateway") or {}
@@ -270,7 +270,7 @@ def set_balance(user_dir, balance_db, level_db=None):
 # HERESY 1548: the monitor, a second output for listening on this machine
 def monitor(user_dir):
     try:
-        m = json.loads(Path(user_dir, "audio.json").read_text()).get("monitor") or {}
+        m = json.loads(Path(user_dir, "audio.json").read_text(encoding="utf-8")).get("monitor") or {}
     except (OSError, ValueError):
         m = {}
     return {"out": m.get("out", ""), "rate": int(m.get("rate") or 0)}
@@ -294,7 +294,7 @@ def set_monitor(user_dir, out, rate):
         raise ValueError(f"{out} is the gateway's own card, which opens once: choose another output for the monitor")
     p = Path(user_dir, "audio.json")
     try:
-        cfg = json.loads(p.read_text())
+        cfg = json.loads(p.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         cfg = {}
     cfg["monitor"] = {"out": out or "", "rate": rate}
@@ -402,7 +402,7 @@ def set_gateway(user_dir, out, inp, rate):
             raise ValueError(f"{d} is no device name")
     p = Path(user_dir, "audio.json")
     try:
-        cfg = json.loads(p.read_text())
+        cfg = json.loads(p.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         cfg = {}
     was = cfg.get("gateway") or {}
@@ -451,7 +451,7 @@ def probe(device, rate=48000, seconds=2, channels=2):
         out = Path(t) / "floor.wav"
         try:
             r = subprocess.run(_cmd(["arecord", "-q", "-D", dev, "-f", "S32_LE", "-r", str(int(rate)), "-c", str(int(channels)), "-d", str(seconds + 2), "-t", "wav", str(out)]),
-                               capture_output=True, text=True, timeout=seconds + 17)   # 1546: two seconds more, the first 1.5 left out
+                               capture_output=True, text=True, timeout=seconds + 17, encoding="utf-8", errors="replace")   # 1546: two seconds more, the first 1.5 left out
         except (OSError, subprocess.SubprocessError) as e:
             raise ValueError(f"arecord could not run: {e}")
         if r.returncode != 0 or not out.is_file():
@@ -538,10 +538,10 @@ def loop(out_dev, in_dev, rate=48000, level_db=-20.0):
         secs = int(np.ceil(len(frames) / rate + 0.5 + SETTLE))   # 1546: the input settled before the tone goes out
         try:
             r = subprocess.Popen(_cmd(["arecord", "-q", "-D", rec_dev, "-f", "S32_LE", "-r", str(rate), "-c", "2", "-d", str(secs), "-t", "wav", str(rec)]),
-                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8", errors="replace")
             import time as _t
             _t.sleep(SETTLE)
-            pl = subprocess.run(_cmd(["aplay", "-q", "-D", play_dev, str(tone)]), capture_output=True, text=True, timeout=secs + 10)
+            pl = subprocess.run(_cmd(["aplay", "-q", "-D", play_dev, str(tone)]), capture_output=True, text=True, timeout=secs + 10, encoding="utf-8", errors="replace")
             _, rerr = r.communicate(timeout=secs + 15)
         except (OSError, subprocess.SubprocessError) as e:
             raise ValueError(f"the loop could not run: {e}")

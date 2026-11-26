@@ -238,7 +238,7 @@ def critic():
 
 def omni(crit, image, text, n):
     r = subprocess.run([str(CLI), "-m", str(crit[0]), "--mmproj", str(crit[1]), "--image", str(image), "-p", text,
-                        "-ngl", "99", "-c", "8192", "-n", str(n), "--temp", "0"], capture_output=True, text=True, timeout=300)
+                        "-ngl", "99", "-c", "8192", "-n", str(n), "--temp", "0"], capture_output=True, text=True, timeout=300, encoding="utf-8", errors="replace")
     if r.returncode != 0:
         raise RuntimeError("the critic failed: " + (r.stderr.strip().splitlines() or ["no output"])[-1][-200:])
     return r.stdout.strip()

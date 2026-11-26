@@ -33,7 +33,7 @@ def load_validation_cache(cache_dir: Optional[str] = None):
     cache_path = get_validation_cache_path(cache_dir)
     if os.path.exists(cache_path):
         try:
-            with open(cache_path, 'r') as f:
+            with open(cache_path, 'r', encoding="utf-8") as f:
                 return json.load(f)
         except:
             pass
@@ -52,7 +52,7 @@ def save_validation_cache(cache, cache_dir: Optional[str] = None):
     try:
         # Ensure directory exists
         os.makedirs(os.path.dirname(cache_path), exist_ok=True)
-        with open(cache_path, 'w') as f:
+        with open(cache_path, 'w', encoding="utf-8") as f:
             json.dump(cache, f, indent=2)
     except:
         pass

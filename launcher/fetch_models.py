@@ -45,7 +45,7 @@ def rev(repo):
 def mac_quant():
     """A Mac's backbone by its unified memory (the card and the processor share it): 16 GB and up Q8_0, 8 GB Q6_K, less Q5_K_M."""
     try:
-        gb = int(subprocess.run(["sysctl", "-n", "hw.memsize"], capture_output=True, text=True, timeout=10).stdout.strip()) / 2 ** 30
+        gb = int(subprocess.run(["sysctl", "-n", "hw.memsize"], capture_output=True, text=True, timeout=10, encoding="utf-8", errors="replace").stdout.strip()) / 2 ** 30
     except (OSError, ValueError, subprocess.SubprocessError):
         return "Q6_K"
     return "Q8_0" if gb >= 15 else "Q6_K" if gb >= 7.5 else "Q5_K_M"
@@ -57,7 +57,7 @@ def card_quant():
     vram = 0
     if smi and os.path.isfile(smi) if NT else smi:
         try:
-            out = subprocess.run([smi, "--query-gpu=memory.total", "--format=csv,noheader,nounits"], capture_output=True, text=True, timeout=20).stdout
+            out = subprocess.run([smi, "--query-gpu=memory.total", "--format=csv,noheader,nounits"], capture_output=True, text=True, timeout=20, encoding="utf-8", errors="replace").stdout
             vram = int(float(out.split()[0]))
         except (OSError, ValueError, IndexError, subprocess.SubprocessError):
             vram = 0
@@ -101,22 +101,44 @@ def hs(n):
     return f"{n / 1e9:.1f} GB" if n >= 1e9 else f"{n / 1e6:.0f} MB" if n >= 1e6 else f"{n / 1e3:.0f} KB"
 
 
+def parts_in(folder):
+    """HERESY 2986: {path: size} of every unfinished part (*.incomplete) under FOLDER"""
+    out = {}
+    for d, _, fs in os.walk(folder):
+        for n in fs:
+            if n.endswith(".incomplete"):
+                try:
+                    out[os.path.join(d, n)] = os.path.getsize(os.path.join(d, n))
+                except OSError:
+                    pass
+    return out
+
+
 def ticker(part, size, stop, out=None, every=2.0, line_every=60.0):
     """HERESY 2931 (the 2.1.0-rc1 Windows soak: the backbone's 2.6 GB came with no sign for minutes, a window that looks hung): while a file
     comes, how much of it is here, from the size of the downloader's unfinished part (hf_guard's .ruach-part, its *.incomplete). In a
-    console, one line kept up to date; elsewhere (a log), a line a minute. Nothing is said before the first byte."""
+    console, one line kept up to date; elsewhere (a log), a line a minute. Nothing is said before the first byte.
+    HERESY 2984: PART may be one file's own *.incomplete (a direct download), and then only it counts, not another file's part kept
+    beside it for the next run (the VM's 25.11.2026 run said «21 MB of 2 KB (922636%)» for ep317's yaml beside its cut-short ckpt).
+    HERESY 2986: over a folder (hf_guard's .ruach-part, which every file models/.incomplete/ takes in shares) only the parts this download makes
+    or adds to count; another file's part kept there from a run cut short stays as it was and is left out (the check of 2984 saw the twin's
+    hf_guard route say «4 MB of 22 KB (15946%)»)."""
     out = out or sys.stdout
     tty = out.isatty()
     said, last = False, 0.0
+    one = str(part).endswith(".incomplete")
+    before, moving = ({} if one else parts_in(part)), set()
     while not stop.wait(every):
         got = 0
-        for d, _, fs in os.walk(part):
-            for n in fs:
-                if n.endswith(".incomplete"):
-                    try:
-                        got += os.path.getsize(os.path.join(d, n))
-                    except OSError:
-                        pass
+        if one:
+            try:
+                got = os.path.getsize(part)
+            except OSError:
+                pass
+        for f, n in ({} if one else parts_in(part)).items():
+            if f in moving or before.get(f) != n:      # made or added to while this download runs
+                moving.add(f)
+                got += n
         if not got:
             continue
         line = f"          {hs(got)} of {hs(size)}" + (f" ({100 * got // size}%)" if size else "")
@@ -213,7 +235,7 @@ def main(argv):
                     chk = [sys.executable, str(ROOT / "tools" / "hf_expect.py"), "--repo", repo, "--rev", r, "--dir", str(dst.parent), "--files", path] + (["--strip", pre] if pre else [])
                 else:
                     chk = [sys.executable, str(ROOT / "tools" / "hf_expect.py"), "--repo", repo, "--rev", r, "--dir", str(into), "--files", path]
-                if subprocess.run(chk, env=env(), capture_output=True, text=True).returncode == 0:
+                if subprocess.run(chk, env=env(), capture_output=True, text=True, encoding="utf-8", errors="replace").returncode == 0:
                     ok = True
                     break
             if attempt == 1:

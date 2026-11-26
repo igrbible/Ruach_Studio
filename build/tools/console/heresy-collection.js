@@ -1040,6 +1040,10 @@
       if (b.dataset.name === name) b.setAttribute("aria-pressed", String(markOf(name, b.dataset.hmark)));
     });
     reactPaint(name);                                  // HERESY 1873
+    // HERESY 3009 (Viktor 25.11.2026, the compare window: «манипуляции с пальчиком вверх и с обнулением огонька и диаманда, как мы сделали это с
+    // карточками в Библиотекаре, в сравнителе не работают. Огонёк не поднимает пальчик вверх и прочее»): the window's 🔥 💎 were the cards' own and
+    // wrote the like with them (2902), but its 👍 👎 are its own buttons and were never told: said here, wherever a take's marks change
+    try { window.dispatchEvent(new CustomEvent("ruach-marks", { detail: { name: name } })); } catch (e) { /* no CustomEvent: the window paints on its own clicks */ }
   }
   // HERESY 2902 (Viktor 20.11.2026, the take card's reactions): linked, a user default on (Engine → Defaults, yue2.reactLink "off" to unlink): 🔥 or 💎
   // switched on likes the take too; 👎 switched on takes off the like, 🔥 and 💎; the faces (1873) untouched. Wherever the buttons live (the cards, the
@@ -4705,8 +4709,8 @@
                               // HERESY 2912b (the checks): the Library as a section of the suite found it, given back after it; a section that stubs
                               // /lab/catalog left its takes, its workspaces and the workspace in hand to every section after it (20.11: 2909's and
                               // 2910's, and «Replace a section», Compare, Archive and the albums failed behind them)
-                              keepState: function () { return { s: Object.assign({}, state), ws: recall(WS_KEY) }; },
-                              putState: function (k) { Object.keys(k.s).forEach(function (x) { state[x] = k.s[x]; }); store(WS_KEY, k.ws || ""); paint(); paintCurrent(); },
+                              keepState: function () { return { s: Object.assign({}, state), ws: recall(WS_KEY), realms: ["creator", "reader"].map(function (m) { return [m, recall(WS_KEY + "." + m)]; }) }; },   // 2926b: each realm's in hand too
+                              putState: function (k) { Object.keys(k.s).forEach(function (x) { state[x] = k.s[x]; }); store(WS_KEY, k.ws || ""); (k.realms || []).forEach(function (m) { if (m[1] !== null) store(WS_KEY + "." + m[0], m[1]); else try { localStorage.removeItem(WS_KEY + "." + m[0]); } catch (e) { /* private */ } }); paint(); paintCurrent(); },
                               datasheet: openDatasheet, sung: sungMany, sungOf: function (n) { return (state.sung || {})[n]; }, sungMark: sungMark, tailOf: function (n) { return (state.tail || {})[n] || null; }, tailMark: tailMark, modelLine: modelLine, reveal: function (name) { return (state.loaded ? Promise.resolve() : load()).then(function () { reveal(name); }); },
                               row: rowOf, workspaces: function () { return state.ws.slice(); }, wsTree: wsTreeList, wsFace: wsMenuFace, wsChoice: wsChoiceTree, wsClosedWhy: wsClosedWhy, /* HERESY 2956 */ wsRealm: wsRealm, takesRealm: takesRealm, mixedSaid: mixedSaid, askWs: askWs, noWs: noWs, /* HERESY 2940 · 2941 */ act: act, openSheet: openSheet, requestOf: requestOf, fitHead: fitHead, matcher: matcher,   // 2028: for the checks   // 2023: fitHead for the checks
                               selected: names, place: function () { return state.place; }, moveTo: moveTo,

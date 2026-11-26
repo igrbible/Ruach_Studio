@@ -17,10 +17,10 @@ class Console(io.StringIO):
     def isatty(self):
         return True
 
-def run(part, out, size=2_600_000_000):
+def run(part, out, size=2_600_000_000, grow=None):
     stop = threading.Event()
     t = threading.Thread(target=fm.ticker, args=(part, size, stop, out, 0.02, 60.0))
-    t.start(); time.sleep(0.25); stop.set(); t.join()
+    t.start(); time.sleep(0.05); grow and grow(); time.sleep(0.2); stop.set(); t.join()
     return out.getvalue()
 
 with tempfile.TemporaryDirectory() as d:
@@ -28,10 +28,14 @@ with tempfile.TemporaryDirectory() as d:
     check(run(part, Console()) == "" and run(part, io.StringIO()) == "", "nothing said before the first byte (no part yet)")
     rec = part / ".cache" / "huggingface" / "download"
     rec.mkdir(parents=True)
-    with open(rec / "YuE2-3B-Q5_K_M.gguf.0a1b.incomplete", "wb") as f:
-        f.truncate(1_300_000_000)                  # sparse: the size without the bytes
-    con = run(part, Console())
+    inc = rec / "YuE2-3B-Q5_K_M.gguf.0a1b.incomplete"
+
+    def grow():                                    # HERESY 2986: the part comes while the ticker runs (one that stays as it was is another file's)
+        with open(inc, "wb") as f:
+            f.truncate(1_300_000_000)              # sparse: the size without the bytes
+    con = run(part, Console(), grow=grow)
     check("\r          1.3 GB of 2.6 GB (50%)" in con and con.endswith("\r" + " " * 48 + "\r"), "a console: one line kept up to date, cleared at the end")
-    log = run(part, io.StringIO())
+    inc.unlink()
+    log = run(part, io.StringIO(), grow=grow)
     check(log == "          1.3 GB of 2.6 GB (50%)\n", "a log: one line, not one every two seconds")
 print(f"{ok} passed")

@@ -16,7 +16,7 @@ Two quants (the user chooses in Engine → Writer; fetch-heresy.sh --writer brin
            about 6.5 GB on a card: an 8 GB one
 
 HERESY 2060 (Viktor 04.11.2026: «И твои трёхсуточного бдения долги тоже, плиз»; the audit of 02.11.2026, C10): a server left on the writer's port by a lab
-that ended without its stop (restarted by hand, under Pinokio, ./lab/start-lab.sh; under systemd it ends with its lab) is taken over as the lab's own:
+that ended without its stop (restarted by hand, ./lab/start-lab.sh; under systemd it ends with its lab) is taken over as the lab's own:
 looked for at the lab's start and every 30 s while the lab runs none, and at the first question. Its pid is the port's owner, its quant its -m, its card
 its CUDA_VISIBLE_DEVICES; the idle unload, the guard's reclaim, Unload, a quant chosen anew, the lab's atexit and the status treat it as the one the lab
 starts. A server another running lab started (its parent a lab.py that lives) stays that lab's: used, never stopped from here.
@@ -87,6 +87,10 @@ def server(kit, where=None, backend=None):
     (HERESY 2463)."""
     if where == "arc":
         return Path(kit) / "vendor" / "llama.cpp" / ("build-vulkan" if backend == "vulkan" else "build-sycl") / "bin" / "llama-server"
+    if winx.NT:                                     # HERESY 2992: the Windows package's own, beside the engine (engine\cuda where a card answers)
+        p = winx.native_exe(kit, "llama-server")
+        if p:
+            return p
     return Path(kit) / "vendor" / "llama.cpp" / "build" / "bin" / ("llama-server.exe" if winx.NT else "llama-server")   # HERESY 2934
 
 
@@ -200,7 +204,7 @@ def arc_bdf():
         dev = card / "device"
         try:
             drv = os.path.basename(os.path.realpath(dev / "driver"))
-            vendor = (dev / "vendor").read_text().strip()
+            vendor = (dev / "vendor").read_text(encoding="utf-8").strip()
         except OSError:
             continue
         if drv in ("xe", "i915") and vendor == "0x8086" and list(dev.glob("hwmon/hwmon*")):
@@ -222,7 +226,7 @@ def arc_builds(kit):
 
 def _xpu(args, timeout=10):
     try:
-        out = subprocess.run(["xpu-smi"] + args + ["-j"], capture_output=True, text=True, timeout=timeout).stdout
+        out = subprocess.run(["xpu-smi"] + args + ["-j"], capture_output=True, text=True, timeout=timeout, encoding="utf-8", errors="replace").stdout
         return json.loads(out[out.find("{"):]) if "{" in out else {}
     except (OSError, ValueError, subprocess.SubprocessError):
         return {}
@@ -258,7 +262,7 @@ def _drm_vram(pids=None):
             try:
                 if not os.readlink(f"/proc/{pid}/fd/{fd}").startswith("/dev/dri/"):
                     continue
-                info = dict(line.split(":", 1) for line in open(f"/proc/{pid}/fdinfo/{fd}").read().splitlines() if ":" in line)
+                info = dict(line.split(":", 1) for line in open(f"/proc/{pid}/fdinfo/{fd}", encoding="utf-8").read().splitlines() if ":" in line)
             except (OSError, ValueError):
                 continue
             key = (info.get("drm-pdev", "").strip(), info.get("drm-client-id", "").strip())
@@ -277,7 +281,7 @@ def _holders(skip=None):
         if mb < 256 or pid == skip:
             continue
         try:
-            name = Path(f"/proc/{pid}/comm").read_text().strip()
+            name = Path(f"/proc/{pid}/comm").read_text(encoding="utf-8").strip()
         except OSError:
             name = str(pid)
         rows.append(f"{name} {mb / 1024:.1f} GB")
@@ -351,7 +355,7 @@ def _arc_take(kit, need, wait_s):
     """The Arc for the writer: its lock taken and the card free (_arc_free). None when it is ours (the lock kept in S["arc_fd"] until stop()), else
     why not, after waiting up to wait_s (0: one look). The wait says why in the Studio's log and the writer's status, and a cancel ends it."""
     _arc_release()                                     # a lock left by a start that failed after taking it: our own fd would refuse us
-    fd = open(ARC_LOCK, "a")
+    fd = open(ARC_LOCK, "a", encoding="utf-8")
     t0, said = time.time(), ""
     S["cancel_wait"] = False
     try:
@@ -415,7 +419,7 @@ def yield_arc(why):
 def _cuda_apps():
     """HERESY 2898: the CUDA processes and their cards, {pid: (name, card's uuid)}, by nvidia-smi; {} when it does not answer"""
     try:
-        p = subprocess.run(["nvidia-smi", "--query-compute-apps=pid,process_name,gpu_uuid", "--format=csv,noheader"], capture_output=True, text=True, timeout=8)
+        p = subprocess.run(["nvidia-smi", "--query-compute-apps=pid,process_name,gpu_uuid", "--format=csv,noheader"], capture_output=True, text=True, timeout=8, encoding="utf-8", errors="replace")
     except (OSError, subprocess.SubprocessError):
         return {}
     out = {}
@@ -492,7 +496,7 @@ def status(kit):
             "idle_s": ARC_IDLE_S if up and S["where"] == "arc" else IDLE_S, "error": S["error"],
             "adopted": up and S["proc"] is None, "elsewhere": None if up else S["elsewhere"],
             "where": S["where"] if up else None, "backend": S["backend"] if up and S["where"] == "arc" else None,
-            "device": device(kit), "arc_backend": backend(kit), "arc": arc_here(), "arc_builds": arc_builds(kit), "cuda_server": server(kit).is_file(),
+            "device": device(kit), "arc_backend": backend(kit), "arc": arc_here(), "arc_builds": arc_builds(kit), "cuda_server": server(kit).is_file() and server(kit).parent.name != "cpu",
             "waiting": S["waiting"], "yielded": y, "busy": S["busy"] > 0,
             "variants": {v: {"label": x["label"], "need_mb": x["need_mb"], "here": v in here(kit)} for v, x in VARIANTS.items()}}
 
@@ -599,7 +603,7 @@ def _adopt():
     where = "the Intel Arc" if arc else "the processor" if gpu is None else f"GPU {gpu}"
     if arc:
         try:
-            fd = open(ARC_LOCK, "a")
+            fd = open(ARC_LOCK, "a", encoding="utf-8")
             fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
             S["arc_fd"] = fd
         except OSError:
@@ -681,7 +685,7 @@ def ensure(kit):
         where, gpu, fit, why = "cpu", None, True, ""
         builds = arc_builds(kit)
         if dev in ("auto", "cuda"):
-            if server(kit).is_file():
+            if server(kit).is_file() and server(kit).parent.name != "cpu":   # HERESY 2992: the Windows package's engine\cpu build has no CUDA
                 gpu, fit = _card(kit, need)
                 if gpu is not None:
                     where = "cuda"
@@ -692,6 +696,9 @@ def ensure(kit):
                 else:
                     why = "the Intel Arc is not free: " + why
         elif dev == "arc":
+            if winx.NT:                                 # HERESY 2992: arc_here() reads Linux's /sys, and llama.cpp's Arc builds are Linux's
+                raise ValueError("the Writer on an Intel Arc runs on Linux for now (llama.cpp's Vulkan and SYCL builds are not in the Windows "
+                                 "package): choose Auto, a CUDA card or the processor in Engine → Writer")
             if not arc_here():
                 raise ValueError("Engine → Writer runs it on the Intel Arc, and there is no Intel Arc on this machine: choose Auto, a CUDA card or "
                                  "the processor there")
@@ -706,8 +713,10 @@ def ensure(kit):
         exe = server(kit, where, back)
         if not exe.is_file():
             _arc_release()
-            raise ValueError("the Studio's own writer runs on Linux for now (llama.cpp's llama-server is not in the Windows and Mac packages): "
-                             "Engine → Writer and Artwork takes LM Studio, Ollama, vLLM or OpenRouter instead" if winx.NT or sys.platform == "darwin"
+            raise ValueError(winx.no_native("llama-server", "the Studio's own writer") + ": Engine → Writer and Artwork takes LM Studio, Ollama, "
+                             "vLLM or OpenRouter instead" if winx.NT                                  # HERESY 2992
+                             else "the Studio's own writer runs on Linux and Windows for now (llama.cpp's llama-server is not in the Mac package): "
+                             "Engine → Writer and Artwork takes LM Studio, Ollama, vLLM or OpenRouter instead" if sys.platform == "darwin"
                              else "llama.cpp's llama-server is not built: launcher/extras.sh builds it (a few minutes)")   # HERESY 2934
         args = ["-m", str(Path(kit) / VARIANTS[v]["file"]), "--host", "127.0.0.1", "--port", str(PORT), "-c", str(CTX), "-np", "1",
                 "--jinja", "--alias", ALIAS, "--no-webui", "-t", str(max(2, (os.cpu_count() or 4) // 2))]

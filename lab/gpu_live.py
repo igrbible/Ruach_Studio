@@ -35,7 +35,7 @@ def _num(s):
 def _run():
     try:
         p = subprocess.Popen(["nvidia-smi", "--query-gpu=" + QUERY, "--format=csv,noheader,nounits", "-lms", "2000"],
-                             stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, bufsize=1)
+                             stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, bufsize=1, encoding="utf-8", errors="replace")
     except OSError as e:                               # HERESY 2934: no «[WinError 2]» in the words
         STATE.update(running=False, error=winx.NO_NVSMI if isinstance(e, FileNotFoundError) else f"nvidia-smi did not start ({winx.said(e)})")
         return
@@ -84,7 +84,7 @@ def _xe_cards():
         dev = os.path.join(card, "device")
         try:
             drv = os.path.basename(os.path.realpath(os.path.join(dev, "driver")))
-            vendor = open(os.path.join(dev, "vendor")).read().strip()
+            vendor = open(os.path.join(dev, "vendor"), encoding="utf-8").read().strip()
         except OSError:
             continue
         hw = sorted(glob.glob(os.path.join(dev, "hwmon", "hwmon*")))
@@ -93,7 +93,7 @@ def _xe_cards():
         bdf = os.path.basename(os.path.realpath(dev))
         name, total = "Intel GPU", None
         try:
-            d = json.loads(subprocess.run(["xpu-smi", "discovery", "-d", bdf, "-j"], capture_output=True, text=True, timeout=20).stdout or "{}")
+            d = json.loads(subprocess.run(["xpu-smi", "discovery", "-d", bdf, "-j"], capture_output=True, text=True, timeout=20, encoding="utf-8", errors="replace").stdout or "{}")
             name = d.get("device_name") or name
             total = round(int(d["memory_physical_size_byte"]) / 2 ** 20) if d.get("memory_physical_size_byte") else None
         except (OSError, ValueError, subprocess.SubprocessError):
@@ -123,12 +123,12 @@ def _hwmon(hw, kind, label):
     files = sorted(glob.glob(os.path.join(hw, kind + "*_input")))
     for f in files:
         try:
-            if open(f.replace("_input", "_label")).read().strip() == label:
-                return float(open(f).read())
+            if open(f.replace("_input", "_label"), encoding="utf-8").read().strip() == label:
+                return float(open(f, encoding="utf-8").read())
         except OSError:
             continue
     try:
-        return float(open(files[0]).read()) if files else None
+        return float(open(files[0], encoding="utf-8").read()) if files else None
     except (OSError, ValueError):
         return None
 
@@ -143,7 +143,7 @@ def _run_xe():
             now, busy, vram, seen = time.time(), {}, {}, {}
             for path in _drm_fds():
                 try:
-                    info = dict(line.split(":", 1) for line in open(path).read().splitlines() if ":" in line)
+                    info = dict(line.split(":", 1) for line in open(path, encoding="utf-8").read().splitlines() if ":" in line)
                 except OSError:
                     continue
                 bdf = info.get("drm-pdev", "").strip()

@@ -1,4 +1,4 @@
-# HERESY 2649 (the native Windows port): Ruach Studio's Python on Windows, from nothing. Brings uv (Astral's, pinned) into tmp\uv, Python 3.12 and
+﻿# HERESY 2649 (the native Windows port): Ruach Studio's Python on Windows, from nothing. Brings uv (Astral's, pinned) into tmp\uv, Python 3.12 and
 # the Studio's .venv with it (nothing installed for the whole machine, nothing outside the Studio's folder), then launcher\setup_win.py: the lab's
 # packages and the models a song needs. RuachStudio.cmd runs it the first time; by hand:
 #     powershell -NoProfile -ExecutionPolicy Bypass -File launcher\install.ps1 [-Cpu] [-Yes]
@@ -8,6 +8,9 @@ $ProgressPreference = "SilentlyContinue"
 # HERESY 2935 (a tester's console showed Cyrillic as gibberish, code page 866): this console in UTF-8, so what uv, nvidia-smi and the
 # Studio's Python print in UTF-8 reads right in it; with no console (the output redirected) it is left as it is
 try { [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding $false } catch { }
+# HERESY 2998: and what it pipes to a program it starts in UTF-8 too; the file itself is UTF-8 with a BOM, which Windows PowerShell 5.1
+# needs to read a script as UTF-8 at all (without one it reads the ANSI code page)
+$OutputEncoding = New-Object System.Text.UTF8Encoding $false
 $Root = Split-Path -Parent $PSScriptRoot
 $UvVersion = "0.6.14"
 $UvDir = Join-Path $Root "tmp\uv"

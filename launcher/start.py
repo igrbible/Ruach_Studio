@@ -28,6 +28,7 @@ sys.path.insert(0, str(ROOT / "lab"))
 import paths  # noqa: E402  the weights' places, as launcher/paths.sh says them
 import winx  # noqa: E402
 winx.utf8_console()   # HERESY 2935: this window in UTF-8 (code page 866 garbled yue-server's Cyrillic in it), this script's output too
+winx.runtime_path(ROOT)   # HERESY 2989: the Windows package's programs (runtime/ffmpeg, runtime/fluidsynth) first on PATH
 NT = os.name == "nt"
 EXE = ".exe" if NT else ""
 
@@ -74,13 +75,11 @@ def engine_bin(card=False):
 
 
 def smi():
-    """nvidia-smi on PATH, in Windows' System32, or WSL's; None without it."""
+    """nvidia-smi on PATH, or in Windows' System32; None without it (WSL's /usr/lib/wsl/lib went out with the WSL port, HERESY 2999)."""
     s = shutil.which("nvidia-smi")
     if not s and NT:
         c = Path(os.environ.get("SystemRoot", r"C:\Windows")) / "System32" / "nvidia-smi.exe"
         s = str(c) if c.is_file() else None
-    if not s and Path("/usr/lib/wsl/lib/nvidia-smi").is_file():
-        s = "/usr/lib/wsl/lib/nvidia-smi"
     return s
 
 
@@ -89,7 +88,7 @@ def card_answers(s):
     if not s:
         return False
     try:
-        r = subprocess.run([s, "-L"], capture_output=True, text=True, timeout=30)
+        r = subprocess.run([s, "-L"], capture_output=True, text=True, timeout=30, encoding="utf-8", errors="replace")
     except (OSError, subprocess.SubprocessError):
         return False
     return r.returncode == 0 and "GPU " in r.stdout
@@ -146,7 +145,7 @@ def main(argv):
     binp = engine_bin(card_answers(s))
     cpu_engine = binp.parent.name == "cpu"              # HERESY 2686: the package's CPU engine takes no card, so no guard and no CUDAn
     if not env.get("YUE2CPP_GPU") and s and not cpu_engine:
-        r = subprocess.run([py, str(ROOT / "lab" / "gpu_guard.py"), "--pick", studio_gpu or "0", "8000"], capture_output=True, text=True)
+        r = subprocess.run([py, str(ROOT / "lab" / "gpu_guard.py"), "--pick", studio_gpu or "0", "8000"], capture_output=True, text=True, encoding="utf-8", errors="replace")
         pick, told = r.stdout.strip(), r.stderr.strip()
         if pick and pick != (studio_gpu or "0"):
             guard_say, studio_gpu = f"GPU{studio_gpu or 0} did not pass the guard; GPU{pick} instead · {told}", pick
@@ -222,7 +221,7 @@ def main(argv):
     gpu_used = gpu_total = 0.0
     if s:
         r = subprocess.run([s, "-i", studio_gpu or "0", "--query-gpu=name,memory.used,memory.total,compute_cap", "--format=csv,noheader,nounits"],
-                           capture_output=True, text=True)
+                           capture_output=True, text=True, encoding="utf-8", errors="replace")
         line = (r.stdout.strip().splitlines() or [""])[0]
         parts = [x.strip() for x in line.split(",")]
         if len(parts) == 4:

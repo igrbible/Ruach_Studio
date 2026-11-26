@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # What this machine has for the install. Changes nothing: it prints what is there, what is missing, and
-# the exact lines to fix it. Linux/WSL (NVIDIA + CUDA) or macOS (Apple Silicon: Metal + Accelerate).
-# It finds tools that are installed but not on PATH (WSL: nvcc in /usr/local/cuda/bin, nvidia-smi in
-# /usr/lib/wsl/lib; macOS: the Chrome app, a project-local cmake/ninja): check here BEFORE installing.
+# the exact lines to fix it. Linux (NVIDIA + CUDA) or macOS (Apple Silicon: Metal + Accelerate).
+# It finds tools that are installed but not on PATH (Linux: nvcc in /usr/local/cuda/bin;
+# macOS: the Chrome app, a project-local cmake/ninja): check here BEFORE installing.
 #
 #   tools/check-machine.sh [INSTALL_FOLDER]   (the folder is used for the free-disk check and .venv;
 #                                              default: the install this script is in)
@@ -80,11 +80,10 @@ if [ "$OS" = Darwin ]; then
   done
   echo "${B}page fonts${X}  ${D}(macOS's own fonts cover every symbol the page uses)${X}"
 else
-  # ======================================================================= Linux / WSL
-  WSL=0; command grep -qi microsoft /proc/version 2>/dev/null && WSL=1
-  echo "${B}machine${X}  $(. /etc/os-release 2>/dev/null; echo "${PRETTY_NAME:-unknown Linux}"), $ARCH$([ $WSL = 1 ] && echo ", WSL2")"
+  # ======================================================================= Linux
+  echo "${B}machine${X}  $(. /etc/os-release 2>/dev/null; echo "${PRETTY_NAME:-unknown Linux}"), $ARCH"
   echo "${B}gpu${X}"
-  SMI=$(find_tool nvidia-smi /usr/lib/wsl/lib/nvidia-smi /usr/bin/nvidia-smi)
+  SMI=$(find_tool nvidia-smi /usr/bin/nvidia-smi)
   CC=""
   if [ -n "$SMI" ]; then
     [ "$SMI" != "$(command -v nvidia-smi 2>/dev/null)" ] && path_add+=("$(dirname "$SMI")")
@@ -96,7 +95,7 @@ else
       row "$R" error nvidia-smi "$SMI runs but sees no GPU"; blockers=$((blockers + 1))
     fi
   else
-    row "$R" missing nvidia-smi "$([ $WSL = 1 ] && echo "WSL gets it from the Windows NVIDIA driver: update that driver; never install a Linux NVIDIA driver inside WSL" || echo "install the NVIDIA driver for this distro")"
+    row "$R" missing nvidia-smi "install the NVIDIA driver for this distro"
     blockers=$((blockers + 1))
   fi
   NVCC=$(find_tool nvcc /usr/local/cuda/bin/nvcc $(ls -d /usr/local/cuda-*/bin/nvcc /opt/cuda/bin/nvcc 2>/dev/null | sort -V -r))
@@ -108,7 +107,7 @@ else
     else row "$R" too-old nvcc "CUDA $cuda, this GPU needs $need or newer"; blockers=$((blockers + 1)); fi
     if [ -n "$CC" ]; then arch="${CC/./}"; [ "${CC%%.*}" -ge 12 ] 2>/dev/null && arch="${arch}a"; row "$G" build arch "-DCMAKE_CUDA_ARCHITECTURES=$arch"; fi
   else
-    row "$R" missing nvcc "no CUDA toolkit on PATH, in /usr/local/cuda* or /opt/cuda: install cuda-toolkit-12-8 or newer ($([ $WSL = 1 ] && echo "NVIDIA's WSL-Ubuntu repo, the toolkit only" || echo "NVIDIA's repo for this distro"))"
+    row "$R" missing nvcc "no CUDA toolkit on PATH, in /usr/local/cuda* or /opt/cuda: install cuda-toolkit-12-8 or newer (NVIDIA's repo for this distro)"
     blockers=$((blockers + 1))
   fi
 
