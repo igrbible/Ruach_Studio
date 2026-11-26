@@ -6032,6 +6032,8 @@ RuachI18n.add("el", {
 "Not measured: {0}": "Δεν μετρήθηκε: {0}",
 "no sound card is seen here (/proc/asound has none)": "δεν φαίνεται κάρτα ήχου εδώ (το /proc/asound είναι άδειο)",
 "the audio interfaces are read through ALSA, Linux's sound system: on Windows and macOS none are listed yet, and the analog gateway and the monitor run on Linux for now": "οι διεπαφές ήχου διαβάζονται μέσω ALSA, του συστήματος ήχου του Linux: σε Windows και macOS δεν εμφανίζεται ακόμη καμία, και η αναλογική πύλη και η οθόνη ακρόασης τρέχουν προς το παρόν μόνο σε Linux",
+"the audio interfaces are listed as Windows names them; the analog gateway and the monitor run on Linux for now": "οι διεπαφές ήχου εμφανίζονται όπως τις ονομάζουν τα Windows· η αναλογική πύλη και η οθόνη ακρόασης τρέχουν προς το παρόν μόνο σε Linux",   // HERESY 3016: Audio I/O on Windows, its devices by Windows' names
+"Windows did not list its sound devices (PowerShell's Get-PnpDevice gave no answer)": "Τα Windows δεν έδωσαν τη λίστα των συσκευών ήχου τους (το Get-PnpDevice του PowerShell δεν απάντησε)",   // HERESY 3016
 "aplay is not here: ALSA's software devices are not listed": "δεν υπάρχει aplay εδώ: οι εικονικές συσκευές του ALSA δεν απαριθμούνται",
 "arecord is not here: ALSA's software devices are not listed": "δεν υπάρχει arecord εδώ: οι εικονικές συσκευές του ALSA δεν απαριθμούνται",
 "PipeWire / Pulse do not run here (no pactl answer)": "Το PipeWire / Pulse δεν τρέχει εδώ (καμία απάντηση από pactl)",

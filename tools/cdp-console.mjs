@@ -33593,6 +33593,43 @@ const au2934 = await ev(`(async () => {
 check("Audio I/O on Windows: «read through ALSA, Linux's sound system» once, no /proc/asound nor aplay; in Spanish «el sistema de sonido de Linux»",
   /read through ALSA, Linux's sound system/.test(au2934.en) && !/asound|aplay/.test(au2934.en) && /el sistema de sonido de Linux/.test(au2934.es), JSON.stringify(au2934));
 
+// HERESY 3016 (the plan's Windows leftover «звуковые устройства словами ALSA»): on Windows the tab lists the devices by Windows' own names,
+// and no gateway or monitor choice is made of them (they stay Linux's)
+section("Audio I/O on Windows: the devices by Windows' names (a Cyrillic one whole), a virtual cable under Virtual, no gateway choice of them, the sentence in the page's language");
+const au3016 = await ev(`(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)), o = {}, real = window.fetch;
+  const json = (b) => Promise.resolve(new Response(JSON.stringify(b), { status: 200, headers: { "Content-Type": "application/json" } }));
+  const WIN = "the audio interfaces are listed as Windows names them; the analog gateway and the monitor run on Linux for now";
+  const ph = (id, card, name, out, inp) => ({ id: id, card_name: card, driver: "Windows", name: name, out: out, in: inp, formats: {}, alsa: "" });
+  window.fetch = (u, opt) => { u = String(u);
+    if (u.startsWith("/lab/audio/devices")) return json({ physical: [ph("1", "Realtek(R) Audio", "Speakers", true, false), ph("1", "Realtek(R) Audio", "Microphone", false, true),
+        ph("2", "Scarlett 2i2 USB", "Динамики", true, false)], virtual: [{ kind: "windows", name: "CABLE Input", description: "VB-Audio Virtual Cable", out: true, in: false }],
+      said: [WIN], gateway: { out: "", in: "", rate: 0 }, monitor: { out: "", rate: 0 }, playing: { playing: false }, linux_only: true });
+    return real(u, opt); };
+  try {
+    document.querySelector('.topbar [data-tab="post"]').click(); await wait(300);
+    if (HeresyPost.canvas.on()) { HeresyPost.canvas.set(false); await wait(150); }
+    o.was = ((document.querySelector("#postSteps .ps-step.is-active") || {}).dataset || {}).stepPanel || "";
+    HeresyPost.select("audioPanel"); HeresyPost.audio.load();
+    for (let i = 0; i < 40 && !/Windows names them/.test(document.getElementById("auSaid").textContent); i++) await wait(50);
+    o.en = document.getElementById("auSaid").textContent;
+    o.phys = document.getElementById("auPhysical").textContent; o.virt = document.getElementById("auVirtual").textContent;
+    o.outs = document.getElementById("auOut").options.length; o.ins = document.getElementById("auIn").options.length;
+    o.mon = document.getElementById("auMon") ? document.getElementById("auMon").options.length : -1;
+    await window.RuachI18n.set("es"); await wait(200); HeresyPost.audio.load();
+    for (let i = 0; i < 40 && !/como las nombra Windows/.test(document.getElementById("auSaid").textContent); i++) await wait(50);
+    o.es = document.getElementById("auSaid").textContent;
+  } finally {
+    window.fetch = real;
+    if (window.RuachI18n.lang() !== "en") { await window.RuachI18n.set("en"); await wait(300); }
+    if (o.was) HeresyPost.select(o.was);
+    document.querySelector('.topbar [data-tab="create"]').click(); await wait(250);
+  }
+  return o; })()`);
+check("Audio I/O on Windows: Realtek's Speakers and Microphone, Scarlett's «Динамики», the VB-Audio cable under Virtual; the gateway's and the monitor's lists hold «none» alone; «como las nombra Windows» in Spanish",
+  /Realtek\(R\) Audio/.test(au3016.phys) && /Speakers/.test(au3016.phys) && /Microphone/.test(au3016.phys) && /Динамики/.test(au3016.phys) && /CABLE Input/.test(au3016.virt) &&
+  au3016.outs === 1 && au3016.ins === 1 && au3016.mon <= 1 && /listed as Windows names them/.test(au3016.en) && !/ALSA/.test(au3016.en) && /como las nombra Windows/.test(au3016.es), JSON.stringify(au3016));
+
 // HERESY 2934 (the Windows soak's lab log: the LoRA profile's measure of the base model died in its thread, «No module named 'gguf'», and the page
 // never knew): the adapter's tip says why «how far it moves a layer» is not known
 section("A LoRA's tip when the base model's measure failed: why «how far it moves a layer» is not known, under where it pushes, in the page's language");

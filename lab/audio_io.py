@@ -165,9 +165,79 @@ NOT_HERE = ("the audio interfaces are read through ALSA, Linux's sound system: o
             "gateway and the monitor run on Linux for now")
 
 
+# HERESY 3016 (the plan's Windows leftover «звуковые устройства словами ALSA», by Viktor's law ② of 21.11.2026): on Windows the tab lists the
+# sound devices as Windows names them (its audio endpoints, «Speakers (Realtek(R) Audio)», from Get-PnpDevice), the gateway and the monitor
+# still Linux's; a PowerShell that does not answer is said, never shown as «no sound card»
+NOT_HERE_WIN = "the audio interfaces are listed as Windows names them; the analog gateway and the monitor run on Linux for now"
+WIN_UNHEARD = "Windows did not list its sound devices (PowerShell's Get-PnpDevice gave no answer)"
+_WIN_PS = ("[Console]::OutputEncoding = [Text.Encoding]::UTF8; "
+           "$d = @(Get-PnpDevice -Class AudioEndpoint -PresentOnly -ErrorAction Stop | Select-Object FriendlyName, InstanceId, Status); "
+           "ConvertTo-Json -InputObject $d -Compress")
+_WIN_VIRTUAL = re.compile(r"virtual|vb-audio|voicemeeter|steam streaming|\bcable\b", re.I)   # the usual virtual cables, by their drivers' names
+
+
 def _linux_only():
     if not sys.platform.startswith("linux"):
-        raise ValueError(NOT_HERE)
+        raise ValueError(NOT_HERE_WIN if sys.platform == "win32" else NOT_HERE)
+
+
+def win_endpoints(run=None):
+    """HERESY 3016: Windows' audio endpoints [{"name", "card", "way"}] (way «out» for a render endpoint, «in» for a capture one, by the MMDevice
+    id in its InstanceId: {0.0.0.00000000} and {0.0.1.00000000}), the ones Windows has on (Status OK); None when PowerShell did not answer
+    (no program, a refusal, an answer that is no JSON), which is not «none». run: the subprocess.run to call (a test's own)."""
+    run = run or subprocess.run
+    try:
+        r = run(["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", _WIN_PS], capture_output=True, timeout=30,
+                encoding="utf-8", errors="replace")
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if r.returncode != 0:
+        return None
+    try:
+        rows = json.loads((r.stdout or "").lstrip("\ufeff").strip() or "null")   # a UTF-8 console may lead with its BOM
+    except ValueError:
+        return None
+    if isinstance(rows, dict):                            # one device: an object, not a list, on an older PowerShell
+        rows = [rows]
+    if not isinstance(rows, list):
+        return None
+    out = []
+    for d in rows:
+        if not isinstance(d, dict) or str(d.get("Status") or "") != "OK":
+            continue
+        iid, full = str(d.get("InstanceId") or "").lower(), str(d.get("FriendlyName") or "").strip()
+        way = "out" if "{0.0.0.00000000}" in iid else "in" if "{0.0.1.00000000}" in iid else ""
+        if not full or not way:
+            continue
+        m = re.match(r"^(.*?)\s*\((.*)\)\s*$", full)   # «Speakers (Realtek(R) Audio)»: the endpoint, then its device in the last brackets
+        name, card = (m.group(1).strip() or full, m.group(2).strip()) if m else (full, full)
+        out.append({"name": name, "card": card, "way": way})
+    return out
+
+
+def _devices_windows(user_dir, run=None):
+    """HERESY 3016: /audio/devices on Windows: each device with its endpoints, in and out, as Windows names them; a virtual cable (VB-Audio,
+    Voicemeeter, a «Virtual» driver) under Virtual. Nothing here is a gateway's choice (linux_only: the page fills no gateway from it)."""
+    eps = win_endpoints(run)
+    physical, virtual, ids = [], [], {}
+    for e in eps or []:
+        if _WIN_VIRTUAL.search(e["card"]) or _WIN_VIRTUAL.search(e["name"]):
+            hit = next((v for v in virtual if v["name"] == e["name"] and v["description"] == e["card"]), None)
+            if hit:
+                hit[e["way"]] = True
+            else:
+                virtual.append({"kind": "windows", "name": e["name"], "description": e["card"], "out": e["way"] == "out", "in": e["way"] == "in"})
+            continue
+        cid = ids.setdefault(e["card"], str(len(ids) + 1))
+        hit = next((p for p in physical if p["id"] == cid and p["name"] == e["name"]), None)
+        if hit:
+            hit[e["way"]] = True
+        else:
+            physical.append({"id": cid, "card_name": e["card"], "driver": "Windows", "name": e["name"], "out": e["way"] == "out",
+                             "in": e["way"] == "in", "formats": {}, "alsa": ""})
+    said = [NOT_HERE_WIN] + ([WIN_UNHEARD] if eps is None else [])
+    return {"physical": physical, "virtual": virtual, "said": said, "gateway": gateway(user_dir) if user_dir else {},
+            "monitor": monitor(user_dir) if user_dir else {}, "playing": monitor_state(), "linux_only": True}
 
 
 def _which(b):
@@ -175,6 +245,8 @@ def _which(b):
 
 
 def devices(root="/proc/asound", user_dir=None):
+    if sys.platform == "win32":                         # HERESY 3016: Windows' own names
+        return _devices_windows(user_dir)
     if not sys.platform.startswith("linux"):           # HERESY 2934
         return {"physical": [], "virtual": [], "said": [NOT_HERE], "gateway": gateway(user_dir) if user_dir else {},
                 "monitor": monitor(user_dir) if user_dir else {}, "playing": monitor_state(), "linux_only": True}

@@ -323,13 +323,14 @@ try:
 
     import audio_io
     d = audio_io.devices(user_dir=str(tmp))
-    check(d["said"] == [audio_io.NOT_HERE] and d["physical"] == [] and "asound" not in json.dumps(d) and d.get("linux_only"),
-          "/audio/devices on Windows: one sentence that the tab reads ALSA, Linux's, not «/proc/asound has none» and «aplay is not here»")
+    # HERESY 3016: Windows' devices by Windows' names now (lab/test_win_audio_3016.py); here, with no PowerShell on this machine, said so
+    check(d["said"] == [audio_io.NOT_HERE_WIN, audio_io.WIN_UNHEARD] and d["physical"] == [] and "asound" not in json.dumps(d) and d.get("linux_only"),
+          "/audio/devices on Windows: Windows' names said, and a PowerShell that did not answer said, not «/proc/asound has none» nor «aplay is not here»")
     try:
         audio_io.probe("hw:0", 48000, 2)
         check(False, "a measure on Windows refused")
     except ValueError as e:
-        check(str(e) == audio_io.NOT_HERE, "the gateway's measure on Windows refused in the same words, no aplay started")
+        check(str(e) == audio_io.NOT_HERE_WIN, "the gateway's measure on Windows refused in the same words, no aplay started")
 
     import places
     places.setup(tmp, lambda: False, None, tmp / "settings.json")

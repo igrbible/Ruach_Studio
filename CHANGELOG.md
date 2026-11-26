@@ -6,6 +6,8 @@ Ruach Studio is a music studio on [YuE2](https://huggingface.co/m-a-p/YuE2-3B): 
 
 After 2.1.0-rc3.
 
+- **Audio I/O on Windows** lists your sound devices by the names Windows gives them, each output and input under its device and a virtual cable under Virtual; the analog gateway and the monitor stay Linux's for now (HERESY 3016).
+
 ## 2.1.0-rc3 · 2026-11-25
 
 2.1.0-rc3 is the third candidate for 2.1.0: rc2 with everything made since, most of it for **Windows**. The Windows package now runs natively from RuachStudio.exe alone, the WSL2 package is gone, and it brings its own programs: **FFmpeg 9.0.2** and **FluidSynth 2.5.7**, and, built beside the engine for a card and for the processor, llama.cpp's server for the Writer and the style listener, audio.cpp's server for the Narrator's Drama 3 and the sound-to-MIDI transcriber. Every file, pipe and console of the Studio speaks **UTF-8**, so a Studio unpacked into a folder with spaces or Cyrillic works as anywhere else, and every part of Engine → Models fetches without bash. The Refiner has an **Amp (NAM)** step: a stem played through a capture of an amp, a pedal or a rig, ten captures by their authors under MIT with the install and your own .nam files beside them. The players draw a **stereo wave** tinted by its **pan**; the compare window opens taller, its 👍 follows 🔥 and 💎, and the player's live spectrum plays in its head. The Videographer queues a clip's whole render for the night; the Train room scales a track mastered past full scale before the decoder reads it; private voice adapters stay out of every publish under any name. **Pinokio is cut to a minimal Linux menu, unsupported**: the Studio installs from its GitHub clone on Linux and from its own packages on Windows and macOS (HERESY 2982–3013).

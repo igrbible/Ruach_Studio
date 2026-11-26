@@ -2783,8 +2783,9 @@
     }).join("") + "</ul>" : '<p class="row-hint">None.</p>';
     $("auSaid").textContent = (d.said || []).map(tr).join(" \u00b7 ");
     var ins = [], outs = [];
-    (d.physical || []).forEach(function (p) { var lab = p.card_name + " \u00b7 " + p.name; if (p.out) outs.push([p.alsa, lab, p.formats && p.formats.out]); if (p.in) ins.push([p.alsa, lab, p.formats && p.formats.in]); });
-    v.forEach(function (x) { var a = x.alsa || x.name, lab = x.kind + " \u00b7 " + a; if (x.out) outs.push([a, lab]); if (x.in) ins.push([a, lab]); });   // 1514: by its ALSA address
+    // HERESY 3016: Windows' devices are shown by their own names, but the gateway and the monitor are Linux's: no choice is made of them
+    if (!d.linux_only) (d.physical || []).forEach(function (p) { var lab = p.card_name + " \u00b7 " + p.name; if (p.out) outs.push([p.alsa, lab, p.formats && p.formats.out]); if (p.in) ins.push([p.alsa, lab, p.formats && p.formats.in]); });
+    if (!d.linux_only) v.forEach(function (x) { var a = x.alsa || x.name, lab = x.kind + " \u00b7 " + a; if (x.out) outs.push([a, lab]); if (x.in) ins.push([a, lab]); });   // 1514: by its ALSA address
     var g = d.gateway || {};
     function fill(sel, list, want) {
       sel.innerHTML = '<option value="">\u2014 none \u2014</option>' + list.map(function (o) { return '<option value="' + esc(o[0]) + '" translate="no">' + esc(o[1]) + "</option>"; }).join("");

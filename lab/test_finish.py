@@ -17,6 +17,39 @@ def check(what, ok, got=""):
         bad.append(what)
 
 
+# HERESY 3018 (the plan's item 102: the public tree's checks need nothing of the kitchen nor of the Forge's data): the pictures an earlier plan
+# painted where this Studio has them (the Forge's user/videos/20261028-200830-1-a, 16 s of it), else two pictures painted here (a warm one with
+# its subject at the right, a cool one at the left) over four shots cut where the Forge's are (4.85 s, 9.7 s, …), so the renders below run in any clone; said which
+def painted(R, d, name):
+    src = R / "user/videos/20261028-200830-1-a"
+    if Path(str(src) + ".json").is_file() and (Path(str(src) + ".frames")).is_dir():
+        plan = json.load(open(str(src) + ".json", encoding="utf-8"))
+        plan["shots"] = [s for s in plan["shots"] if s["t0"] < 16]
+        plan["shots"][-1]["t1"] = 16.0
+        plan["seconds"] = 16.0
+        for s in plan["shots"]:
+            s.pop("video", None); s.pop("focus", None)
+        shutil.copytree(str(src) + ".frames", d / (name + ".frames"))
+        return plan, "the Forge's painted pictures"
+    import numpy as np
+    fr = d / (name + ".frames"); fr.mkdir(parents=True)
+    yy, xx = np.mgrid[0:1080, 0:1920]
+    pics = []
+    for k, (top, low, sx) in enumerate((((220, 130, 60), (140, 80, 45), 0.72), ((50, 90, 170), (60, 80, 120), 0.3))):
+        t = (yy / 1079.0)[..., None]
+        img = np.array(top, float) * (1 - t) + np.array(low, float) * t
+        spot = ((xx - sx * 1920) ** 2 + (yy - 0.45 * 1080) ** 2) < 180 ** 2
+        img[spot] = (245, 235, 220)
+        f = f"20261108-000000-00{k}-00{k}.jpg"                # the Videographer's own picture names (FRAME_RE)
+        Image.fromarray(img.astype("uint8")).save(fr / f, quality=90)
+        pics.append(f)
+    shots = [{"t0": float(a), "t1": float(b), "words": "", "section": s, "sung": s != "intro", "scene": {"shot": "", "camera": "", "motion": "", "light": ""},
+              "frame": pics[i % 2], "frame_from": "disk", "frame_wh": [1920, 1080]}
+             for i, (a, b, s) in enumerate(((0, 4.85, "intro"), (4.85, 9.7, "verse"), (9.7, 13.1, "chorus"), (13.1, 16, "chorus")))]
+    return {"name": name, "title": "t", "style": "", "seconds": 16.0, "made": time.time(), "look": {k: "" for k in V.LOOK_KEYS}, "shots": shots,
+            "model": "MiniMax H3"}, "two pictures painted here (no Forge's take in this Studio)"
+
+
 def probe(f):
     p = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height:format=duration", "-of", "json", str(f)],
                        capture_output=True, text=True)
@@ -81,18 +114,12 @@ check("  a flat picture: the middle", V.subject_x(w / "spot.png") > 0.4 and V.su
 
 # ---- renders from painted pictures
 R = Path(__file__).resolve().parent.parent
-src = R / "user/videos/20261028-200830-1-a"
 kit = Path(tempfile.mkdtemp())
 d = kit / "user/videos"; d.mkdir(parents=True)
-plan = json.load(open(str(src) + ".json", encoding="utf-8"))
-plan["shots"] = [s for s in plan["shots"] if s["t0"] < 16]
-plan["shots"][-1]["t1"] = 16.0
-plan["seconds"] = 16.0
-for s in plan["shots"]:
-    s.pop("video", None); s.pop("focus", None)
 name = "20261108-000000-finish"
+plan, pictures = painted(R, d, name)                 # HERESY 3018
+print("  --    the renders from " + pictures)
 json.dump(plan, open(d / (name + ".json"), "w", encoding="utf-8"))
-shutil.copytree(str(src) + ".frames", d / (name + ".frames"))
 frames = sorted((d / (name + ".frames")).glob("*.jpg"))
 audio = kit / "a.wav"
 subprocess.run(["ffmpeg", "-loglevel", "error", "-f", "lavfi", "-i", "sine=f=220:r=48000", "-t", "16", "-ac", "2", str(audio)], check=True)
@@ -126,8 +153,12 @@ for k in ("between", "shape", "reframe", "title_style"):
     except ValueError:
         check(f"an unknown {k} refused", True)
 keep = R / "heresy/MISC/claude-arc/video-2242"
-keep.mkdir(parents=True, exist_ok=True)
-for sh_, dr in (("16:9", True), ("tg", False), ("9:16", True)):
+kept = (R / "heresy/MISC").is_dir()     # HERESY 3018: the kitchen's copy where there is a kitchen
+if kept:
+    keep.mkdir(parents=True, exist_ok=True)
+else:
+    print("  --    the drafts not kept: no heresy/MISC in this Studio")
+for sh_, dr in (("16:9", True), ("tg", False), ("9:16", True)) if kept else ():
     shutil.copy(V.clip_path(kit, name, sh_, dr), keep / V.clip_path(kit, name, sh_, dr).name)
 shutil.rmtree(kit, ignore_errors=True)
 shutil.rmtree(w, ignore_errors=True)

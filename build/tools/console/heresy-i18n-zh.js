@@ -5918,6 +5918,8 @@ RuachI18n.add("zh", {
 "Not measured: {0}": "未测量：{0}",
 "no sound card is seen here (/proc/asound has none)": "这里看不到声卡（/proc/asound 为空）",
 "the audio interfaces are read through ALSA, Linux's sound system: on Windows and macOS none are listed yet, and the analog gateway and the monitor run on Linux for now": "音频接口通过 Linux 的声音系统 ALSA 读取：在 Windows 和 macOS 上暂不列出任何接口，模拟网关和监听目前只在 Linux 上运行",
+"the audio interfaces are listed as Windows names them; the analog gateway and the monitor run on Linux for now": "音频接口按 Windows 给出的名称列出；模拟网关和监听目前只在 Linux 上运行",   // HERESY 3016: Audio I/O on Windows, its devices by Windows' names
+"Windows did not list its sound devices (PowerShell's Get-PnpDevice gave no answer)": "Windows 没有列出它的声音设备（PowerShell 的 Get-PnpDevice 没有回应）",   // HERESY 3016
 "aplay is not here: ALSA's software devices are not listed": "这里没有 aplay：无法列出 ALSA 的软件设备",
 "arecord is not here: ALSA's software devices are not listed": "这里没有 arecord：无法列出 ALSA 的软件设备",
 "PipeWire / Pulse do not run here (no pactl answer)": "PipeWire / Pulse 未在此运行（pactl 无回应）",

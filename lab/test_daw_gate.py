@@ -77,7 +77,8 @@ for wrong, why in (({"threshold_db": 5}, "a threshold over 0"), ({"ratio": 0.5},
         check("refused: " + why, True)
 
 # the page's kernel: the gate alone, and with the compressor (and its blend), a cell later
-js_file = Path(sys.argv[1]) if len(sys.argv) > 1 else Path.home() / "Documents/AI/Ruach_Studio/heresy/MISC/creator/build/tools/console/heresy-mixdsp.js"
+# HERESY 3018: the tree's own page kernel (it read the Creator lane's old copy in the kitchen, so in any other clone the check never ran)
+js_file = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(__file__).resolve().parent.parent / "build/tools/console/heresy-mixdsp.js"
 node = shutil.which("node") or str(Path.home() / ".nvm/versions/node/v24.21.0/bin/node")
 if js_file.exists() and os.path.exists(node) and "HERESY 1760" in js_file.read_text(encoding="utf-8"):
     d = Path(tempfile.mkdtemp())

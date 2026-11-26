@@ -6033,6 +6033,8 @@ RuachI18n.add("it", {
 "Not measured: {0}": "Non misurato: {0}",
 "no sound card is seen here (/proc/asound has none)": "nessuna scheda audio si vede qui (/proc/asound è vuoto)",
 "the audio interfaces are read through ALSA, Linux's sound system: on Windows and macOS none are listed yet, and the analog gateway and the monitor run on Linux for now": "le interfacce audio sono lette tramite ALSA, il sistema audio di Linux: su Windows e macOS non ne è ancora elencata nessuna, e il gateway analogico e il monitor per ora girano solo su Linux",
+"the audio interfaces are listed as Windows names them; the analog gateway and the monitor run on Linux for now": "le interfacce audio sono elencate come le chiama Windows; il gateway analogico e il monitor per ora girano solo su Linux",   // HERESY 3016: Audio I/O on Windows, its devices by Windows' names
+"Windows did not list its sound devices (PowerShell's Get-PnpDevice gave no answer)": "Windows non ha dato l’elenco dei suoi dispositivi audio (Get-PnpDevice di PowerShell non ha risposto)",   // HERESY 3016
 "aplay is not here: ALSA's software devices are not listed": "aplay non c'è qui: i dispositivi software di ALSA non sono elencati",
 "arecord is not here: ALSA's software devices are not listed": "arecord non c'è qui: i dispositivi software di ALSA non sono elencati",
 "PipeWire / Pulse do not run here (no pactl answer)": "PipeWire / Pulse non girano qui (pactl non risponde)",
