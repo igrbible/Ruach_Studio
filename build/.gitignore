@@ -2,6 +2,8 @@ build/
 build-sycl/
 build-vulkan/
 *.wav
+# HERESY 3015: but audio.cpp's four demo voices, which its CMakeLists embeds in audiocpp_server (the Windows Narrator could not configure without them)
+!audio.cpp/webui/native/demo_voices/*.wav
 
 tests/*/
 
